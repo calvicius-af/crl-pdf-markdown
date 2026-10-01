@@ -48,3 +48,7 @@ Thumbs.db
 
 # Configuração de máquina do Claude Code (settings.json é partilhável)
 .claude/settings.local.json
+
+# Dependências de lint e dados gerados
+node_modules/
+.ruff_cache/

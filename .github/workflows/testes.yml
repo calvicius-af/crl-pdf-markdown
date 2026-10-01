@@ -1,249 +1,27 @@
-name: Testes
-
-on:
-  push:
-    branches: [main]
-  pull_request:
-
-# Cadeia de fornecimento (issue #30): o CI só precisa de ler o repositório.
-# Nenhum job escreve conteúdo, publica pacotes ou comenta em issues; se algum
-# vier a precisar, declara a permissão adicional no próprio job, não aqui.
-permissions:
-  contents: read
-
-# As actions estão fixadas por SHA, não por tag móvel: uma tag pode ser
-# reapontada para outro commit entre duas corridas, um SHA não. O comentário
-# ao lado diz a que versão corresponde, e é o Dependabot (.github/dependabot.yml)
-# que propõe o SHA seguinte por pull request.
-
+name: Markdown pipeline
+on: [push, pull_request]
 jobs:
-  pytest:
-    name: pytest (${{ matrix.os }}, Python ${{ matrix.python }})
-    runs-on: ${{ matrix.os }}
+  tests:
     strategy:
-      fail-fast: false
-      # ISSUE-0012: as estações do CRL são Windows 11 com Python 3.13, e a
-      # matriz não cobria nem o sistema nem a versão. O mínimo defensável:
-      # acrescentar windows-latest/3.13 às combinações existentes. Limite
-      # honesto: um runner Windows não reproduz uma estação do CRL (região
-      # portuguesa, políticas de proxy; as unidades de rede mapeadas têm o
-      # seu workflow, instalacao-rede.yml) — os gates manuais continuam a ser
-      # necessários
-      # (docs/validacao/instalacao-estacao-crl-2026-09-17.md).
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-        python: ["3.11", "3.12"]
-        include:
-          # a combinação em falta, sem multiplicar a matriz inteira:
-          - os: windows-latest
-            python: "3.13"
-
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
-          python-version: ${{ matrix.python }}
-          cache: pip
-
-      - name: Instalar dependências
-        # requirements.txt declara mínimos (instalação leve, sem Docling); as
-        # constraints fixam as versões exactas que esta corrida testa.
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install -r requirements.txt -c requirements/runtime.txt -c requirements/dev.txt
-
-      - name: Correr os testes
-        # Os testes que precisam dos dados (fora do repositório) declaram-se
-        # como skipped; ver CONTRIBUTING.md.
-        run: python -m pytest -q -rs
-
-      - name: Verificar anonimização dos exemplos
-        if: matrix.os == 'ubuntu-latest' && matrix.python == '3.12'
-        run: python scripts/anonimizar_exemplos.py --check
-
-  seguranca:
-    # Segredos, dados internos e allowlist de examples/ (issue #5). A mesma
-    # verificação corre localmente antes de um commit:
-    #     python scripts/verificar_seguranca.py --verboso
-    name: segurança (segredos, dados, allowlist)
+          python-version: '3.11'
+      # Testes sem modelos/PyTorch; integração com objetos Docling reais.
+      - run: python -m pip install -e . --no-deps
+      - run: python -m pip install pytest ruff 'markdown-it-py>=3,<5' 'docling-core>=2.97,<3'
+      - run: python -m pytest
+      - run: ruff check src tests
+  markdown:
     runs-on: ubuntu-latest
-
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
-          python-version: "3.12"
-
-      - name: Verificar segredos, dados e allowlist
-        # Só biblioteca padrão: não instala nada, não depende da rede.
-        run: python scripts/verificar_seguranca.py --verboso
-
-      - name: Verificar referências documentais locais
-        # Links Markdown locais e caminhos de documentação em código Python
-        # (issue #6); sensível a maiúsculas/minúsculas, para apanhar em CI
-        # (Linux) o que passa despercebido em macOS/Windows.
-        run: python scripts/verificar_referencias.py --verboso
-
-  estatica:
-    # Gates rápidos de manutenção (issue #27), separados dos testes: lint,
-    # tipos e espaços em branco. Só leem o código; não instalam o produto
-    # nem o Docling. Configuração em pyproject.toml.
-    name: análise estática (ruff, mypy, espaços)
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          # o histórico da base é preciso para comparar só o que o PR muda
-          fetch-depth: 0
-
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
-        with:
-          python-version: "3.12"
-          cache: pip
-
-      - name: Instalar as ferramentas
-        # O mypy precisa das bibliotecas do produto para ver os seus tipos
-        # (pdfplumber traz os seus); as versões são as das constraints.
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install -r requirements.txt \
-            -c requirements/runtime.txt -c requirements/dev.txt
-          python -m pip install -c requirements/dev.txt ruff mypy types-PyYAML
-
-      - name: Lint (ruff)
-        run: python -m ruff check cct scripts tests
-
-      - name: Tipos (mypy)
-        run: python -m mypy cct
-
-      - name: Espaços em branco no que o PR muda
-        # Só o diff do PR: os documentos de investigação usam dois espaços no
-        # fim da linha como quebra de linha Markdown, e isso não é erro.
-        if: github.event_name == 'pull_request'
-        run: git diff --check "origin/${{ github.base_ref }}...HEAD" -- . ':(exclude)docs/research/*'
-
-  auditoria:
-    # Auditoria das dependências instaladas contra a base de dados de
-    # vulnerabilidades do PyPI/OSV. Política em SECURITY.md.
-    name: auditoria de dependências (pip-audit)
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
-        with:
-          python-version: "3.12"
-          cache: pip
-
-      - name: Instalar o pip-audit
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install -c requirements/dev.txt pip-audit
-
-      - name: Auditar as dependências declaradas
-        # Audita os ficheiros de constraints, não o ambiente do runner: o
-        # pip-audit resolve as dependências transitivas (pdfminer.six, pillow,
-        # cryptography, ...) e ignora o que vem pré-instalado na imagem do
-        # GitHub, que não faz parte do que este projeto distribui.
-        # --strict faz falhar também quando um pacote não pode ser auditado,
-        # para que um silêncio não passe por "sem vulnerabilidades".
-        # Excepções revistas acrescentam-se aqui como --ignore-vuln GHSA-...,
-        # sempre com o issue correspondente indicado em comentário.
-        # Política de resposta: SECURITY.md, secção "Auditoria de dependências".
-        run: |
-          pip-audit --strict --desc \
-            -r requirements/runtime.txt \
-            -r requirements/dev.txt \
-            -r requirements/docling.txt
-
-  tipos-docling:
-    # O extrator docling é opcional e a suite normal corre sem ele (os
-    # testes usam objetos de teste). Este job instala só os TIPOS
-    # (docling-core, sem PyTorch) para confirmar que a forma real deles
-    # não mudou — ver tests/test_docling_integracao.py.
-    name: tipos docling (docling-core)
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
-        with:
-          python-version: "3.12"
-          cache: pip
-
-      - name: Instalar dependências + tipos do docling
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install -r requirements.txt \
-            -c requirements/runtime.txt -c requirements/dev.txt
-          python -m pip install -r requirements/docling.txt \
-            -c requirements/runtime.txt -c requirements/dev.txt \
-            -c requirements/docling.txt
-
-      - name: Correr os testes
-        run: python -m pytest -q -rs
-
-  corpus:
-    # Corpus de regressão com PDF reais do BTE (cct/corpus.py). Descarrega os
-    # documentos do manifesto que já têm URL, verifica o hash e mede-os contra
-    # tests/corpus/referencia.json: falha se algum documento piorar. Enquanto
-    # o manifesto não tiver URL ou não houver referência, o teste é ignorado
-    # e o job passa, dizendo porquê.
-    name: corpus de regressão (PDF reais)
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
-        with:
-          python-version: "3.12"
-          cache: pip
-
-      - name: Instalar dependências
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install -r requirements.txt -c requirements/runtime.txt -c requirements/dev.txt
-
-      # Modo estrito nas duas etapas: falham se faltar qualquer PDF do
-      # manifesto (uma descarga falhada, todas as descargas falhadas) ou se um
-      # documento não tiver referência. Um corpus parcial verde seria uma
-      # garantia falsa sobre os documentos que faltam (revisão do PR #89).
-      - name: Obter os PDF do corpus
-        run: python -m cct.corpus obter --rede
-
-      - name: Medir contra a referência
-        env:
-          CCT_CORPUS_OBRIGATORIO: "1"
-        run: python -m pytest -q -rs tests/test_corpus.py -k corpus_real
-
-      - name: Mostrar as medições deste commit
-        # Informativo, e por isso permissivo: a garantia está nas etapas acima.
-        # Mede de novo e grava as métricas numa referência à parte, que não
-        # substitui a do repositório: a comparação detalhada fica no registo
-        # do job e no artefacto, e a referência proposta pode ser revista e
-        # copiada para tests/corpus/referencia.json quando uma melhoria for
-        # confirmada.
-        if: always()
-        run: |
-          if ls data/corpus/*.pdf >/dev/null 2>&1; then
-            python -m cct.corpus medir --atualizar --permitir-ausentes \
-              --referencia results/corpus/referencia-proposta.json
-            cat results/corpus/comparacao.md
-            cat results/corpus/referencia-proposta.json
-          else
-            echo "Sem PDF do corpus: nada a medir."
-          fi
-
-      - name: Guardar a comparação
-        if: always()
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
-        with:
-          name: corpus-comparacao
-          path: results/corpus/
-          if-no-files-found: ignore
+          node-version: '22'
+      - run: npm ci
+      - run: npm run lint:md

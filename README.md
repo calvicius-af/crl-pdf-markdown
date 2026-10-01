@@ -1,210 +1,135 @@
-# AppCCT — pré-codificação de convenções coletivas para o MaxQDA
+# CRL — PDF para Markdown
 
-Aplicação local do **Centro de Relações Laborais** que pega nas convenções coletivas
-publicadas no *Boletim do Trabalho e Emprego*, extrai o texto com a estrutura preservada,
-sugere a codificação temática das cláusulas, compara cada convenção com a sua versão
-anterior, e entrega um projeto pronto a abrir no **MaxQDA**.
-
-O objetivo não é substituir a análise humana. É evitar que, num corpus de quase três
-centenas de convenções por ano, alguma coisa passe despercebida — e poupar às analistas o
-trabalho mecânico de localizar, no meio de centenas de páginas, as cláusulas que
-interessam a cada tema.
-
-**Ver a funcionar em dois minutos:** [`examples/`](examples/README.md) tem artefactos de
-dois casos reais — texto extraído, projeto MaxQDA e instruções para obter os PDFs de origem.
-
-## O que faz, em quatro passos
-
-```
-índice do BTE  →  0. AQUISIÇÃO  descarrega os PDFs e dá-lhes o nome do esquema (opcional)
-PDF do BTE  →  1. EXTRAÇÃO      texto + estrutura (capítulo, cláusula, número, alínea)
-            →  2. CODIFICAÇÃO   codebook do tema → cláusulas candidatas
-            →  3. DIACRONIA     o que mudou face à versão anterior
-            →  4. TRIAGEM       AUTO / REVER / CONSOLIDADO
-                                → projeto.qdpx (MaxQDA) + sugestoes_peritas.xlsx
-```
-
-Detalhe em [docs/arquitetura/arquitetura.md](docs/arquitetura/arquitetura.md).
-
-## Estado
-
-Fases 0 a 5 concluídas, mais a aquisição do corpus
-([SPEC-0001](specs/0001-recolha-e-nomeacao-do-bte.md)), com uma suite automática
-executada no CI em Linux, macOS e Windows, nas versões do Python definidas em
-[`.github/workflows/testes.yml`](.github/workflows/testes.yml). Em uso real: o corpus de 2025
-(89 convenções do tema 4.8, proteção de dados) foi processado e revisto por peritas em
-cinco rondas sucessivas.
-
-Qualidade medida contra codificação humana: cobertura 0,88, precisão 0,57 — e a faixa
-`AUTO` só existe para códigos com precisão medida ≥ 0,85. Os números, e o que significam,
-estão em [docs/validacao/](docs/validacao/README.md).
-
-Por fazer: numeração de cláusulas por extenso, análise de remissões entre documentos,
-prova com um segundo tema. Ver [specs/](specs/README.md) e
-[issues/](issues/README.md).
-
-## Instalação
-
-Requer **Python 3.11 ou superior**. A instalação base tem quatro dependências diretas,
-todas com licença permissiva. O extrator Docling é opcional e significativamente mais
-pesado.
-
-No PowerShell do Windows:
-
-```powershell
-python -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -r requirements.txt
-.\.venv\Scripts\python.exe -m cct.doctor
-```
-
-No macOS, usar `.venv/bin/python` nos dois últimos comandos. Usar o mesmo
-interpretador na instalação e na execução; `python` isolado pode referir-se
-ao Python do sistema.
-
-O `cct.doctor` diz sempre com que interpretador está a correr; se o projeto
-tiver um `.venv` que não esteja a ser usado, é esse o problema a resolver
-antes de qualquer outro.
-
-**Em rede fechada** (o caso das estações do CRL, onde o proxy bloqueia o pip): as
-bibliotecas preparam-se uma vez numa máquina com acesso e instalam-se sem qualquer pedido
-de rede.
-
-```bash
-python scripts/preparar_pacote_offline.py   # máquina com internet, uma vez
-scripts/instalar_offline.bat                # em cada estação (macOS: .command)
-```
-
-O procedimento completo, incluindo o que fazer quando falha, está em
-[docs/institucional/instalacao-offline.md](docs/institucional/instalacao-offline.md). O
-resto dos requisitos de sistema está em
-[docs/institucional/requisitos-tecnicos.md](docs/institucional/requisitos-tecnicos.md).
-
-## Utilização
-
-**Com interface gráfica** (a via normal): duplo clique em `scripts/AppCCT.command`
-(macOS) ou `scripts/AppCCT.bat` (Windows). Os campos aparecem pré-preenchidos; basta
-carregar em *Correr pipeline*.
-
-**Encher a pasta de PDFs a partir dos índices do BTE** (opcional — a única parte que usa
-a rede, e só com autorização explícita):
-
-Depois de copiar os índices `.xlsx` para `data/raw/indices/`, no PowerShell:
-
-```powershell
-.\.venv\Scripts\python.exe -m cct.aquisicao --indices data\raw\indices
-.\.venv\Scripts\python.exe -m cct.aquisicao --indices data\raw\indices --confirmar-rede --aplicar
-```
-
-No macOS, usar `.venv/bin/python` e `/` nos caminhos. A primeira corrida
-simula, sem descarregar PDFs. `cct.aquisicao` executa `cct.recolha` e depois
-`cct.nomeacao`; o [guia de operação](docs/operacao/guia-operacao.md#21-encher-a-pasta-automaticamente-recolha-do-bte)
-explica os estados e o tratamento de documentos por confirmar.
-
-**Por linha de comandos** — a corrida completa de um tema:
-
-```bash
-python -m cct.pipeline_tema \
-    --pdfs data/raw/bte/bte_2026 \
-    --codebook codebooks/4_08_protecao_dados.yaml \
-    --pasta-versoes data/raw/textos_consolidados \
-    --out results/runs/2026/2026_4_08
-```
-
-Cada corrida cria também `manifest.json`, com o comando, commit, versões, hashes dos
-inputs/outputs, contagens e problemas encontrados.
-
-**Arrumar e catalogar um número do BTE** no esquema da gestão documental do RNC
-(âmbito no nome, código IRCT, separação por família e por âmbito, e catálogo
-anotável):
-
-```bash
-python -m cct.nomeacao --esquema rnc --destino 1_fontes/irct \
-    --siglas vocabularios/siglas_organizacoes.csv \
-    --ambitos vocabularios/empregadores_ambito.csv
-python -m cct.catalogo --indices data/raw/indices \
-    --saida 0_gestao/catalogo/catalogo_irct_2026.csv
-```
-
-A convenção completa — pastas, nomes, catálogo, vocabulários — está em
-[docs/rnc/README.md](docs/rnc/README.md).
-
-Comparar duas versões de uma convenção:
-
-```bash
-python -m cct.comparar --pasta data/raw/textos_consolidados/ACIP_FESAHT \
-    --out results/benchmarks/tema-4.08/comparacoes/ACIP.xlsx
-```
-
-O guia de operação completo, com o que fazer quando algo corre mal, está em
-[docs/operacao/guia-operacao.md](docs/operacao/guia-operacao.md).
-
-## Estrutura do repositório
+Variante de [crl-app-cct](https://github.com/calvicius-af/crl-app-cct), com o
+histórico Git preservado, dedicada à preparação de documentos para importação
+direta no **MAXQDA**:
 
 ```text
-cct/            código-fonte da aplicação
-tests/          testes pytest: unidade, integração, corpus e formatos
-codebooks/      os temas de codificação, em YAML: configuração, não código
-vocabularios/   listas controladas: siglas, âmbitos, tipos, estados, temas
-examples/       dois casos completos, PDF → TXT → QDPX (versionados)
-scripts/        lançadores da aplicação gráfica e instalação offline
-docs/
-  arquitetura/  como o sistema funciona
-  adr/          porque é assim — registo das decisões tomadas
-  operacao/     como se opera, e como se escrevem codebooks
-  rnc/          gestão documental do Relatório da Negociação Coletiva
-  validacao/    os gates, os memos das peritas, as métricas
-  dados/        de onde vêm os dados e como repor
-  institucional/ requisitos técnicos e proposta ao Instituto de Informática
-  research/     estudos preparatórios (AKN4EU, ELI, FRBR, REFI-QDA)
-  formacao/     material de formação
-specs/          o que se vai construir a seguir
-issues/         o que está partido ou em falta
+PDF → Docling (texto, títulos, listas e tabelas) → normalização → Markdown
+                                                          → relatório de revisão
 ```
 
-Não versionadas, mas presentes numa instalação de trabalho: `data/` (fontes),
-`results/` (saídas), `vendor/` (bibliotecas para instalação offline e software
-de terceiros consultado) e `archive/`
-(versões anteriores do projeto). Porquê, e como repor:
-[docs/dados/README.md](docs/dados/README.md) e
-[ADR-0009](docs/adr/0009-layout-do-repositorio.md). O ciclo de vida de fontes, caches,
-corridas e resultados humanos está em
-[organização do workspace](docs/dados/organizacao-workspace.md).
+Não executa pré-codificação, comparação de versões, triagem temática nem geração
+de QDPX. O único formato documental produzido é Markdown. Os relatórios JSON são
+auxiliares de controlo de qualidade e não se importam no MAXQDA.
 
-## Regras que não se quebram
+## Instalar
 
-Três invariantes sustentam tudo o resto. Estão cobertas por testes, mas convém saber
-porquê antes de mexer:
+Python 3.11 ou superior. No macOS Apple Silicon, usar Python arm64.
 
-1. **Texto-fonte em UTF-8 sem BOM, quebras LF.** Os offsets das codificações contam
-   caracteres sobre esse texto exato — um BOM desalinha todas as marcações.
-2. **Zero perda de texto.** Concatenar os nós de um `doc.json` reconstrói integralmente o
-   `.txt`, carácter a carácter.
-3. **O pipeline não conhece temas.** Um tema novo é um ficheiro YAML em `codebooks/`,
-   nunca uma alteração ao código.
+```bash
+python -m venv .venv
+.venv/bin/python -m pip install -e .
+```
 
-## Privacidade e funcionamento offline
+No Windows substituir `.venv/bin/python` por `.venv\Scripts\python.exe`.
+Docling é a dependência principal; os seus modelos precisam de estar disponíveis
+localmente ou de ser descarregados na primeira utilização. O conteúdo dos PDFs é
+processado na máquina, com serviços remotos e plugins externos desativados.
 
-A aplicação corre inteiramente na máquina local. A instalação base não faz pedidos de
-rede em operação. Há três exceções, todas opcionais, todas desligadas por omissão e
-confinadas a um módulo:
+## Utilizar
 
-- **Docling** (extrator alternativo): pode descarregar modelos na primeira execução;
-  pré-instalável para funcionamento offline em rede fechada.
-- **camada semântica**: fala com um modelo de linguagem em `localhost` (por exemplo, LM
-  Studio) — dentro da própria máquina, nunca para o exterior; o código recusa URLs que
-  não sejam de loopback ([ADR-0006](docs/adr/0006-semantica-llm-local-desligada-por-omissao.md),
-  [ADR-0012](docs/adr/0012-modelos-locais-obrigatorios.md)).
-- **recolha do BTE**: descarrega documentos públicos de `bte.dgcp.mtsss.gov.pt`, só com
-  `--confirmar-rede`, só a partir das ligações que constam dos índices fornecidos pela
-  DGERT, e só para anfitriões de uma lista fechada
-  ([ADR-0015](docs/adr/0015-recolha-em-rede-desligada-por-omissao.md)).
+Interface gráfica (requer Tkinter, incluído em muitas distribuições de Python):
 
-Em nenhum dos casos são enviados dados do CRL para o exterior.
+```bash
+.venv/bin/python -m crl_markdown.app
+```
 
-## Licença e citação
+Conversão individual ou de uma pasta, incluindo subpastas:
 
-Trabalho pessoal de António Fula, oferecido para uso do CRL sem lhe atribuir a
-titularidade. Dedicado ao domínio público — ver [LICENSE](LICENSE): pode ser usado,
-copiado, modificado e distribuído por qualquer pessoa ou entidade, para qualquer fim,
-sem restrições e sem necessidade de atribuição. Citação disponível, mas opcional, em
-[CITATION.cff](CITATION.cff).
+```bash
+.venv/bin/python -m crl_markdown convert documento.pdf --out results
+.venv/bin/python -m crl_markdown convert data/pdfs --out results
+```
+
+O Docling utiliza reconhecimento de tabelas em modo `ACCURATE`. O OCR está
+desligado por omissão para PDFs com camada textual; usar `--ocr` para documentos
+digitalizados. `--timeout 900` define o limite por documento em segundos.
+
+Com modelos já preparados, sem descarregamentos:
+
+```bash
+.venv/bin/python -m crl_markdown convert data/pdfs --out results \
+  --models /caminho/modelos-docling --offline
+```
+
+Uma corrida produz, preservando as subpastas da entrada:
+
+```text
+results/documento.md                         ← importar este no MAXQDA
+results/_auditoria/documento.docling.md      ← exportação original para comparação
+results/_auditoria/documento.qualidade.json  ← alertas, versões e hashes SHA-256
+```
+
+O comando recusa substituir saídas existentes. Usar `--overwrite` para uma nova
+extração. PDFs com nomes que colidem são rejeitados antes da conversão. Uma falha
+num PDF não impede a conversão dos restantes; aparece no terminal e causa saída 1.
+Conversões parciais do Docling são tratadas como falhas, sem publicar um documento
+incompleto. PDFs com problemas estruturais podem gerar Markdown para revisão;
+o relatório identifica esses problemas e o comando termina com saída 1.
+
+## Estrutura e linting
+
+A exportação usa diretamente `DoclingDocument.export_to_markdown()`, evitando a
+conversão para texto plano do projeto original. O normalizador insere espaços
+entre títulos e tabelas, elimina linhas em branco redundantes e alinha tabelas
+regulares com pipes. Preserva conteúdo, acentos, montantes, números de cláusulas,
+alíneas, quebras explícitas de linha e blocos de código. Não inventa cabeçalhos nem
+renumera listas. Se não houver título de nível 1, acrescenta o nome do ficheiro
+como título de identificação e regista essa operação no relatório. Substitui
+tabulações por espaços fora de blocos de código. Tabelas irregulares ficam
+intactas e são sinalizadas.
+
+O validador Python usa um parser CommonMark com suporte de tabelas para detetar
+saltos de títulos, tabelas irregulares, HTML, imagens sem transcrição, caracteres
+Unicode danificados e extrações vazias. Não é uma implementação completa de
+markdownlint. Para a verificação completa das regras selecionadas, usa-se
+**markdownlint-cli2**, com a configuração versionada neste repositório:
+
+```bash
+.venv/bin/python -m crl_markdown lint results
+npm ci
+npx markdownlint-cli2 'results/**/*.md'
+```
+
+As regras verificam títulos, espaçamento, HTML e integridade/alinhamento de tabelas
+(MD055/MD056/MD058/MD060). Não impõem comprimento máximo de linhas, títulos únicos
+ou sequência de numeração: esses requisitos poderiam contrariar documentos
+extraídos de convenções. `<br>` é permitido pelo markdownlint, mas sinalizado pelo
+validador Python para conferir a sua importação. Código sem linguagem e títulos
+repetidos são aceites porque podem fazer parte do documento de origem.
+
+Por omissão, avisos permitem saída 0; erros de estrutura e falhas dão saída 1.
+`--strict` faz também os avisos produzirem saída 2. `sem_alertas_automaticos`
+significa apenas que as verificações passaram, não certifica a fidelidade ao PDF.
+Os relatórios guardam a exportação original e os hashes para ajudar a revisão.
+
+## Conferir no MAXQDA
+
+Importar apenas os `.md` finais, excluindo a pasta `_auditoria`. Conferir a ordem
+de leitura, as cláusulas e os valores das tabelas contra o PDF. Tabelas com células
+unidas não têm representação equivalente em tabelas Markdown simples: o Docling
+achata-as e o relatório marca `TABLE_SPAN`. Tabelas largas recebem `TABLE_WIDE`.
+Figuras sem texto recebem `IMAGE`. Estes casos requerem revisão humana.
+
+A validação automática verifica a estrutura Markdown; a legibilidade final
+depende da versão e do importador do MAXQDA. O exemplo fictício em
+`examples/documento.md` permite testar títulos, listas e uma tabela simples.
+
+## Desenvolvimento
+
+```bash
+.venv/bin/python -m pip install -e '.[dev]'
+.venv/bin/python -m pytest
+ruff check src tests
+npm ci
+npm run lint:md
+```
+
+O CI testa Linux, Windows e macOS sem descarregar modelos, incluindo o contrato
+com os objetos reais do `docling-core`. O teste de conversão de PDF com modelos
+é opt-in: `CRL_TEST_MODELS=/caminho/modelos-docling python -m pytest`.
+
+Referências: [exportação Docling](https://docling-project.github.io/docling/usage/),
+[opções de extração](https://github.com/docling-project/docling/blob/main/docs/usage/advanced_options.md),
+[regras markdownlint](https://github.com/DavidAnson/markdownlint/blob/main/doc/Rules.md).

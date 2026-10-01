@@ -1,61 +1,34 @@
 [project]
-name = "appcct"
-version = "0.5.0"
-description = "Pré-codificação de convenções coletivas de trabalho para o MaxQDA (REFI-QDA)"
-readme = "README.md"
+name = "crl-pdf-markdown"
+version = "0.1.0"
+description = "PDF → Docling → Markdown para importação no MAXQDA"
 requires-python = ">=3.11"
-license = { file = "LICENSE" }
-authors = [{ name = "António Fula", email = "antonio.fula@gmail.com" }]
-keywords = ["negociação coletiva", "REFI-QDA", "MaxQDA", "análise qualitativa"]
-dependencies = [
-    "pdfplumber>=0.11",
-    "openpyxl>=3.1",
-    "pyyaml>=6.0",
-    "jsonschema>=4.0",
-]
+readme = "README.md"
+license = {file = "LICENSE"}
+authors = [{name = "António Fula"}]
+dependencies = ["docling>=2.128,<3", "markdown-it-py>=3,<5"]
 
 [project.optional-dependencies]
-dev = ["pytest>=8.0"]
+dev = ["pytest>=8", "ruff>=0.11"]
 
 [project.scripts]
-appcct = "cct.app:main"
+crl-md = "crl_markdown.cli:main"
+crl-md-app = "crl_markdown.app:main"
 
 [build-system]
 requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
-[tool.setuptools]
-packages = ["cct"]
+[tool.setuptools.packages.find]
+where = ["src"]
 
-# A configuração do pytest continua em pytest.ini, para que
-# `python -m pytest` funcione sem instalar o pacote.
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
 
-# Issue #27: lint no CI. As regras são as por omissão do Ruff (erros de
-# sintaxe, nomes indefinidos, imports não usados, comparações suspeitas),
-# que apontam defeitos e não gosto. Duas exceções deliberadas:
-#   E741  `l` é o nome de linha em todo o projeto (`for l in linhas`); mudá-lo
-#         em 64 sítios não corrige nenhum defeito.
-#   E402  os scripts acrescentam a raiz ao sys.path antes de importar `cct`,
-#         para correrem sem o pacote instalado (instalação offline).
 [tool.ruff]
 target-version = "py311"
+line-length = 100
 
 [tool.ruff.lint]
-ignore = ["E741"]
-
-[tool.ruff.lint.per-file-ignores]
-"scripts/*.py" = ["E402"]
-
-# Issue #27: verificação de tipos no CI, sobre o pacote inteiro, no modo por
-# omissão do mypy (só as funções anotadas são verificadas por dentro). As
-# bibliotecas opcionais ou sem tipos (docling, pdfplumber, yaml) não entram:
-# o contrato com elas está nos testes com objetos falsos.
-[tool.mypy]
-python_version = "3.11"
-ignore_missing_imports = true
-warn_unused_ignores = true
-
-[[tool.mypy.overrides]]
-module = ["yaml", "yaml.*", "pdfplumber", "pdfplumber.*", "docling", "docling.*",
-          "docling_core", "docling_core.*", "openpyxl", "openpyxl.*"]
-ignore_missing_imports = true
+select = ["E4", "E7", "E9", "F", "I"]

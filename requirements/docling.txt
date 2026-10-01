@@ -1,9 +1,0 @@
-# Constraints da integração opcional com o Docling.
-#
-# Só os TIPOS (docling-core, sem PyTorch), que é o que
-# tests/test_docling_integracao.py precisa para confirmar que a forma real
-# dos objectos não mudou. O extrator completo (docling, ~4 GB) continua
-# fora do CI e fora da instalação base — ver requirements.txt.
-#
-#     python -m pip install -r requirements/docling.txt -c requirements/docling.txt
-docling-core==2.97.1
