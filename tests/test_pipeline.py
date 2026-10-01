@@ -129,9 +129,8 @@ def test_cli_lint_exit_codes(tmp_path):
 
 @pytest.mark.skipif(not os.environ.get("CRL_TEST_MODELS"), reason="Modelos locais não indicados")
 def test_real_pdf_conversion(tmp_path):
-    from pdf_fixture import escrever_pdf, grelha
-
     from crl_markdown.pipeline import make_converter
+    from tests.pdf_sintetico import escrever_pdf, grelha
 
     lines = [
         (50, 780, "CONVENCAO DE TESTE"),

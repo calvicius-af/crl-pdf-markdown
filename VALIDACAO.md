@@ -1,34 +1,62 @@
-# Validação inicial — 1 de outubro de 2026
+# Validação de extração e Markdown — 1 de outubro de 2026
 
-Ambiente local: macOS arm64, Python 3.11.16, Docling 2.128.0,
-markdownlint-cli2 0.23.3. Modelos locais; conversão executada em modo offline,
-sem OCR e com reconhecimento de tabelas em modo ACCURATE.
+A versão 0.2 corrige a limitação da primeira validação, que cobria a sintaxe
+Markdown e dois documentos curtos, sem medir a completude do conteúdo.
 
-## Verificações
+## Âmbito
 
-- Testes de estrutura: conteúdo de células, montantes e acentos preservados;
-  escapes, células vazias, alinhamento e blocos de código tratados corretamente.
-- Testes com objetos reais do docling-core: exportação, relatório, recusa de
-  sobrescrita, deteção de células unidas e rejeição de documento vazio.
-- Testes de lote: subpastas preservadas, continuação após uma falha e deteção de
-  colisões de nomes (este último não se aplica a volumes que ignoram maiúsculas).
-- Conversão real de PDF sintético: tabela reconhecida, montantes `1250,00` e
-  `1000,00` presentes no Markdown final. Teste opt-in com modelos locais.
-- Ruff: sem erros. markdownlint: sem problemas no exemplo e nos dois documentos
-  reais após normalização. Esta verificação mede sintaxe e estrutura, não
-  fidelidade documental.
+- Suite: 304 testes aprovados e 6 ignorados (PDFs antigos ausentes e colisões
+  de nomes num volume que não distingue maiúsculas).
+- Onze ficheiros de testes recuperados de crl-app-cct (commit `53fd77c`).
+- Testes novos sobre o Markdown final, conteúdo de tabelas, perda de parágrafos,
+  alteração de montantes, marcadores legais, títulos e preâmbulos.
+- Os 14 PDFs do corpus anterior, com hashes confirmados e uma extração Docling
+  real em modo offline. Reaplicação de regras sobre esses itens guardados, com
+  nova auditoria independente em cada teste.
+- macOS arm64, Python 3.11.16, Docling 2.128.0.
 
-## Documentos reais
+## Corpus real
 
-| Documento do BTE 31/2026 | Páginas | Tabelas | Alertas no relatório final |
-| ------------------------ | ------- | ------- | -------------------------- |
-| CNIS–FNSTFPS, alteração  | 2       | 0       | 2 figuras sem transcrição  |
-| AEVP–FESAHT, alteração   | 3       | 1       | 3 figuras sem transcrição  |
+| ID BTE | Cláusulas | Artigos | Tabelas | Cobertura | Estado  |
+| ------ | --------- | ------- | ------- | --------- | ------- |
+| 377    | 65        | 0       | 9       | 99.752%   | review  |
+| 378    | 2         | 0       | 0       | 100.000%  | review  |
+| 379    | 4         | 0       | 1       | 100.000%  | review  |
+| 380    | 5         | 0       | 3       | 100.000%  | review  |
+| 381    | 73        | 0       | 3       | 99.746%   | review  |
+| 383    | 45        | 0       | 3       | 99.693%   | review  |
+| 384    | 6         | 1       | 5       | 99.565%   | blocked |
+| 385    | 6         | 2       | 6       | 99.636%   | blocked |
+| 386    | 4         | 0       | 3       | 100.000%  | review  |
+| 382    | 82        | 0       | 7       | 99.760%   | blocked |
+| 387    | 0         | 0       | 2       | 99.330%   | blocked |
+| 388    | 0         | 0       | 2       | 99.329%   | blocked |
+| 389    | 0         | 0       | 2       | 99.327%   | blocked |
+| 390    | 0         | 0       | 2       | 99.329%   | blocked |
 
-A tabela AEVP–FESAHT foi exportada com três colunas e onze linhas de dados;
-os grupos I a XI e os valores salariais estão presentes. Não foi feita uma
-verificação célula a célula contra o PDF nem uma importação nesta sessão no
-MAXQDA. A ordem de leitura e as figuras continuam a exigir conferência humana.
+As contagens de cláusulas e anexos coincidem com as expectativas estruturais
+do corpus anterior. As cláusulas são apresentadas com o título unido; os
+preâmbulos e as assinaturas estão identificados. Na IBERCOURIER, os marcadores
+das cláusulas 42.ª/43.ª foram preservados. Na ACIBARCELOS, o título longo da
+68.ª foi preservado. Na APSolutions, recuperou-se a cláusula 33.ª, que o Docling
+tinha confundido com uma tabela.
 
-Os PDFs e as extrações reais permanecem locais, em `results/validacao/`, excluídos
-do Git. O exemplo público em `examples/documento.md` é fictício.
+## Problemas ainda sinalizados
+
+- Empresa Metropolitana: a reconstrução anterior da grelha apagava células
+  com seis montantes. Os textos foram recuperados de `table_cells`; os montantes
+  agora coincidem com o auditor, mas a sobreposição de posições continua a impedir
+  validar a correspondência entre linhas e colunas.
+- AWP e APSolutions: células sobrepostas em grelhas de categorias/funções;
+  conteúdo preservado, posição a conferir.
+- Quatro CARRISTUR: grelhas rodadas com sobreposições e um `1967,00` que aparece
+  como `967,00` noutra posição. Os erros continuam bloqueados.
+- Os restantes documentos mantêm avisos de figuras sem transcrição e, nalguns
+  casos, perdas/excessos residuais de palavras. `review` não significa aprovação
+  de fidelidade ao PDF.
+
+Todos os documentos do corpus passaram nas regras markdownlint selecionadas.
+Isto não remove os bloqueios de extração. O corpus mede a camada textual: não
+comprova por si só o conteúdo de imagens nem a renderização no MAXQDA.
+
+Os PDFs, extrações e diagnósticos reais ficam locais, excluídos do Git.

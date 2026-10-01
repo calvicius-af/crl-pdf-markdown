@@ -1,12 +1,12 @@
 [project]
 name = "crl-pdf-markdown"
-version = "0.1.0"
+version = "0.2.0"
 description = "PDF → Docling → Markdown para importação no MAXQDA"
 requires-python = ">=3.11"
 readme = "README.md"
 license = {file = "LICENSE"}
 authors = [{name = "António Fula"}]
-dependencies = ["docling>=2.128,<3", "markdown-it-py>=3,<5"]
+dependencies = ["docling>=2.128,<3", "markdown-it-py>=3,<5", "pdfplumber>=0.11", "jsonschema>=4"]
 
 [project.optional-dependencies]
 dev = ["pytest>=8", "ruff>=0.11"]
@@ -32,3 +32,7 @@ line-length = 100
 
 [tool.ruff.lint]
 select = ["E4", "E7", "E9", "F", "I"]
+
+[tool.ruff.lint.per-file-ignores]
+"src/crl_markdown/legacy/*.py" = ["I001", "E741"]
+"tests/legacy/*.py" = ["I001", "E402", "E741"]

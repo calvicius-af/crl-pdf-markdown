@@ -3,6 +3,7 @@ import json
 import sys
 from pathlib import Path
 
+from .cache import CachedConverter
 from .pipeline import Options, run
 from .quality import lint
 
@@ -18,6 +19,11 @@ def main(argv=None):
     convert.add_argument("--offline", action="store_true", help="Usar apenas modelos locais")
     convert.add_argument("--timeout", type=float, default=900)
     convert.add_argument("--overwrite", action="store_true")
+    convert.add_argument(
+        "--docling-cache",
+        type=Path,
+        help="Reutilizar uma extração Docling auditada, verificando o hash do PDF",
+    )
     convert.add_argument("--strict", action="store_true", help="Falhar também quando há avisos")
     check = commands.add_parser("lint", help="Validar Markdown existente, sem o modificar")
     check.add_argument("source", type=Path)
@@ -40,6 +46,7 @@ def main(argv=None):
                 args.out,
                 Options(args.ocr, args.models, args.offline, args.timeout),
                 overwrite=args.overwrite,
+                converter=CachedConverter(args.docling_cache) if args.docling_cache else None,
             )
         if any(
             r.get("state") == "falhou"
@@ -47,7 +54,9 @@ def main(argv=None):
             for r in reports
         ):
             return 1
-        if args.strict and any(r.get("findings") for r in reports):
+        if args.strict and any(
+            f["severity"] != "info" for r in reports for f in r.get("findings", [])
+        ):
             return 2
         return 0
     except (ValueError, OSError, ImportError, RuntimeError) as exc:

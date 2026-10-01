@@ -1,0 +1,122 @@
+{
+  "descricao": "PDF reais do BTE usados como corpus de regressão do extrator. Identificados pelo SHA-256; os PDF não são versionados (ADR-0013). Ver cct/corpus.py.",
+  "origem": "corrida de 24-09-2026 sobre o BTE 31/2026 (manifest.json da estação); os URL acrescentam-se com `python -m cct.corpus obter --registo data/registo/registo_bte.jsonl`",
+  "documentos": [
+    {
+      "nome": "2026_BTE_31_PRI_377_CCT_27251_ACRAL-CESP+3",
+      "id": "377/2026",
+      "sha256": "5e777771eb1be27bf399ccda78db2645754d3e1d9832be52a1063963051953fa",
+      "bytes": 1128201,
+      "url": "https://bte.dgcp.mtsss.gov.pt/documentos/2026/31/00260057.pdf",
+      "motivo": "revisão global longa; tabela «Enquadramento das profissões» partida entre páginas sai baralhada, com o cabeçalho do BTE a meio (corrida de 24-09-2026)"
+    },
+    {
+      "nome": "2026_BTE_31_PRI_378_CCT-ALT_26760_CNIS-FNSTFPS",
+      "id": "378/2026",
+      "sha256": "c6aaea0770625ca58492afa131544542c8958798f084de2a03f4a852f3cf5466",
+      "bytes": 833905,
+      "url": "https://bte.dgcp.mtsss.gov.pt/documentos/2026/31/00580059.pdf",
+      "motivo": "alteração curta (2 cláusulas)"
+    },
+    {
+      "nome": "2026_BTE_31_PRI_379_CCT-ALT_26651_AEVP-FESAHT",
+      "id": "379/2026",
+      "sha256": "28022e0f9f39de6e155c1de0a6e537df3f1b8d0866abc601ead6157eac4a5acc",
+      "bytes": 811284,
+      "url": "https://bte.dgcp.mtsss.gov.pt/documentos/2026/31/00600062.pdf",
+      "motivo": "alteração com tabela salarial; controlo positivo da ISSUE-0024"
+    },
+    {
+      "nome": "2026_BTE_31_PRI_380_CCT-ALT_26652_AEVP-FESAHT",
+      "id": "380/2026",
+      "sha256": "8f02228fb6083ed9b7e468c15b420491ad0b1bf96935c10e095feca80292b81a",
+      "bytes": 814673,
+      "url": "https://bte.dgcp.mtsss.gov.pt/documentos/2026/31/00630065.pdf",
+      "motivo": "tabela salarial colapsada numa linha antes do PR #86 (ISSUE-0024)"
+    },
+    {
+      "nome": "2026_BTE_31_PRI_381_CCT-ALT_26957_ACIBARCELOS-IndependenteS+1",
+      "id": "381/2026",
+      "sha256": "9dea68a62ee671d3fc34658501a85061dcd840fa46e1ff59c558a1c7e84728c4",
+      "bytes": 1005272,
+      "url": "https://bte.dgcp.mtsss.gov.pt/documentos/2026/31/00660087.pdf",
+      "motivo": "alteração extensa (73 cláusulas)"
+    },
+    {
+      "nome": "2026_BTE_31_SPE_382_AE_47252_EmpresaMetropolitana-SINTAP",
+      "id": "382/2026",
+      "sha256": "883e8e87c32789b4a060c25152a185cb938fabefc311ba5ebb6b20cfeb32f8f2",
+      "bytes": 1133195,
+      "url": "https://bte.dgcp.mtsss.gov.pt/documentos/2026/31/00880122.pdf",
+      "motivo": "acordo de empresa com tabelas rodadas 90º na página 34"
+    },
+    {
+      "nome": "2026_BTE_31_PRI_383_AE_47253_IBERCOURIER-SNTCT",
+      "id": "383/2026",
+      "sha256": "869817006041398f4e4eca85b56457e2579fd05ddf685393b1dd253534ed4351",
+      "bytes": 908384,
+      "url": "https://bte.dgcp.mtsss.gov.pt/documentos/2026/31/01230135.pdf",
+      "motivo": "acordo de empresa (45 cláusulas) com anexos"
+    },
+    {
+      "nome": "2026_BTE_31_PRI_384_AE-ALT_47120_AWP-STAS",
+      "id": "384/2026",
+      "sha256": "2b0a7a0bdd8598e1183d29e98a663479846041fc858443540e234969f9861174",
+      "bytes": 961663,
+      "url": "https://bte.dgcp.mtsss.gov.pt/documentos/2026/31/01360149.pdf",
+      "motivo": "grelhas largas divididas pela heurística de duas colunas (ISSUE-0024); artigo 1.º que anuncia cláusulas (ISSUE-0023)"
+    },
+    {
+      "nome": "2026_BTE_31_PRI_385_AE-ALT_47140_APSolutionsGMBH-STAS",
+      "id": "385/2026",
+      "sha256": "2cf00a9731320328be6908796f0af11dd6335c4a50927ab66f3b4bd9a3062ddf",
+      "bytes": 938802,
+      "url": "https://bte.dgcp.mtsss.gov.pt/documentos/2026/31/01500163.pdf",
+      "motivo": "igual ao 384, outro outorgante"
+    },
+    {
+      "nome": "2026_BTE_31_PRI_386_AE-ALT_46771_COPEFAP-SPGL+2",
+      "id": "386/2026",
+      "sha256": "f037d790adebfc128ef7c2580b69c4c895fd73cb433813cebfc80b89ab5b362c",
+      "bytes": 818212,
+      "url": "https://bte.dgcp.mtsss.gov.pt/documentos/2026/31/01640167.pdf",
+      "motivo": "anexos III e IV com tabelas consecutivas (ISSUE-0024)"
+    },
+    {
+      "nome": "2026_BTE_31_SPE_387_AE-ALT-RECT_47109_CARRISTUR-ASPTC",
+      "id": "387/2026",
+      "sha256": "2c0846b9cf2a96808b949fb67e69db66815eeb99d95f8199516d7f7914ab32cd",
+      "bytes": 846495,
+      "url": "https://bte.dgcp.mtsss.gov.pt/documentos/2026/31/01680170.pdf",
+      "motivo": "retificação sem articulado, tabelas rodadas (ISSUE-0014, ISSUE-0020)",
+      "subtipo": "retificacao"
+    },
+    {
+      "nome": "2026_BTE_31_SPE_388_AE-ALT-RECT_47126_CARRISTUR-FECTRANS",
+      "id": "388/2026",
+      "sha256": "63b0eda891a52eaf72392afa30ccdb97a8175a260674baa61db056ea5ddff51f",
+      "bytes": 846501,
+      "url": "https://bte.dgcp.mtsss.gov.pt/documentos/2026/31/01710173.pdf",
+      "motivo": "retificação sem articulado, tabelas rodadas",
+      "subtipo": "retificacao"
+    },
+    {
+      "nome": "2026_BTE_31_SPE_389_AE-ALT-RECT_47110_CARRISTUR-SITRA",
+      "id": "389/2026",
+      "sha256": "245990715a35b3e56dbbff1d0c613f7275b1a98254260b11fc68c09a52dfba03",
+      "bytes": 846474,
+      "url": "https://bte.dgcp.mtsss.gov.pt/documentos/2026/31/01740176.pdf",
+      "motivo": "retificação sem articulado, tabelas rodadas",
+      "subtipo": "retificacao"
+    },
+    {
+      "nome": "2026_BTE_31_SPE_390_AE-ALT-RECT_47111_CARRISTUR-SNMOT",
+      "id": "390/2026",
+      "sha256": "7e4a551c7c057cd547d7399d8e67868784718164060ad5643dacc0044bef6746",
+      "bytes": 846421,
+      "url": "https://bte.dgcp.mtsss.gov.pt/documentos/2026/31/01770179.pdf",
+      "motivo": "retificação sem articulado, tabelas rodadas",
+      "subtipo": "retificacao"
+    }
+  ]
+}

@@ -80,3 +80,10 @@ def test_alignment_and_empty_cells_preserved():
     assert cells(result.splitlines()[2]) == ["", "0"]
     assert cells(result.splitlines()[1])[0].startswith(":")
     assert cells(result.splitlines()[1])[1].endswith(":")
+
+
+def test_legal_readability_regressions_also_detected_on_existing_markdown():
+    assert "LEGAL_LIST_BULLET" in rules("- 2Sem prejuízo dos direitos.\n")
+    assert "LEGAL_LIST_BULLET" in rules("- g) Direito a férias.\n")
+    assert "CLAUSE_TITLE_SPLIT" in rules("**Cláusula 1.ª**\n\nÁrea e âmbito\n")
+    assert "CLAUSE_TITLE_SPLIT" not in rules("## Cláusula 1.ª - Área e âmbito\n\n1- Aplica-se a todos.\n")

@@ -1,0 +1,72 @@
+{
+  "2026_BTE_31_PRI_377_CCT_27251_ACRAL-CESP+3": {
+    "clauses": 65,
+    "annexes": 4,
+    "minimum_coverage": 0.995
+  },
+  "2026_BTE_31_PRI_378_CCT-ALT_26760_CNIS-FNSTFPS": {
+    "clauses": 2,
+    "annexes": 0,
+    "minimum_coverage": 0.995
+  },
+  "2026_BTE_31_PRI_379_CCT-ALT_26651_AEVP-FESAHT": {
+    "clauses": 4,
+    "annexes": 1,
+    "minimum_coverage": 0.995
+  },
+  "2026_BTE_31_PRI_380_CCT-ALT_26652_AEVP-FESAHT": {
+    "clauses": 5,
+    "annexes": 1,
+    "minimum_coverage": 0.995
+  },
+  "2026_BTE_31_PRI_381_CCT-ALT_26957_ACIBARCELOS-IndependenteS+1": {
+    "clauses": 73,
+    "annexes": 3,
+    "minimum_coverage": 0.995
+  },
+  "2026_BTE_31_SPE_382_AE_47252_EmpresaMetropolitana-SINTAP": {
+    "clauses": 82,
+    "annexes": 3,
+    "minimum_coverage": 0.995
+  },
+  "2026_BTE_31_PRI_383_AE_47253_IBERCOURIER-SNTCT": {
+    "clauses": 45,
+    "annexes": 2,
+    "minimum_coverage": 0.995
+  },
+  "2026_BTE_31_PRI_384_AE-ALT_47120_AWP-STAS": {
+    "clauses": 6,
+    "annexes": 3,
+    "minimum_coverage": 0.995
+  },
+  "2026_BTE_31_PRI_385_AE-ALT_47140_APSolutionsGMBH-STAS": {
+    "clauses": 6,
+    "annexes": 3,
+    "minimum_coverage": 0.995
+  },
+  "2026_BTE_31_PRI_386_AE-ALT_46771_COPEFAP-SPGL+2": {
+    "clauses": 4,
+    "annexes": 2,
+    "minimum_coverage": 0.995
+  },
+  "2026_BTE_31_SPE_387_AE-ALT-RECT_47109_CARRISTUR-ASPTC": {
+    "clauses": 0,
+    "annexes": 0,
+    "minimum_coverage": 0.9905
+  },
+  "2026_BTE_31_SPE_388_AE-ALT-RECT_47126_CARRISTUR-FECTRANS": {
+    "clauses": 0,
+    "annexes": 0,
+    "minimum_coverage": 0.9905
+  },
+  "2026_BTE_31_SPE_389_AE-ALT-RECT_47110_CARRISTUR-SITRA": {
+    "clauses": 0,
+    "annexes": 0,
+    "minimum_coverage": 0.9905
+  },
+  "2026_BTE_31_SPE_390_AE-ALT-RECT_47111_CARRISTUR-SNMOT": {
+    "clauses": 0,
+    "annexes": 0,
+    "minimum_coverage": 0.9905
+  }
+}

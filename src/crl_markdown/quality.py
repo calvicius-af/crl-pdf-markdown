@@ -97,6 +97,8 @@ def normalize(markdown: str) -> str:
 
 
 def lint(markdown: str) -> list[Finding]:
+    from .legacy.extractor import RE_ARTIGO, RE_CLAUSULA, _titulo_candidato
+
     lines = markdown.splitlines()
     tokens = parser().parse(markdown)
     findings = []
@@ -158,6 +160,17 @@ def lint(markdown: str) -> list[Finding]:
     for index, line in enumerate(lines):
         if index in protected:
             continue
+        if index not in tables and re.match(
+            r"^\s*[-*+•]\s+(?:\d+(?:\s*[-–—.)]|[A-ZÀ-Ú])|[a-zà-ú]\))", line
+        ):
+            findings.append(
+                Finding(
+                    "LEGAL_LIST_BULLET",
+                    index + 1,
+                    "Bala acrescentada por cima de número/alínea legal.",
+                    "error",
+                )
+            )
         if index not in tables and re.match(r"^\s*\|.*\|\s*$", line):
             findings.append(
                 Finding(
@@ -173,4 +186,21 @@ def lint(markdown: str) -> list[Finding]:
             )
         if "<!-- image -->" in line:
             findings.append(Finding("IMAGE", index + 1, "Figura do PDF sem transcrição textual."))
+    inline = [token for token in tokens if token.type == "inline" and token.level <= 1]
+    for index, token in enumerate(inline[:-1]):
+        visible = "".join(child.content for child in token.children or [] if child.type == "text")
+        match = RE_CLAUSULA.match(visible) or RE_ARTIGO.match(visible)
+        if match and not match.group(2).strip(" -–—:"):
+            following = inline[index + 1]
+            title = "".join(
+                child.content for child in following.children or [] if child.type == "text"
+            )
+            if _titulo_candidato(title):
+                findings.append(
+                    Finding(
+                        "CLAUSE_TITLE_SPLIT",
+                        token.map[0] + 1,
+                        "Referência e título da cláusula/artigo estão separados.",
+                    )
+                )
     return findings

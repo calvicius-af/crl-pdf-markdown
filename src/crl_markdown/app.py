@@ -74,11 +74,12 @@ def main():
                 )
                 failed = sum(r["state"] == "falhou" for r in reports)
                 review = sum(r["state"] == "rever" for r in reports)
+                blocked = sum(r.get("quality_status") == "blocked" for r in reports)
                 events.put(
                     (
                         "log",
                         f"Concluído: {len(reports) - failed} convertidos, "
-                        f"{review} para rever, {failed} falhas. Ver _auditoria.",
+                        f"{review} para rever ({blocked} bloqueados), {failed} falhas. Ver _auditoria.",
                     )
                 )
             except Exception as exc:

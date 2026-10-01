@@ -8,7 +8,9 @@ from dataclasses import asdict, dataclass
 from importlib.metadata import version
 from pathlib import Path
 
-from .quality import Finding, lint, normalize, parser
+from .audit import audit_pdf
+from .document import plain_markdown, prepare
+from .quality import lint, parser
 
 
 @dataclass(frozen=True)
@@ -84,16 +86,25 @@ def convert_pdf(
 ) -> dict:
     raw_target = target.parent / "_auditoria" / (target.stem + ".docling.md")
     report_target = target.parent / "_auditoria" / (target.stem + ".qualidade.json")
-    if not overwrite and any(p.exists() for p in (target, raw_target, report_target)):
+    if not overwrite and any(
+        p.exists()
+        for p in (
+            target,
+            raw_target,
+            report_target,
+            raw_target.with_suffix(".json"),
+            report_target.with_suffix(".md"),
+        )
+    ):
         raise FileExistsError(f"Saída já existente: {target}; usar --overwrite para substituir.")
     result = converter.convert(pdf)
     status = getattr(result.status, "value", str(result.status))
     if status != "success":
         raise RuntimeError(f"Conversão incompleta ({status}): {pdf.name}")
     raw = result.document.export_to_markdown(image_placeholder="<!-- image -->")
-    markdown = normalize(raw)
-    if any(finding.rule == "EMPTY" for finding in lint(markdown)):
-        raise RuntimeError("Docling não extraiu texto nem tabelas.")
+    subtype = "retificacao" if "-RECT_" in pdf.stem.upper() else "desconhecido"
+    prepared = prepare(result.document, pdf.stem, subtype=subtype)
+    markdown = prepared.markdown
     title_added = not any(
         token.type == "heading_open" and token.tag == "h1" for token in parser().parse(markdown)
     )
@@ -102,33 +113,60 @@ def convert_pdf(
         # Nome de ficheiro usado como texto, sem permitir sintaxe Markdown.
         for char in "\\`*_{}[]<>()#!|":
             title = title.replace(char, "\\" + char)
-        markdown = "# " + title.replace("\n", " ").replace("\r", " ") + "\n\n" + markdown
-    findings = lint(markdown)
-    for index, table in enumerate(result.document.tables, 1):
-        if any(cell.row_span > 1 or cell.col_span > 1 for cell in table.data.table_cells):
-            findings.append(
-                Finding(
-                    "TABLE_SPAN",
-                    0,
-                    f"Tabela {index}: células unidas foram achatadas pelo Docling; "
-                    "comparar os cabeçalhos e os valores com o PDF.",
-                )
-            )
-    state = "rever" if findings else "sem_alertas_automaticos"
+        heading = "# " + title.replace("\n", " ").replace("\r", " ")
+        markdown = heading + "\n\n" + markdown
+        prepared.generated_headings.append(heading)
+    findings = lint(markdown) + prepared.findings
+    audit, audit_findings, diagnostic = audit_pdf(
+        pdf,
+        plain_markdown(markdown, prepared.generated_headings),
+        prepared.structure,
+        prepared.structured_text,
+        prepared.tables,
+    )
+    findings.extend(audit_findings)
+    state = "rever" if any(f.severity != "info" for f in findings) else "sem_alertas_automaticos"
+    document_json = json.dumps(result.document.export_to_dict(), ensure_ascii=False) + "\n"
     report = {
         "source": str(pdf.resolve()),
         "source_sha256": hashlib.sha256(pdf.read_bytes()).hexdigest(),
         "markdown_sha256": hashlib.sha256(markdown.encode("utf-8")).hexdigest(),
-        "docling_version": version("docling"),
-        "options": {**asdict(options), "models": str(options.models) if options.models else None},
+        "docling_version": getattr(converter, "docling_version", None) or version("docling"),
+        "docling_document_sha256": hashlib.sha256(document_json.encode("utf-8")).hexdigest(),
+        "cached_extraction": hasattr(converter, "extraction_options"),
+        "options": getattr(converter, "extraction_options", None)
+        or {**asdict(options), "models": str(options.models) if options.models else None},
         "state": state,
+        "quality_status": "blocked"
+        if any(f.severity == "error" for f in findings)
+        else "review"
+        if state == "rever"
+        else "passed",
         "pages": len(result.document.pages),
         "tables": len(result.document.tables),
         "title_from_filename": title_added,
+        "structure": {
+            "clauses": sum(n["tipo"] == "clausula" for n in prepared.structure["nos"]),
+            "articles": sum(n["tipo"] == "artigo" for n in prepared.structure["nos"]),
+            "annexes": sum(n["tipo"] == "anexo" for n in prepared.structure["nos"]),
+            "preambles": sum(n["tipo"] == "preambulo" for n in prepared.structure["nos"]),
+            "reordered_by_geometry": prepared.reordered,
+            "labels": [
+                n["rotulo"]
+                for n in prepared.structure["nos"]
+                if n["tipo"] in {"clausula", "artigo", "anexo", "capitulo", "seccao"}
+            ],
+        },
+        "completeness": audit,
         "findings": [finding.to_dict() for finding in findings],
     }
     atomic_write(raw_target, raw)
     atomic_write(report_target, json.dumps(report, ensure_ascii=False, indent=2) + "\n")
+    atomic_write(report_target.with_suffix(".md"), diagnostic)
+    atomic_write(
+        raw_target.with_suffix(".json"),
+        document_json,
+    )
     atomic_write(target, markdown)
     return report
 

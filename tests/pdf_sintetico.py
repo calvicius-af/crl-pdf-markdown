@@ -16,15 +16,15 @@ com a matriz desviada uns centésimos, como metade das páginas do TINITA de
 como os esquemas das carreiras do CARRIS de 2025; `grelha()` desenha os traços
 de uma tabela.
 """
-
 from pathlib import Path
 
-LARGURA, ALTURA = 595, 842  # A4, em pontos
+LARGURA, ALTURA = 595, 842          # A4, em pontos
 
 
 def _escapar(texto: str) -> bytes:
     bruto = texto.encode("cp1252")
-    return bruto.replace(b"\\", b"\\\\").replace(b"(", b"\\(").replace(b")", b"\\)")
+    return (bruto.replace(b"\\", b"\\\\").replace(b"(", b"\\(")
+            .replace(b")", b"\\)"))
 
 
 def _conteudo(linhas: list[tuple]) -> bytes:
@@ -39,19 +39,13 @@ def _conteudo(linhas: list[tuple]) -> bytes:
     for item in linhas:
         if item[0] == "recortado":
             _, x, y, texto, (x0, y0, x1, y1) = item
-            blocos.append(
-                b"q %.1f %.1f %.1f %.1f re W n BT /F1 10 Tf 1 0 0 1 %.1f %.1f Tm ("
-                % (x0, y0, x1 - x0, y1 - y0, x, y)
-                + _escapar(texto)
-                + b") Tj ET Q"
-            )
+            blocos.append(b"q %.1f %.1f %.1f %.1f re W n BT /F1 10 Tf 1 0 0 1 %.1f %.1f Tm ("
+                          % (x0, y0, x1 - x0, y1 - y0, x, y) + _escapar(texto) + b") Tj ET Q")
             continue
         if item[0] == "imagem":
             _, x, y, w, h = item
-            tracos.append(
-                b"q %.1f 0 0 %.1f %.1f %.1f cm BI /W 1 /H 1 /CS /G /BPC 8 ID \x80 EI Q"
-                % (w, h, x, y)
-            )
+            tracos.append(b"q %.1f 0 0 %.1f %.1f %.1f cm BI /W 1 /H 1 /CS /G /BPC 8 ID \x80 EI Q"
+                          % (w, h, x, y))
             continue
         if item[0] == "traco":
             _, x0, y0, x1, y1 = item
@@ -59,24 +53,19 @@ def _conteudo(linhas: list[tuple]) -> bytes:
             continue
         x, y, texto, *modo = item
         if modo and modo[0] == "times":
-            partes.append(
-                b"/F2 10 Tf 1 0 0 1 %.1f %.1f Tm (" % (x, y) + _escapar(texto) + b") Tj /F1 10 Tf"
-            )
+            partes.append(b"/F2 10 Tf 1 0 0 1 %.1f %.1f Tm (" % (x, y) + _escapar(texto)
+                          + b") Tj /F1 10 Tf")
             continue
-        matriz = {
-            "rodado": b"0 1 -1 0",
-            "rodado_horario": b"0 -1 1 0",
-            "quase_rodado": b"0.001 1 -1 0.001",
-            "virado": b"-1 0 0 -1",
-        }.get(modo[0] if modo else "", b"1 0 0 1")
+        matriz = {"rodado": b"0 1 -1 0", "rodado_horario": b"0 -1 1 0",
+                  "quase_rodado": b"0.001 1 -1 0.001", "virado": b"-1 0 0 -1"}.get(
+            modo[0] if modo else "", b"1 0 0 1")
         partes.append(matriz + b" %.1f %.1f Tm (" % (x, y) + _escapar(texto) + b") Tj")
     partes.append(b"ET")
     return b"\n".join(tracos + partes + blocos)
 
 
-def grelha(
-    x0: float, y0: float, larguras: list[float], alturas: list[float], desvio: float = 0.0
-) -> list[tuple]:
+def grelha(x0: float, y0: float, larguras: list[float], alturas: list[float],
+           desvio: float = 0.0) -> list[tuple]:
     """Traços de uma grelha com o canto inferior esquerdo em (x0, y0).
 
     Com `desvio`, cada traço fica torto por essa distância de uma ponta à
@@ -103,30 +92,24 @@ def escrever_pdf(destino: Path, paginas: list[list[tuple]]) -> Path:
         objetos.append(corpo)
         return len(objetos)
 
-    catalogo = novo(b"")  # preenchidos no fim
+    catalogo = novo(b"")                     # preenchidos no fim
     arvore = novo(b"")
-    times = novo(
-        b"<< /Type /Font /Subtype /Type1 /BaseFont /Times-Roman /Encoding /WinAnsiEncoding >>"
-    )
-    fonte = novo(
-        b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>"
-    )
+    times = novo(b"<< /Type /Font /Subtype /Type1 /BaseFont /Times-Roman "
+                 b"/Encoding /WinAnsiEncoding >>")
+    fonte = novo(b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica "
+                 b"/Encoding /WinAnsiEncoding >>")
     folhas = []
     for linhas in paginas:
         conteudo = _conteudo(linhas)
-        fluxo = novo(b"<< /Length %d >>\nstream\n" % len(conteudo) + conteudo + b"\nendstream")
-        folhas.append(
-            novo(
-                b"<< /Type /Page /Parent %d 0 R /MediaBox [0 0 %d %d] "
-                b"/Resources << /Font << /F1 %d 0 R /F2 %d 0 R >> >> /Contents %d 0 R >>"
-                % (arvore, LARGURA, ALTURA, fonte, times, fluxo)
-            )
-        )
+        fluxo = novo(b"<< /Length %d >>\nstream\n" % len(conteudo) + conteudo
+                     + b"\nendstream")
+        folhas.append(novo(
+            b"<< /Type /Page /Parent %d 0 R /MediaBox [0 0 %d %d] "
+            b"/Resources << /Font << /F1 %d 0 R /F2 %d 0 R >> >> /Contents %d 0 R >>"
+            % (arvore, LARGURA, ALTURA, fonte, times, fluxo)))
     objetos[catalogo - 1] = b"<< /Type /Catalog /Pages %d 0 R >>" % arvore
-    objetos[arvore - 1] = b"<< /Type /Pages /Kids [%s] /Count %d >>" % (
-        b" ".join(b"%d 0 R" % f for f in folhas),
-        len(folhas),
-    )
+    objetos[arvore - 1] = (b"<< /Type /Pages /Kids [%s] /Count %d >>"
+                           % (b" ".join(b"%d 0 R" % f for f in folhas), len(folhas)))
 
     saida = bytearray(b"%PDF-1.4\n")
     posicoes = []
@@ -136,11 +119,8 @@ def escrever_pdf(destino: Path, paginas: list[list[tuple]]) -> Path:
     xref = len(saida)
     saida += b"xref\n0 %d\n0000000000 65535 f \n" % (len(objetos) + 1)
     saida += b"".join(b"%010d 00000 n \n" % p for p in posicoes)
-    saida += b"trailer\n<< /Size %d /Root %d 0 R >>\nstartxref\n%d\n%%%%EOF\n" % (
-        len(objetos) + 1,
-        catalogo,
-        xref,
-    )
+    saida += (b"trailer\n<< /Size %d /Root %d 0 R >>\nstartxref\n%d\n%%%%EOF\n"
+              % (len(objetos) + 1, catalogo, xref))
     Path(destino).write_bytes(bytes(saida))
     return Path(destino)
 
