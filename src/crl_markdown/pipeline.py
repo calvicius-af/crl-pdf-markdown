@@ -11,6 +11,7 @@ from pathlib import Path
 from .audit import audit_pdf
 from .document import plain_markdown, prepare
 from .quality import lint, parser
+from .report import new_manifest, write_reports
 
 
 @dataclass(frozen=True)
@@ -129,6 +130,7 @@ def convert_pdf(
     document_json = json.dumps(result.document.export_to_dict(), ensure_ascii=False) + "\n"
     report = {
         "source": str(pdf.resolve()),
+        "output": str(target.resolve()),
         "source_sha256": hashlib.sha256(pdf.read_bytes()).hexdigest(),
         "markdown_sha256": hashlib.sha256(markdown.encode("utf-8")).hexdigest(),
         "docling_version": getattr(converter, "docling_version", None) or version("docling"),
@@ -183,14 +185,40 @@ def run(
         raise ValueError("PDFs com nomes que colidem na saída Markdown.")
     if any("_auditoria" in relative.parts for _, relative in entries):
         raise ValueError("O nome _auditoria está reservado para os relatórios.")
-    converter = converter if converter is not None else make_converter(options)
+    manifest = new_manifest(
+        source,
+        output,
+        entries,
+        {
+            **asdict(options),
+            "models": str(options.models) if options.models else None,
+            "overwrite": overwrite,
+        },
+    )
     reports = []
-    for index, (pdf, relative) in enumerate(entries, 1):
-        progress(f"[{index}/{len(entries)}] {pdf.name}")
-        try:
-            report = convert_pdf(pdf, output / relative, converter, options, overwrite)
-        except Exception as exc:
-            report = {"source": str(pdf), "state": "falhou", "error": str(exc)}
-        reports.append(report)
-        progress(f"  {report['state']}" + (f": {report['error']}" if "error" in report else ""))
+    manifest["status"] = "interrompida"
+    try:
+        converter = converter if converter is not None else make_converter(options)
+        for index, (pdf, relative) in enumerate(entries, 1):
+            progress(f"[{index}/{len(entries)}] {pdf.name}")
+            try:
+                report = convert_pdf(pdf, output / relative, converter, options, overwrite)
+            except Exception as exc:
+                report = {
+                    "source": str(pdf.resolve()),
+                    "state": "falhou",
+                    "error": str(exc),
+                    "error_type": type(exc).__name__,
+                }
+            report = {**manifest["documents"][index - 1], **report}
+            manifest["documents"][index - 1] = report
+            reports.append(report)
+            progress(f"  {report['state']}" + (f": {report['error']}" if "error" in report else ""))
+        manifest["status"] = "concluida"
+    except BaseException as exc:
+        manifest["error"] = f"{type(exc).__name__}: {exc}"
+        raise
+    finally:
+        report_path = write_reports(manifest, output, atomic_write)
+        progress(f"Relatório consolidado: {report_path.resolve()}")
     return reports

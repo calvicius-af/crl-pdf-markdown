@@ -95,10 +95,41 @@ validada. O Markdown continua disponível como rascunho para conferência, e o
 comando termina com código 1 quando existem erros. `--strict` também faz os avisos devolverem código 2.
 Informações sobre retificações legítimas não contam como falhas.
 
+## Relatório consolidado por corrida
+
+Todas as execuções, pela linha de comandos ou pela interface gráfica, produzem
+um relatório do lote em `_auditoria/diagnostico.md`. A interface inclui o botão
+**Abrir relatório do lote**; a linha de comandos mostra o caminho no fim.
+
+- Índice de todos os PDFs, incluindo subpastas, com estado, cobertura, ordem de
+  leitura, número de tabelas e contagem de erros e avisos.
+- Resumo das regras acionadas e número de documentos afetados.
+- Todas as ocorrências por documento, com gravidade, regra, linha e mensagem.
+  Os documentos bloqueados e as falhas aparecem primeiro no diagnóstico.
+- Evidências de completude: palavras e montantes em falta ou excedentes,
+  trechos e contextos, perdas por página, referências alternativas, resíduos
+  e palavras invertidas, mesmo quando o veredicto global é `OK`.
+- Falhas de conversão e documentos não processados numa execução interrompida,
+  sem apresentar um Markdown antigo como resultado da tentativa atual.
+- Hashes, versões, opções e indicação de reutilização da extração Docling.
+
+`relatorio.txt` conserva o inventário de ocorrências para pesquisa rápida;
+`manifest.json` conserva os dados completos de todos os documentos e as datas UTC.
+Cada corrida fica arquivada em `_auditoria/corridas/<id>/`, enquanto os três
+ficheiros diretamente em `_auditoria/` correspondem à corrida mais recente.
+Uma nova corrida conserva os relatórios anteriores; os documentos e as auditorias
+individuais podem ser substituídos com `--overwrite`, por isso os links dos
+relatórios antigos podem apontar para ficheiros entretanto atualizados. Os hashes
+arquivados permitem identificar essa diferença.
+
 ## Saídas e nova renderização
 
 ```text
 results/documento.md                         ← documento para conferência/importação
+results/_auditoria/diagnostico.md             ← relatório detalhado do lote
+results/_auditoria/relatorio.txt              ← inventário de todas as ocorrências
+results/_auditoria/manifest.json              ← dados e proveniência da corrida
+results/_auditoria/corridas/<id>/             ← relatórios de corridas anteriores
 results/_auditoria/documento.docling.md      ← exportação Markdown nativa
 results/_auditoria/documento.docling.json    ← itens e geometria Docling
 results/_auditoria/documento.qualidade.json  ← métricas, estrutura, alertas e hashes

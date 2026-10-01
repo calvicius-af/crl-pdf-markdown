@@ -3,6 +3,7 @@
 import queue
 import threading
 import tkinter as tk
+import webbrowser
 from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
 
@@ -55,6 +56,12 @@ def main():
     log = tk.Text(frame, height=10, state="disabled", wrap="word")
     log.pack(fill="both", expand=True)
 
+    report_path = None
+
+    def open_report():
+        if report_path:
+            webbrowser.open(report_path.resolve().as_uri())
+
     def start():
         if not source.get().strip() or not output.get().strip():
             messagebox.showerror("Campos em falta", "Escolhe a entrada e a pasta de saída.")
@@ -65,7 +72,10 @@ def main():
             Options(ocr.get(), Path(models.get()) if models.get() else None, offline.get()),
         )
         replace = overwrite.get()
+        previous_manifest = args[1] / "_auditoria" / "manifest.json"
+        previous_run = previous_manifest.read_bytes() if previous_manifest.exists() else None
         button.configure(state="disabled")
+        report_button.configure(state="disabled")
 
         def worker():
             try:
@@ -85,17 +95,33 @@ def main():
             except Exception as exc:
                 events.put(("log", f"Erro: {exc}"))
             finally:
+                path = args[1] / "_auditoria" / "diagnostico.md"
+                current_manifest = args[1] / "_auditoria" / "manifest.json"
+                if (
+                    path.exists()
+                    and current_manifest.exists()
+                    and current_manifest.read_bytes() != previous_run
+                ):
+                    events.put(("report", path))
                 events.put(("done", ""))
 
         threading.Thread(target=worker, daemon=True).start()
 
     button = ttk.Button(frame, text="Construir Markdown", command=start)
     button.pack(pady=(8, 0))
+    report_button = ttk.Button(
+        frame, text="Abrir relatório do lote", command=open_report, state="disabled"
+    )
+    report_button.pack(pady=(4, 0))
 
     def poll():
+        nonlocal report_path
         while not events.empty():
             kind, text = events.get_nowait()
-            if kind == "done":
+            if kind == "report":
+                report_path = text
+                report_button.configure(state="normal")
+            elif kind == "done":
                 button.configure(state="normal")
             else:
                 log.configure(state="normal")

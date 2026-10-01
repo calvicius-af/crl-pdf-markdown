@@ -60,3 +60,22 @@ Isto não remove os bloqueios de extração. O corpus mede a camada textual: nã
 comprova por si só o conteúdo de imagens nem a renderização no MAXQDA.
 
 Os PDFs, extrações e diagnósticos reais ficam locais, excluídos do Git.
+
+## Relatórios por corrida (0.2.1)
+
+O relatório consolidado foi validado numa nova execução dos 14 PDFs do corpus,
+reutilizando as extrações Docling com hashes verificados e repetindo a auditoria
+independente do Markdown final. Resultado: 14 convertidos, 0 falhas, 7 documentos
+a rever e 7 bloqueados; 15 erros, 205 avisos e 5 informações.
+
+O diagnóstico reúne todas as ocorrências, os contextos e os trechos de completude,
+incluindo problemas locais quando o veredicto global é `OK`. O inventário TXT e o
+manifesto JSON conservam os dados de cada tentativa. As corridas anteriores ficam
+arquivadas, com links relativos ajustados à localização do respetivo relatório.
+
+A suite sem modelos nem corpus externos passou com **294 testes** e **21 testes
+condicionais omitidos**. Os novos testes cobrem lotes com falhas, subpastas com
+nomes repetidos, erros de inicialização, interrupções, conservação de relatórios
+anteriores e inventários sem truncamento de ocorrências ou contagens de palavras.
+Ruff e markdownlint passaram. A interface gráfica disponibiliza a abertura do
+relatório; essa interação visual não foi testada automaticamente.

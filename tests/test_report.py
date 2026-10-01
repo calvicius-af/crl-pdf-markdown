@@ -1,0 +1,130 @@
+import json
+from pathlib import Path
+from types import SimpleNamespace
+
+import pytest
+
+from crl_markdown.pipeline import Options, atomic_write, run
+from crl_markdown.report import diagnostic, new_manifest, write_reports
+
+
+def test_all_findings_and_completeness_evidence_retained(tmp_path):
+    source = tmp_path / "inputs"
+    source.mkdir()
+    pdf = source / "sub" / "mesmo | nome.pdf"
+    manifest = new_manifest(source, tmp_path / "out", [(pdf, Path("sub/doc.md"))], {})
+    record = manifest["documents"][0]
+    record.update(
+        {
+            "quality_status": "blocked",
+            "state": "rever",
+            "pages": 3,
+            "tables": 2,
+            "findings": [
+                {
+                    "severity": "error",
+                    "rule": "TABLE_OVERLAP",
+                    "line": i,
+                    "message": f"Problema {i} | célula\nsegunda linha",
+                }
+                for i in range(40)
+            ],
+            "completeness": {
+                "veredicto": "OK",
+                "cobertura": 0.999,
+                "ordem": 0.998,
+                "amounts_missing": {"1250,00": 2},
+                "trechos_falta": [[3, "```texto desaparecido", "outro texto"]],
+                "fallback_pages": [3],
+                "em_falta": {f"palavra{i}": 1 for i in range(35)},
+            },
+        }
+    )
+    manifest["status"] = "concluida"
+    path = write_reports(manifest, tmp_path / "out", atomic_write)
+    text = path.read_text("utf-8")
+    assert "Bloqueado" in text and "99.90%" in text and "Veredicto: OK" in text
+    assert text.count("**ERRO — TABLE\\_OVERLAP**") == 40
+    assert "1250,00" in text and "palavra34" in text and "```texto desaparecido" in text
+    assert "Páginas com referência alternativa" in text
+    assert "mesmo \\| nome.pdf" in text
+    archive = path.parent / "corridas" / manifest["run_id"]
+    saved = json.loads((archive / "manifest.json").read_text("utf-8"))
+    assert saved["documents"][0]["findings"] == record["findings"]
+    assert saved["counts"] == {"blocked": 1}
+    assert "sub/doc.md" in text
+    assert "../../../sub/doc.md" in (archive / "diagnostico.md").read_text("utf-8")
+    assert "Problema 39" in (archive / "relatorio.txt").read_text("utf-8")
+    from markdown_it import MarkdownIt
+
+    tokens = MarkdownIt().parse(text)
+    assert any(t.type == "fence" and "```texto desaparecido" in t.content for t in tokens)
+
+
+def test_failed_documents_reported_and_previous_runs_preserved(tmp_path):
+    source = tmp_path / "pdfs"
+    source.mkdir()
+    (source / "bad.pdf").touch()
+    (source / "nested").mkdir()
+    (source / "nested/bad.pdf").touch()
+
+    def fail(_):
+        raise RuntimeError("PDF inválido")
+
+    output = tmp_path / "out"
+    logs = []
+    for _ in range(2):
+        results = run(
+            source, output, Options(), converter=SimpleNamespace(convert=fail), progress=logs.append
+        )
+        assert len(results) == 2
+    folders = list((output / "_auditoria/corridas").iterdir())
+    assert len(folders) == 2
+    manifest = json.loads((output / "_auditoria/manifest.json").read_text("utf-8"))
+    assert manifest["counts"] == {"falhou": 2}
+    assert manifest["status"] == "concluida"
+    assert "nested/bad.pdf" in (output / "_auditoria/relatorio.txt").read_text("utf-8")
+    assert "Não foi publicado um Markdown" in (output / "_auditoria/diagnostico.md").read_text(
+        "utf-8"
+    )
+    assert not list(output.glob("*.md"))
+    assert "Relatório consolidado:" in logs[-1]
+
+
+@pytest.mark.parametrize("exception", [RuntimeError("Modelos indisponíveis"), KeyboardInterrupt()])
+def test_initialization_failure_records_unprocessed_documents(tmp_path, monkeypatch, exception):
+    pdf = tmp_path / "origem.pdf"
+    pdf.touch()
+
+    def fail(_):
+        raise exception
+
+    monkeypatch.setattr("crl_markdown.pipeline.make_converter", fail)
+    with pytest.raises(type(exception)):
+        run(pdf, tmp_path / "out", Options(), progress=lambda _: None)
+    manifest = json.loads((tmp_path / "out/_auditoria/manifest.json").read_text("utf-8"))
+    assert manifest["status"] == "interrompida"
+    assert manifest["counts"] == {"nao_processado": 1}
+    assert type(exception).__name__ in manifest["error"]
+
+
+def test_interruption_retains_completed_attempts_and_pending_documents(tmp_path):
+    for name in ("a.pdf", "b.pdf"):
+        (tmp_path / name).touch()
+
+    def convert(path):
+        if path.name == "b.pdf":
+            raise KeyboardInterrupt()
+        raise RuntimeError("PDF danificado")
+
+    with pytest.raises(KeyboardInterrupt):
+        run(
+            tmp_path,
+            tmp_path / "out",
+            Options(),
+            converter=SimpleNamespace(convert=convert),
+            progress=lambda _: None,
+        )
+    manifest = json.loads((tmp_path / "out/_auditoria/manifest.json").read_text("utf-8"))
+    assert manifest["counts"] == {"falhou": 1, "nao_processado": 1}
+    assert "PDF danificado" in diagnostic(manifest, tmp_path / "out/_auditoria")
