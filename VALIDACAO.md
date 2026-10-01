@@ -80,7 +80,6 @@ anteriores e inventários sem truncamento de ocorrências ou contagens de palavr
 Ruff e markdownlint passaram. A interface gráfica disponibiliza a abertura do
 relatório; essa interação visual não foi testada automaticamente.
 
-
 ## Redução de ruído e relatório resumido (0.2.2)
 
 Nova execução dos mesmos 14 PDFs, com cache verificada e leitura independente:
