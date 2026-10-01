@@ -54,6 +54,18 @@ São usadas efetivamente pelo conversor Markdown, não apenas guardadas como arq
 - Identificação do preâmbulo e separação das assinaturas, incluindo blocos a meio
   do documento. Os rótulos acrescentados são excluídos da medição de completude.
 
+As divisões de palavras como `ex - ceção` ou `tabe- la` são reparadas antes da
+renderização, apenas quando a palavra unida existe na referência independente do
+PDF. Os hífenes de palavras compostas e os marcadores legais são preservados.
+Sem referência legível, estas reparações não são aplicadas.
+
+Os cabeçalhos, datas da edição e rodapés reconhecidos do BTE são retirados da
+referência antes da medição; as citações do boletim no corpo mantêm-se. Resíduos
+que permaneçam no Markdown continuam a ser sinalizados. Um pequeno objeto
+gráfico centrado nos primeiros 7,5% da altura da página é tratado como logótipo
+apenas quando a página tem identificação textual do BTE e a área é inferior a
+0,5% da página. Figuras no corpo ou sem esse contexto continuam a gerar avisos.
+
 A exportação nativa `DoclingDocument.export_to_markdown()` fica guardada para
 comparação. O documento final é construído a partir dos itens estruturados do
 Docling, aplicando as regras acima. Números como `7.` são escapados em Markdown
@@ -98,15 +110,15 @@ Informações sobre retificações legítimas não contam como falhas.
 ## Relatório consolidado por corrida
 
 Todas as execuções, pela linha de comandos ou pela interface gráfica, produzem
-um relatório do lote em `_auditoria/diagnostico.md`. A interface inclui o botão
+um relatório resumido do lote em `_auditoria/diagnostico.md`. A interface inclui o botão
 **Abrir relatório do lote**; a linha de comandos mostra o caminho no fim.
 
 - Índice de todos os PDFs, incluindo subpastas, com estado, cobertura, ordem de
   leitura, número de tabelas e contagem de erros e avisos.
 - Resumo das regras acionadas e número de documentos afetados.
-- Todas as ocorrências por documento, com gravidade, regra, linha e mensagem.
-  Os documentos bloqueados e as falhas aparecem primeiro no diagnóstico.
-- Evidências de completude: palavras e montantes em falta ou excedentes,
+- Ações de revisão por documento, agrupando ocorrências repetidas da mesma regra.
+  A versão completa, com cada linha e mensagem, fica em `_auditoria/detalhes.md`.
+- Na versão completa: evidências de completude, palavras e montantes em falta ou excedentes,
   trechos e contextos, perdas por página, referências alternativas, resíduos
   e palavras invertidas, mesmo quando o veredicto global é `OK`.
 - Falhas de conversão e documentos não processados numa execução interrompida,
@@ -115,7 +127,7 @@ um relatório do lote em `_auditoria/diagnostico.md`. A interface inclui o botã
 
 `relatorio.txt` conserva o inventário de ocorrências para pesquisa rápida;
 `manifest.json` conserva os dados completos de todos os documentos e as datas UTC.
-Cada corrida fica arquivada em `_auditoria/corridas/<id>/`, enquanto os três
+Cada corrida fica arquivada em `_auditoria/corridas/<id>/`, enquanto os
 ficheiros diretamente em `_auditoria/` correspondem à corrida mais recente.
 Uma nova corrida conserva os relatórios anteriores; os documentos e as auditorias
 individuais podem ser substituídos com `--overwrite`, por isso os links dos
@@ -126,7 +138,8 @@ arquivados permitem identificar essa diferença.
 
 ```text
 results/documento.md                         ← documento para conferência/importação
-results/_auditoria/diagnostico.md             ← relatório detalhado do lote
+results/_auditoria/diagnostico.md             ← resumo e ações de revisão do lote
+results/_auditoria/detalhes.md                ← evidências e ocorrências completas
 results/_auditoria/relatorio.txt              ← inventário de todas as ocorrências
 results/_auditoria/manifest.json              ← dados e proveniência da corrida
 results/_auditoria/corridas/<id>/             ← relatórios de corridas anteriores

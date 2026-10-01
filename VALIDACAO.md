@@ -79,3 +79,24 @@ nomes repetidos, erros de inicialização, interrupções, conservação de rela
 anteriores e inventários sem truncamento de ocorrências ou contagens de palavras.
 Ruff e markdownlint passaram. A interface gráfica disponibiliza a abertura do
 relatório; essa interação visual não foi testada automaticamente.
+
+
+## Redução de ruído e relatório resumido (0.2.2)
+
+Nova execução dos mesmos 14 PDFs, com cache verificada e leitura independente:
+2 documentos sem alertas automáticos, 5 a rever e 7 bloqueados. Mantêm-se os
+15 erros de tabelas/montantes; os avisos passaram de 205 para 48. Os 154 avisos
+relativos ao pequeno logótipo do BTE foram excluídos pelo contexto textual e pela
+posição e dimensão do objeto; figuras fora desse padrão continuam sinalizadas.
+
+O resumo passou de 4 680 para 128 linhas, com ocorrências agrupadas por regra.
+As evidências, contextos e proveniência ficam em `detalhes.md` e no manifesto.
+Nos casos AWP e APSolutions, `ex - ceção` passou a `exceção` no próprio Markdown;
+a referência independente confirma a palavra unida. A mesma regra corrigiu
+outras divisões em prosa e células, sem reduzir os controlos de perdas reais.
+
+Os testes confirmam que o mobiliário reconhecido do BTE sai da referência antes
+da comparação, que citações do boletim e números no corpo são preservados, que
+figuras no corpo não são tratadas como logótipos e que a reparação exige evidência
+independente. A suite local passou com 299 testes e 21 omissões condicionais;
+Ruff e markdownlint passaram, incluindo o resumo e os detalhes reais do lote.

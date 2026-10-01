@@ -84,7 +84,7 @@ def evidence(key, value):
     return block(json.dumps(value, ensure_ascii=False, indent=2))
 
 
-def diagnostic(manifest, parent):
+def diagnostic(manifest, parent, *, detailed=True):
     reports = manifest["documents"]
     counts = Counter(status(r) for r in reports)
     findings = Counter(f["severity"] for r in reports for f in r.get("findings", []))
@@ -146,6 +146,30 @@ def diagnostic(manifest, parent):
             lines.append(f"| {escaped(rule)} | {count} | {affected} |")
     else:
         lines.append("Sem ocorrências de regras. Consultar também as falhas de conversão.")
+    if not detailed:
+        lines += ["", "## Ações de revisão", ""]
+        for report in reports:
+            if status(report) in {"passed"}:
+                continue
+            lines += [f"### {escaped(report['relative_source'])}", ""]
+            if report.get("error"):
+                lines += [escaped(report["error"]), ""]
+            grouped = {}
+            for finding in report.get("findings", []):
+                if finding["severity"] == "info":
+                    continue
+                grouped.setdefault((finding["rule"], finding["severity"]), []).append(finding)
+            for (rule, severity), items in grouped.items():
+                lines.append(
+                    f"- **{escaped(rule)}** ({'erro' if severity == 'error' else 'aviso'}, {len(items)} ocorrência(s)): "
+                    + escaped(items[0]["message"])
+                )
+            lines.append("")
+        lines += [
+            link(parent / "detalhes.md", parent, "Consultar evidências e todas as ocorrências"),
+            "",
+        ]
+        return normalize("\n".join(lines))
     lines += ["", "## Diagnóstico por documento", ""]
     # Dá prioridade aos documentos que impedem a importação validada.
     priority = {"falhou": 0, "nao_processado": 1, "blocked": 2, "review": 3, "passed": 4}
@@ -302,7 +326,8 @@ def write_reports(manifest, output: Path, write):
     if manifest.get("error"):
         overview += ["\nFalha da corrida:", manifest["error"]]
     for folder in (output / "_auditoria" / "corridas" / manifest["run_id"], output / "_auditoria"):
-        write(folder / "diagnostico.md", diagnostic(manifest, folder))
+        write(folder / "diagnostico.md", diagnostic(manifest, folder, detailed=False))
+        write(folder / "detalhes.md", diagnostic(manifest, folder))
         write(folder / "relatorio.txt", "\n".join(overview) + "\n")
         write(folder / "manifest.json", json.dumps(manifest, ensure_ascii=False, indent=2) + "\n")
     return output / "_auditoria" / "diagnostico.md"

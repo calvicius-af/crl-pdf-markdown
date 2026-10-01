@@ -42,7 +42,7 @@ def test_all_findings_and_completeness_evidence_retained(tmp_path):
     )
     manifest["status"] = "concluida"
     path = write_reports(manifest, tmp_path / "out", atomic_write)
-    text = path.read_text("utf-8")
+    text = (path.parent / "detalhes.md").read_text("utf-8")
     assert "Bloqueado" in text and "99.90%" in text and "Veredicto: OK" in text
     assert text.count("**ERRO — TABLE\\_OVERLAP**") == 40
     assert "1250,00" in text and "palavra34" in text and "```texto desaparecido" in text
@@ -53,7 +53,7 @@ def test_all_findings_and_completeness_evidence_retained(tmp_path):
     assert saved["documents"][0]["findings"] == record["findings"]
     assert saved["counts"] == {"blocked": 1}
     assert "sub/doc.md" in text
-    assert "../../../sub/doc.md" in (archive / "diagnostico.md").read_text("utf-8")
+    assert "../../../sub/doc.md" in (archive / "detalhes.md").read_text("utf-8")
     assert "Problema 39" in (archive / "relatorio.txt").read_text("utf-8")
     from markdown_it import MarkdownIt
 
@@ -84,9 +84,7 @@ def test_failed_documents_reported_and_previous_runs_preserved(tmp_path):
     assert manifest["counts"] == {"falhou": 2}
     assert manifest["status"] == "concluida"
     assert "nested/bad.pdf" in (output / "_auditoria/relatorio.txt").read_text("utf-8")
-    assert "Não foi publicado um Markdown" in (output / "_auditoria/diagnostico.md").read_text(
-        "utf-8"
-    )
+    assert "PDF inválido" in (output / "_auditoria/diagnostico.md").read_text("utf-8")
     assert not list(output.glob("*.md"))
     assert "Relatório consolidado:" in logs[-1]
 
@@ -128,3 +126,28 @@ def test_interruption_retains_completed_attempts_and_pending_documents(tmp_path)
     manifest = json.loads((tmp_path / "out/_auditoria/manifest.json").read_text("utf-8"))
     assert manifest["counts"] == {"falhou": 1, "nao_processado": 1}
     assert "PDF danificado" in diagnostic(manifest, tmp_path / "out/_auditoria")
+
+
+def test_default_report_groups_occurrences_and_keeps_evidence_separate(tmp_path):
+    manifest = new_manifest(tmp_path, tmp_path / "out", [(tmp_path / "a.pdf", Path("a.md"))], {})
+    manifest["status"] = "concluida"
+    manifest["documents"][0].update(
+        quality_status="review",
+        state="rever",
+        findings=[
+            {
+                "rule": "TABLE_SPAN",
+                "severity": "warning",
+                "line": i,
+                "message": f"Células unidas {i}",
+            }
+            for i in range(40)
+        ],
+    )
+    path = write_reports(manifest, tmp_path / "out", atomic_write)
+    compact = path.read_text("utf-8")
+    details = (path.parent / "detalhes.md").read_text("utf-8")
+    assert "40 ocorrência(s)" in compact
+    assert "Células unidas 39" not in compact
+    assert "Células unidas 39" in details
+    assert "Proveniência" not in compact and "detalhes.md" in compact

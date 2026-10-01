@@ -10,6 +10,7 @@ from pathlib import Path
 
 from .audit import audit_pdf
 from .document import plain_markdown, prepare
+from .legacy import completude
 from .quality import lint, parser
 from .report import new_manifest, write_reports
 
@@ -104,7 +105,18 @@ def convert_pdf(
         raise RuntimeError(f"Conversão incompleta ({status}): {pdf.name}")
     raw = result.document.export_to_markdown(image_placeholder="<!-- image -->")
     subtype = "retificacao" if "-RECT_" in pdf.stem.upper() else "desconhecido"
-    prepared = prepare(result.document, pdf.stem, subtype=subtype)
+    reference = None
+    reference_words = []
+    try:
+        reference = completude.ler_referencia(pdf)
+        cleaned = completude._juntar_paginas(
+            [completude.sem_mobiliario(completude._normalizar(page))[0] for page in reference[0]]
+        )
+        reference_words = completude.palavras("\n".join(cleaned))
+    except Exception:
+        # A auditoria reportará a indisponibilidade; não inventar reparações.
+        pass
+    prepared = prepare(result.document, pdf.stem, subtype=subtype, reference_words=reference_words)
     markdown = prepared.markdown
     title_added = not any(
         token.type == "heading_open" and token.tag == "h1" for token in parser().parse(markdown)
@@ -124,6 +136,7 @@ def convert_pdf(
         prepared.structure,
         prepared.structured_text,
         prepared.tables,
+        reference=reference,
     )
     findings.extend(audit_findings)
     state = "rever" if any(f.severity != "info" for f in findings) else "sem_alertas_automaticos"

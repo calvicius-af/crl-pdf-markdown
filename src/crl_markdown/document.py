@@ -9,6 +9,7 @@ from .legacy import extractor as rules
 from .legacy import extractor_docling as docling_rules
 from .legacy.mobiliario import e_mobiliario, sem_prefixo_de_cabecalho
 from .quality import Finding, normalize, parser
+from .textrepair import repair_wrapped
 
 
 @dataclass
@@ -52,7 +53,7 @@ def plain_markdown(markdown: str, generated_headings=()) -> str:
     return "\n".join(text) + "\n"
 
 
-def table_rows(table, findings=None) -> list[list[str]]:
+def table_rows(table, findings=None, reference_words=()) -> list[list[str]]:
     """Grelha retangular: uma célula por posição; spans não duplicam os valores."""
     # Usar table_cells, porque .grid sobrescreve silenciosamente células quando
     # o Docling atribui spans sobrepostos (Empresa Metropolitana, página 34).
@@ -73,7 +74,7 @@ def table_rows(table, findings=None) -> list[list[str]]:
         }
         overlap = overlap or bool(region & occupied)
         occupied.update(region)
-        value = rules._texto_celula(html.unescape(cell.text or ""))
+        value = rules._texto_celula(repair_wrapped(html.unescape(cell.text or ""), reference_words))
         previous = rows[position[0]][position[1]]
         rows[position[0]][position[1]] = previous + " / " + value if previous else value
     if overlap and findings is not None:
@@ -96,13 +97,13 @@ def table_markdown(rows: list[list[str]]) -> str:
     return "\n".join(lines)
 
 
-def item_text(item, findings) -> str | None:
+def item_text(item, findings, reference_words=()) -> str | None:
     from docling_core.types.doc import ListItem
 
     label = getattr(getattr(item, "label", None), "value", "")
     if label in {"page_header", "page_footer"}:
         return None
-    text = html.unescape(item.text or "")
+    text = repair_wrapped(html.unescape(item.text or ""), reference_words)
     # As mesmas regras estreitas de limpeza do projeto original.
     cleaned = docling_rules.limpar_texto_item(text)
     if cleaned is None:
@@ -136,7 +137,40 @@ def item_text(item, findings) -> str | None:
     return cleaned
 
 
-def prepare(document, doc_id: str, *, subtype="desconhecido") -> Prepared:
+def is_bte_margin_picture(item, document):
+    """Pequeno logótipo centrado no topo, apenas em páginas identificadas como BTE."""
+    from docling_core.types.doc import CoordOrigin
+
+    if not item.prov:
+        return False
+    for prov in item.prov:
+        page = document.pages.get(prov.page_no)
+        if page is None:
+            return False
+        header = any(
+            any(p.page_no == prov.page_no for p in text.prov)
+            and (
+                "Boletim do Trabalho e Emprego" in text.text
+                or re.fullmatch(r"BTE\s+\d+.*", text.text)
+            )
+            for text in document.texts
+        )
+        if not header:
+            return False
+        box = prov.bbox.to_top_left_origin(page.size.height)
+        if box.coord_origin != CoordOrigin.TOPLEFT:
+            return False
+        width, height = page.size.width, page.size.height
+        if not (
+            0 <= box.t < box.b <= height * 0.075
+            and width * 0.43 <= box.l < box.r <= width * 0.57
+            and (box.r - box.l) * (box.b - box.t) <= width * height * 0.005
+        ):
+            return False
+    return True
+
+
+def prepare(document, doc_id: str, *, subtype="desconhecido", reference_words=()) -> Prepared:
     from docling_core.types.doc import PictureItem, TableItem, TextItem
 
     findings = []
@@ -146,10 +180,12 @@ def prepare(document, doc_id: str, *, subtype="desconhecido") -> Prepared:
     stream, table_data = [], {}
     for item in ordered:
         if isinstance(item, PictureItem):
+            if is_bte_margin_picture(item, document):
+                continue
             page = item.prov[0].page_no if item.prov else "?"
             findings.append(Finding("IMAGE", 0, f"Página {page}: figura sem transcrição textual."))
         elif isinstance(item, TableItem):
-            rows = table_rows(item, findings)
+            rows = table_rows(item, findings, reference_words)
             if not rows or not any(cell for row in rows for cell in row):
                 findings.append(Finding("TABLE_EMPTY", 0, "Tabela Docling sem conteúdo.", "error"))
                 continue
@@ -186,7 +222,7 @@ def prepare(document, doc_id: str, *, subtype="desconhecido") -> Prepared:
                     )
                 )
         elif isinstance(item, TextItem):
-            text = item_text(item, findings)
+            text = item_text(item, findings, reference_words)
             if text:
                 stream.extend(text.splitlines())
     if not stream:

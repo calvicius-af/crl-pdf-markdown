@@ -53,9 +53,17 @@ def pdf_amounts(pdf: Path) -> Counter:
     return result
 
 
-def audit_pdf(pdf: Path, plain: str, structure: dict, structured_text: str, exported_tables: int):
+def audit_pdf(
+    pdf: Path,
+    plain: str,
+    structure: dict,
+    structured_text: str,
+    exported_tables: int,
+    *,
+    reference=None,
+):
     try:
-        pages, blind_pages = completude.ler_referencia(pdf)
+        pages, blind_pages = reference if reference is not None else completude.ler_referencia(pdf)
         measure = completude.medir(pdf.stem, pages, plain)
         measure.paginas_cegas = blind_pages
     except Exception as exc:
