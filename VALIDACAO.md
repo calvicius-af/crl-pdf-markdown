@@ -99,3 +99,10 @@ da comparação, que citações do boletim e números no corpo são preservados,
 figuras no corpo não são tratadas como logótipos e que a reparação exige evidência
 independente. A suite local passou com 299 testes e 21 omissões condicionais;
 Ruff e markdownlint passaram, incluindo o resumo e os detalhes reais do lote.
+
+## Importação experimental no MaxQDA — 2 de outubro de 2026
+
+O QDPX construído a partir dos 14 Markdown passou nos controlos técnicos, mas o
+utilizador reportou perda de formatação e variáveis sem valores atribuídos aos
+casos/documentos. A experiência não foi aprovada para esses dois requisitos.
+Ver o [registo do teste](docs/validacao/teste-md-qdpx-maxqda-2026-10-02.md).
