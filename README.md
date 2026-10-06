@@ -85,7 +85,12 @@ Com Python 3.11 ou superior instalado (com Tkinter), abrir por duplo clique:
 - **Windows:** `scripts/Iniciar.bat`.
 - **macOS:** `scripts/Iniciar.command` (Python de python.org recomendado).
 
-O lançador usa o `.venv` do projeto. Se faltarem bibliotecas, apresenta uma
+No Windows, o lançador instala as bibliotecas numa pasta local do utilizador,
+`%LOCALAPPDATA%\CRL-PDF-Markdown\envs\<identificador-do-projeto>`, evitando
+escrever os scripts das bibliotecas numa unidade de rede. A pasta é apresentada
+na janela. O projeto e os documentos permanecem nas pastas escolhidas.
+No macOS/Linux, o lançador usa o `.venv` do projeto.
+Se faltarem bibliotecas, apresenta uma
 janela para autorizar a instalação e acompanhar o progresso. A primeira
 instalação requer Internet; no Linux usa PyTorch para CPU. Node e npm são
 necessários apenas para desenvolvimento e lint, não para usar a interface.

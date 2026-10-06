@@ -39,3 +39,31 @@ def test_pip_windows_roundtrip_preserves_administrative_share(monkeypatch):
     )
     # O endereço anterior perde precisamente a partilha UNC.
     assert not urls.url_to_path(root.as_uri()).startswith("\\\\")
+
+
+def test_windows_libraries_are_local_even_when_project_is_unc():
+    project = PureWindowsPath(r"\\localhost\C$\profiles\CRL\pessoal\projeto")
+    appdata = PureWindowsPath(r"C:\Users\CRL\AppData\Local")
+    environment = launcher.windows_environment_directory(project, appdata)
+    assert environment.is_relative_to(appdata / "CRL-PDF-Markdown" / "envs")
+    assert not str(environment).startswith("\\\\")
+    assert not environment.is_relative_to(project)
+    assert environment == launcher.windows_environment_directory(str(project).upper(), appdata)
+    assert environment != launcher.windows_environment_directory(project / "outro", appdata)
+
+
+def test_application_uses_current_source_instead_of_old_mapped_drive(monkeypatch, tmp_path):
+    project = tmp_path / "new-drive"
+    (project / "src").mkdir(parents=True)
+    (project / "src" / "current_crl_source.py").write_text("value = 'current'\n")
+    monkeypatch.setenv("PYTHONPATH", "old-drive")
+    environment = launcher.app_environment(project)
+    import subprocess
+    import sys
+
+    result = subprocess.run(
+        [sys.executable, "-c", "import current_crl_source; print(current_crl_source.value)"],
+        env=environment, cwd=tmp_path, capture_output=True, text=True,
+    )
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.strip() == "current"
