@@ -3,6 +3,7 @@
 import hashlib
 import json
 import os
+import sys
 import tempfile
 from dataclasses import asdict, dataclass
 from importlib.metadata import version
@@ -23,20 +24,35 @@ class Options:
     timeout: float = 900
 
 
+OFFLINE_KEYS = ("HF_HUB_OFFLINE", "TRANSFORMERS_OFFLINE")
+# Valores do ambiente ao arrancar, para que o modo offline de uma corrida não
+# fique ativo nas seguintes da mesma sessão da interface.
+INITIAL_OFFLINE_ENV = {key: os.environ.get(key) for key in OFFLINE_KEYS}
+
+
+def apply_offline(offline: bool):
+    """Ativa ou repõe o modo offline do Hugging Face para esta corrida."""
+    for key in OFFLINE_KEYS:
+        initial = INITIAL_OFFLINE_ENV[key]
+        if offline:
+            os.environ[key] = "1"
+        elif initial is None:
+            os.environ.pop(key, None)
+        else:
+            os.environ[key] = initial
+    # A interface pode ter importado huggingface numa corrida anterior.
+    constants = sys.modules.get("huggingface_hub.constants")
+    if constants is not None:
+        initial = (INITIAL_OFFLINE_ENV["HF_HUB_OFFLINE"] or "").upper()
+        constants.HF_HUB_OFFLINE = offline or initial in {"1", "ON", "YES", "TRUE"}
+
+
 def make_converter(options: Options):
     if options.timeout <= 0:
         raise ValueError("O tempo máximo deve ser positivo.")
     if options.models and not options.models.is_dir():
         raise ValueError(f"Pasta de modelos inexistente: {options.models}")
-    if options.offline:
-        for key in ("HF_HUB_OFFLINE", "TRANSFORMERS_OFFLINE"):
-            os.environ[key] = "1"
-        # A interface pode ter importado huggingface numa corrida anterior.
-        import sys
-
-        constants = sys.modules.get("huggingface_hub.constants")
-        if constants is not None:
-            constants.HF_HUB_OFFLINE = True
+    apply_offline(options.offline)
     from docling.datamodel.base_models import InputFormat
     from docling.datamodel.pipeline_options import PdfPipelineOptions, TableFormerMode
     from docling.document_converter import DocumentConverter, PdfFormatOption
