@@ -1,5 +1,6 @@
 import json
 import os
+import subprocess
 import sys
 from pathlib import Path
 from types import SimpleNamespace
@@ -141,6 +142,19 @@ def test_offline_mode_does_not_persist_between_runs(monkeypatch, initial):
     apply_offline(False)
     assert all(os.environ.get(key) == initial for key in pipeline.OFFLINE_KEYS)
     assert constants.HF_HUB_OFFLINE is (initial == "1")
+
+
+@pytest.mark.parametrize("module", ["crl_markdown", "crl_markdown.recolha"])
+def test_cli_output_survives_legacy_windows_encoding(module):
+    # Em Windows, a saída redirecionada usa cp1252, que não tem «→».
+    src = Path(__file__).resolve().parents[1] / "src"
+    environment = {**os.environ, "PYTHONIOENCODING": "cp1252", "PYTHONPATH": str(src)}
+    result = subprocess.run(
+        [sys.executable, "-m", module, "--help"], capture_output=True, env=environment
+    )
+    assert result.returncode == 0, result.stderr.decode("utf-8", "replace")
+    if module == "crl_markdown":
+        assert "→".encode() in result.stdout
 
 
 def test_cli_lint_exit_codes(tmp_path):
