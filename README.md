@@ -75,8 +75,76 @@ relativos à pasta de trabalho. Executar da raiz deste repositório.
 
 Este mecanismo não descobre novos boletins nem descarrega os índices sozinho:
 segue o comportamento do original, baseado em índices fornecidos pela equipa.
-Também não recorta documentos de boletins históricos completos nem aplica a
-nomeação RNC do AppCCT. A conversão e auditoria mantêm os comandos existentes.
+Também não recorta documentos de boletins históricos completos. A nomeação RNC
+é aplicada no passo separado descrito abaixo. A conversão e auditoria mantêm os comandos existentes.
+
+## Recolher, nomear e converter sem escrever comandos
+
+Com Python 3.11 ou superior instalado (com Tkinter), abrir por duplo clique:
+
+- **Windows:** `scripts/Iniciar.bat`.
+- **macOS:** `scripts/Iniciar.command` (Python de python.org recomendado).
+
+O lançador usa o `.venv` do projeto. Se faltarem bibliotecas, apresenta uma
+janela para autorizar a instalação e acompanhar o progresso. A primeira
+instalação requer Internet; no Linux usa PyTorch para CPU. Node e npm são
+necessários apenas para desenvolvimento e lint, não para usar a interface.
+Os lançadores precisam de Python instalado; não constituem executáveis autónomos.
+
+A janela tem três passos:
+
+1. **Recolher PDFs:** escolher o índice Excel ou a pasta de índices, a pasta
+   dos originais e o registo JSONL. A recolha simula por omissão; as descargas
+   exigem marcar a autorização de rede e confirmar na janela.
+2. **Rever nomes:** escolher a pasta de destino e, se existirem, os CSV de
+   siglas e âmbitos. Carregar em **Preparar / atualizar nomes**, conferir o
+   nome original, o nome proposto e os avisos (duplo clique mostra o detalhe).
+   Selecionar os documentos aprovados e usar **Aprovar e copiar selecionados**.
+   Depois, **Usar esta pasta na conversão** transfere a entrada para o passo 3.
+3. **Construir Markdown:** escolher a pasta de saída e os modelos locais.
+   **Descarregar modelos…** prepara os modelos Docling, incluindo OCR, com
+   autorização de rede. Finalmente, construir o Markdown e abrir o relatório
+   do lote para verificar completude e documentos bloqueados.
+
+Cada passo pode ser repetido de forma independente. As operações demoradas
+correm fora da thread da janela. Uma falha fica apresentada na interface.
+O OCR continua desligado por omissão; só ativá-lo para digitalizações.
+O funcionamento offline exige preparar primeiro bibliotecas e modelos.
+A cloud sem ambiente gráfico permite testar o pipeline, mas a janela precisa
+de uma sessão gráfica local ou de um servidor gráfico disponibilizado pelo host.
+
+### Nomeação RNC entre a recolha e a extração
+
+As regras foram adaptadas do AppCCT, commit
+`5fd8ae848d44274306e1414621ddeabc620ca4c6`, incluindo siglas, âmbitos,
+referências às convenções de base e separação por família documental.
+Um exemplo de nome é `2026_BTE_31_PRI_377_CCT_27251_ACRAL-CESP.pdf`.
+As cópias ficam em `data/raw/bte/bte_2026/convencoes/PRI/` ou nas pastas
+correspondentes à família e âmbito. O conversor Markdown pode ler todas essas
+famílias; esta aplicação não realiza codificação temática.
+
+Os PDFs descarregados **mantêm o nome e conteúdo originais**. A nomeação cria
+cópias, verifica o SHA-256 da origem, conserva ordinais e regista nome, caminho,
+estado e avisos no mesmo JSONL da recolha. Uma cópia existente com o mesmo hash
+é reutilizada; conteúdo diferente ou mudança de identidade já atribuída produz
+conflito. Propostas derivadas por heurística exigem confirmação individual na
+interface. Dados estruturais em falta ou inválidos não são corrigidos pela
+aprovação humana. Os CSV podem ser revistos antes de gerar uma nova proposta.
+
+Também disponível pela linha de comandos:
+
+```bash
+.venv/bin/python -m crl_markdown rename --registo data/registo/registo_bte.jsonl
+.venv/bin/python -m crl_markdown rename --destino data/raw/bte --aplicar
+.venv/bin/python -m crl_markdown convert data/raw/bte --out results/bte
+```
+
+A simulação grava as propostas no registo mas não copia PDFs. `--siglas` e
+`--ambitos` permitem fornecer os CSV da equipa. `--confirmar CHAVE` aprova
+um documento específico; é repetível. Avisos do BTE ficam apenas como metadados
+no esquema RNC herdado. As restantes famílias só são copiadas com os campos
+necessários ao respetivo nome. A recolha continua a partir dos índices fornecidos
+pela equipa; não descobre nem descarrega índices automaticamente.
 
 ## Utilização com Microsoft Copilot
 

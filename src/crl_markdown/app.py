@@ -7,16 +7,20 @@ import webbrowser
 from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
 
+from .acquisition_app import AcquisitionPanel
 from .pipeline import Options, run
 
 
 def main():
     root = tk.Tk()
     root.title("CRL — PDF para Markdown")
-    root.geometry("780x500")
-    frame = ttk.Frame(root, padding=16)
-    frame.pack(fill="both", expand=True)
-    source, output = tk.StringVar(), tk.StringVar()
+    root.geometry("1000x750")
+    notebook = ttk.Notebook(root)
+    notebook.pack(fill="both", expand=True)
+    source, output = tk.StringVar(), tk.StringVar(value="results")
+    AcquisitionPanel(notebook, source)
+    frame = ttk.Frame(notebook, padding=16)
+    notebook.add(frame, text="3. Construir Markdown")
     ocr, offline, overwrite = tk.BooleanVar(), tk.BooleanVar(), tk.BooleanVar()
     models = tk.StringVar()
     events = queue.Queue()
@@ -56,6 +60,36 @@ def main():
     log = tk.Text(frame, height=10, state="disabled", wrap="word")
     log.pack(fill="both", expand=True)
 
+    def prepare_models():
+        if not models.get().strip():
+            chosen = filedialog.askdirectory(title="Pasta para os modelos Docling")
+            if not chosen:
+                return
+            models.set(chosen)
+        if not messagebox.askyesno("Modelos Docling", "Descarregar os modelos de conversão e OCR "
+                                  "do Hugging Face? É necessária ligação à Internet."):
+            return
+        destination = Path(models.get())
+        button.configure(state="disabled")
+        models_button.configure(state="disabled")
+
+        def worker():
+            try:
+                from docling.utils.model_downloader import download_models
+
+                download_models(output_dir=destination, with_code_formula=False,
+                                with_picture_classifier=False, with_rapidocr=True)
+                events.put(("log", f"Modelos preparados em {destination}."))
+                events.put(("models_ready", ""))
+            except Exception as exc:
+                events.put(("log", f"Falha ao preparar modelos: {exc}"))
+            finally:
+                events.put(("done", ""))
+
+        threading.Thread(target=worker, daemon=True).start()
+
+    models_button = ttk.Button(flags, text="Descarregar modelos…", command=prepare_models)
+    models_button.pack(side="left")
     report_path = None
 
     def open_report():
@@ -75,6 +109,7 @@ def main():
         previous_manifest = args[1] / "_auditoria" / "manifest.json"
         previous_run = previous_manifest.read_bytes() if previous_manifest.exists() else None
         button.configure(state="disabled")
+        models_button.configure(state="disabled")
         report_button.configure(state="disabled")
 
         def worker():
@@ -121,8 +156,11 @@ def main():
             if kind == "report":
                 report_path = text
                 report_button.configure(state="normal")
+            elif kind == "models_ready":
+                offline.set(True)
             elif kind == "done":
                 button.configure(state="normal")
+                models_button.configure(state="normal")
             else:
                 log.configure(state="normal")
                 log.insert("end", text + "\n")

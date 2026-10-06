@@ -4,6 +4,8 @@ import sys
 from pathlib import Path
 
 from .cache import CachedConverter
+from .nomeacao import add_arguments as rename_arguments
+from .nomeacao import rename
 from .pipeline import Options, run
 from .quality import lint
 from .recolha import add_arguments, collect
@@ -16,6 +18,8 @@ def main(argv=None):
         "collect", help="Recolher PDFs a partir dos índices Excel do BTE"
     )
     add_arguments(collection)
+    naming = commands.add_parser("rename", help="Rever e aplicar nomes RNC aos PDFs recolhidos")
+    rename_arguments(naming)
     convert = commands.add_parser("convert", help="Converter PDF ou pasta recursivamente")
     convert.add_argument("source", type=Path)
     convert.add_argument("--out", required=True, type=Path)
@@ -35,6 +39,8 @@ def main(argv=None):
     check.add_argument("--strict", action="store_true")
     args = parser.parse_args(argv)
     try:
+        if args.command == "rename":
+            return rename(args)
         if args.command == "collect":
             return collect(args)
         if args.command == "lint":
