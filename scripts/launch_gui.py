@@ -6,11 +6,26 @@ import subprocess
 import sys
 import threading
 import tkinter as tk
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 from tkinter import messagebox, ttk
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).absolute().parent.parent
 PYTHON = ROOT / ".venv" / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
+
+
+def project_reference(root):
+    """Preserva o servidor UNC na conversão de URI feita pelo pip no Windows."""
+    text = str(root)
+    if not text.startswith("\\\\"):
+        return text
+    server, _, rest = text[2:].partition("\\")
+    if server.lower() == "localhost":
+        server = "127.0.0.1"
+    return PureWindowsPath(f"\\\\{server}\\{rest}").as_uri()
+
+
+def project_install_command(python, root):
+    return [str(python), "-m", "pip", "install", "-e", project_reference(root)]
 
 
 def main():
@@ -29,8 +44,10 @@ def main():
 
     def open_app():
         executable = PYTHON.with_name("pythonw.exe") if os.name == "nt" else PYTHON
-        subprocess.Popen([str(executable), "-m", "crl_markdown.app"], cwd=ROOT, **flags)
+        process = subprocess.Popen([str(executable), "-m", "crl_markdown.app"], cwd=ROOT, **flags)
         root.destroy()
+        # O .bat só pode desfazer o pushd depois de a aplicação terminar.
+        process.wait()
 
     def install():
         if not messagebox.askyesno("Instalar dependências", "Descarregar e instalar as bibliotecas nesta pasta? "
@@ -41,12 +58,15 @@ def main():
 
         def worker():
             try:
+                if not (ROOT / "pyproject.toml").is_file():
+                    raise RuntimeError("Não foi encontrado pyproject.toml. Extrai o ZIP completo "
+                                       "e abre scripts/Iniciar.bat dentro dessa pasta.")
                 if not PYTHON.exists():
                     execute([sys.executable, "-m", "venv", str(ROOT / ".venv")])
                 if sys.platform.startswith("linux"):
                     execute([str(PYTHON), "-m", "pip", "install", "torch", "torchvision",
                              "--index-url", "https://download.pytorch.org/whl/cpu"])
-                execute([str(PYTHON), "-m", "pip", "install", "-e", str(ROOT)])
+                execute(project_install_command(PYTHON, ROOT))
                 events.put(("ready", ""))
             except Exception as exc:
                 events.put(("error", str(exc)))
