@@ -42,10 +42,20 @@ Nenhum documento falhou a extração; os estados documentais foram **1 passed,
 6 review e 7 blocked**. Estes estados não são contagens de testes: os documentos
 com erros conhecidos continuam bloqueados e os avisos continuam a exigir revisão.
 
-A execução final com todos os recursos disponíveis terminou com **389 testes
+A execução integral Linux anterior à correção de caminhos Windows terminou com **389 testes
 aprovados, zero falhas e zero testes ignorados**, em 134,70 segundos. Ruff,
 verificação de dependências, lint de sete ficheiros Markdown e integridade do ZIP
 da skill também passaram. Os 24 avisos de depreciação pertencem ao Docling/Pydantic.
+
+## Correção identificada no CI Windows
+
+O CI encontrou uma falha anterior em `test_failed_documents_reported_and_previous_runs_preserved`:
+`relative_source` guardava separadores nativos Windows (`nested\bad.pdf`), enquanto
+o contrato dos relatórios esperava `nested/bad.pdf`. O manifesto passa a escrever
+os caminhos relativos com separadores `/`, conservando os caminhos absolutos para
+acesso local. Foi acrescentado um teste com caminhos Windows que também corre em
+Linux. O CI agora produz JUnit e anotações das falhas, sem alterar o resultado do
+pytest, para permitir diagnósticos diretamente no PR.
 
 ## Comandos de verificação
 

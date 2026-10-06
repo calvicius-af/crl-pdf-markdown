@@ -18,7 +18,7 @@ jobs:
       - name: Report failed tests
         if: failure()
         run: python scripts/report_pytest.py pytest-results.xml
-      - run: ruff check src tests
+      - run: ruff check src tests scripts
   markdown:
     runs-on: ubuntu-latest
     steps:

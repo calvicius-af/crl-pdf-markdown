@@ -151,3 +151,22 @@ def test_default_report_groups_occurrences_and_keeps_evidence_separate(tmp_path)
     assert "Células unidas 39" not in compact
     assert "Células unidas 39" in details
     assert "Proveniência" not in compact and "detalhes.md" in compact
+
+
+
+def test_relative_source_uses_forward_slashes_for_windows_paths():
+    from pathlib import PureWindowsPath
+
+    class WindowsPath(PureWindowsPath):
+        def resolve(self):
+            return self
+
+        def is_dir(self):
+            return True
+
+    source = WindowsPath("C:/pdfs")
+    output = WindowsPath("C:/results")
+    pdf = source / "nested/documento.pdf"
+    manifest = new_manifest(source, output, [(pdf, WindowsPath("nested/documento.md"))], {})
+    assert manifest["documents"][0]["relative_source"] == "nested/documento.pdf"
+    assert manifest["documents"][0]["source"] == str(pdf)

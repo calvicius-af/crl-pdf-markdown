@@ -24,4 +24,5 @@ def main(path):
 
 
 if __name__ == "__main__":
+    sys.stdout.reconfigure(encoding="utf-8")
     main(Path(sys.argv[1]))
