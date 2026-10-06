@@ -3,22 +3,58 @@ on: [push, pull_request]
 jobs:
   tests:
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
+        # 3.11 é o mínimo declarado; 3.13 é o Python das estações do CRL.
+        python-version: ['3.11', '3.13']
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: ${{ matrix.python-version }}
       # Testes sem modelos/PyTorch; integração com objetos Docling reais.
       - run: python -m pip install -e . --no-deps
-      - run: python -m pip install pytest ruff 'markdown-it-py>=3,<5' 'docling-core>=2.97,<3' 'pdfplumber>=0.11' 'jsonschema>=4' 'openpyxl>=3.1,<4'
+      - run: >-
+          python -m pip install pytest ruff markdown-it-py docling-core pdfplumber
+          jsonschema openpyxl -c requirements/runtime.txt -c requirements/dev.txt
       - run: python -m pytest --junitxml=pytest-results.xml
       - name: Report failed tests
         if: failure()
         run: python scripts/report_pytest.py pytest-results.xml
-      - run: ruff check src tests scripts
+      - run: python -m ruff check src tests scripts
+  install:
+    # A instalação que as pessoas fazem: Docling, PyTorch e restantes
+    # dependências, com as versões fixadas em requirements/runtime.txt.
+    name: instalação completa (${{ matrix.os }}, Python 3.13)
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: pip
+          cache-dependency-path: |
+            pyproject.toml
+            requirements/*.txt
+      - run: python -m pip install -e . -c requirements/runtime.txt -c requirements/dev.txt
+      - run: python -m pip check
+      - name: Arranque sem descarregar modelos
+        run: >-
+          python -c "from crl_markdown.pipeline import Options, make_converter;
+          make_converter(Options(offline=True)); print('conversor criado')"
+      - run: python -m crl_markdown --help
+      - run: python -m crl_markdown collect --help
+      - run: python -m pip install pytest -c requirements/dev.txt
+      - run: python -m pytest --junitxml=pytest-results.xml
+      - name: Report failed tests
+        if: failure()
+        run: python scripts/report_pytest.py pytest-results.xml
   markdown:
     runs-on: ubuntu-latest
     steps:

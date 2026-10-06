@@ -29,6 +29,7 @@ from typing import Any
 from urllib.parse import urlparse
 from zipfile import BadZipFile
 
+from . import utf8_output
 from .bte_schema import validar_registo
 
 # Anfitriões públicos do Boletim do Trabalho e Emprego. O antigo bte.gep.msess.gov.pt
@@ -706,6 +707,7 @@ def texto_resumo(resumo: dict, *, rede: bool) -> str:
 
 
 def main(argv=None):
+    utf8_output()
     p = argparse.ArgumentParser(
         prog="crl_markdown.recolha",
         description="Descarrega os documentos do BTE a partir dos ficheiros-índice. "

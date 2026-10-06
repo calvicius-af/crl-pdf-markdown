@@ -1,12 +1,15 @@
 import json
 import os
+import subprocess
+import sys
 from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
 
+from crl_markdown import pipeline
 from crl_markdown.cli import main
-from crl_markdown.pipeline import Options, convert_pdf, discover, run
+from crl_markdown.pipeline import Options, apply_offline, convert_pdf, discover, run
 
 
 @pytest.fixture
@@ -115,6 +118,43 @@ def test_case_collisions_rejected(tmp_path, converter):
         pytest.skip("Filesystem ignores case")
     with pytest.raises(ValueError, match="colidem"):
         run(tmp_path, tmp_path / "out", Options(), converter=converter)
+
+
+@pytest.mark.parametrize("initial", [None, "0", "1"])
+def test_offline_mode_does_not_persist_between_runs(monkeypatch, initial):
+    # A interface corre várias conversões no mesmo processo: desmarcar o modo
+    # offline tem de repor o ambiente com que a sessão arrancou.
+    constants = SimpleNamespace(HF_HUB_OFFLINE=False)
+    monkeypatch.setitem(sys.modules, "huggingface_hub.constants", constants)
+    monkeypatch.setattr(
+        pipeline, "INITIAL_OFFLINE_ENV", {key: initial for key in pipeline.OFFLINE_KEYS}
+    )
+    for key in pipeline.OFFLINE_KEYS:
+        if initial is None:
+            monkeypatch.delenv(key, raising=False)
+        else:
+            monkeypatch.setenv(key, initial)
+
+    apply_offline(True)
+    assert all(os.environ[key] == "1" for key in pipeline.OFFLINE_KEYS)
+    assert constants.HF_HUB_OFFLINE is True
+
+    apply_offline(False)
+    assert all(os.environ.get(key) == initial for key in pipeline.OFFLINE_KEYS)
+    assert constants.HF_HUB_OFFLINE is (initial == "1")
+
+
+@pytest.mark.parametrize("module", ["crl_markdown", "crl_markdown.recolha"])
+def test_cli_output_survives_legacy_windows_encoding(module):
+    # Em Windows, a saída redirecionada usa cp1252, que não tem «→».
+    src = Path(__file__).resolve().parents[1] / "src"
+    environment = {**os.environ, "PYTHONIOENCODING": "cp1252", "PYTHONPATH": str(src)}
+    result = subprocess.run(
+        [sys.executable, "-m", module, "--help"], capture_output=True, env=environment
+    )
+    assert result.returncode == 0, result.stderr.decode("utf-8", "replace")
+    if module == "crl_markdown":
+        assert "→".encode() in result.stdout
 
 
 def test_cli_lint_exit_codes(tmp_path):

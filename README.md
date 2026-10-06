@@ -14,25 +14,49 @@ O formato documental de trabalho é Markdown; os dados de auditoria ficam à par
 
 ## Instalar e utilizar
 
-Python 3.11 ou superior. No macOS Apple Silicon, usar Python arm64.
+Python 3.11 a 3.13; as estações do CRL usam Windows com Python 3.13. Instalar o
+Python de python.org com a opção «tcl/tk and IDLE», necessária à interface
+gráfica. No macOS, só há pacotes do PyTorch para Apple Silicon com macOS 14 ou
+superior; usar Python arm64.
+
+O ficheiro `requirements/runtime.txt` fixa as versões testadas do Docling, do
+PyTorch e das restantes dependências diretas. Usá-lo sempre como `-c`: sem ele,
+cada instalação nova recebe a versão mais recente do Docling, que ninguém testou.
+Criar o `.venv` num disco local, não numa unidade de rede.
+
+No Windows (PowerShell, a partir da pasta do projeto):
+
+```powershell
+py -3.13 -m venv .venv
+.venv\Scripts\python.exe -m pip install -e . -c requirements\runtime.txt
+.venv\Scripts\python.exe -m crl_markdown convert documento.pdf --out results
+.venv\Scripts\python.exe -m crl_markdown convert data\pdfs --out results
+.venv\Scripts\python.exe -m crl_markdown.app
+```
+
+No macOS e no Linux:
 
 ```bash
-python -m venv .venv
-.venv/bin/python -m pip install -e .
+python3 -m venv .venv
+.venv/bin/python -m pip install -e . -c requirements/runtime.txt
 .venv/bin/python -m crl_markdown convert documento.pdf --out results
 .venv/bin/python -m crl_markdown convert data/pdfs --out results
 .venv/bin/python -m crl_markdown.app
 ```
 
-No Windows substituir `.venv/bin/python` por `.venv\Scripts\python.exe`.
-A interface gráfica requer Tkinter. A conversão é processada localmente,
-com serviços remotos e plugins externos desativados. Os modelos Docling precisam
-de estar disponíveis localmente ou de ser descarregados na primeira utilização.
-O OCR está desligado por omissão; usar `--ocr` para digitalizações.
+Não é preciso ativar o `.venv`: chamar o Python dele diretamente garante que se
+usa o interpretador onde as dependências foram instaladas. A conversão é
+processada localmente, com serviços remotos e plugins externos desativados. Os
+modelos Docling precisam de estar disponíveis localmente ou de ser descarregados
+na primeira utilização. O OCR está desligado por omissão; usar `--ocr` para
+digitalizações. Com modelos locais e sem rede:
+
+```powershell
+.venv\Scripts\python.exe -m crl_markdown convert data\pdfs --out results --models C:\caminho\modelos-docling --offline --timeout 900
+```
 
 ```bash
-.venv/bin/python -m crl_markdown convert data/pdfs --out results \
-  --models /caminho/modelos-docling --offline --timeout 900
+.venv/bin/python -m crl_markdown convert data/pdfs --out results --models /caminho/modelos-docling --offline --timeout 900
 ```
 
 A pesquisa de PDFs inclui subpastas, preservadas na saída. Saídas existentes
@@ -45,6 +69,12 @@ A recolha foi adaptada de `cct/recolha.py` do projeto original, commit
 com os cabeçalhos de 2025 ou 2026, e descarrega os PDFs individuais das ligações
 indicadas. Copiar os índices para `data/raw/indices/` antes de executar:
 
+```powershell
+.venv\Scripts\python.exe -m crl_markdown collect --indices data\raw\indices
+.venv\Scripts\python.exe -m crl_markdown collect --indices data\raw\indices --confirmar-rede
+.venv\Scripts\python.exe -m crl_markdown convert data\interim\recolha --out results\bte
+```
+
 ```bash
 .venv/bin/python -m crl_markdown collect --indices data/raw/indices
 .venv/bin/python -m crl_markdown collect --indices data/raw/indices --confirmar-rede
@@ -52,7 +82,8 @@ indicadas. Copiar os índices para `data/raw/indices/` antes de executar:
 ```
 
 O primeiro comando simula e escreve o catálogo, sem pedidos de rede. O segundo
-ativa as descargas; também pode usar-se `CRL_RECOLHA_REDE=1`. A rede fica limitada
+ativa as descargas; também pode usar-se a variável `CRL_RECOLHA_REDE=1`
+(no PowerShell, `$env:CRL_RECOLHA_REDE = "1"`). A rede fica limitada
 a HTTPS nos três anfitriões oficiais reconhecidos pelo projeto original. URLs e
 redirecionamentos externos são recusados. Na cloud, permitir esses anfitriões nas
 configurações de rede; a conversão requer também modelos locais ou acesso ao
@@ -203,9 +234,12 @@ Importar apenas o documento final, excluindo `_auditoria`. Os relatórios conser
 os hashes do PDF, do Markdown e dos itens Docling. É possível reaplicar novas
 regras a uma extração guardada, sem voltar a carregar os modelos:
 
+```powershell
+.venv\Scripts\python.exe -m crl_markdown convert data\pdfs --out results\nova --docling-cache results\anterior
+```
+
 ```bash
-.venv/bin/python -m crl_markdown convert data/pdfs --out results/nova \
-  --docling-cache results/anterior
+.venv/bin/python -m crl_markdown convert data/pdfs --out results/nova --docling-cache results/anterior
 ```
 
 O comando verifica os hashes do PDF e da cache, e mede novamente a completude.
@@ -223,9 +257,9 @@ sem exigir renumeração de listas nem comprimento máximo de linhas.
 .venv/bin/python -m crl_markdown lint results
 npm ci
 npx markdownlint-cli2 'results/**/*.md'
-.venv/bin/python -m pip install -e '.[dev]'
+.venv/bin/python -m pip install -e '.[dev]' -c requirements/runtime.txt -c requirements/dev.txt
 .venv/bin/python -m pytest
-ruff check src tests
+.venv/bin/python -m ruff check src tests scripts
 npm run lint:md
 ```
 
@@ -235,7 +269,9 @@ completude. Foram excluídos os testes exclusivos das fases removidas; os contra
 com o novo pipeline Markdown têm testes próprios.
 
 O CI executa os testes sintéticos e com objetos reais docling-core em Linux,
-Windows e macOS, sem descarregar modelos nem PDFs. A suite real verifica os 14
+Windows e macOS, com Python 3.11 e 3.13, sem descarregar modelos nem PDFs. Um job
+à parte faz a instalação completa em Windows e macOS com Python 3.13 e as versões
+de `requirements/runtime.txt`, e confirma que o conversor arranca. A suite real verifica os 14
 PDFs identificados por SHA-256 no manifesto do corpus anterior, com atenção aos
 casos ACIBARCELOS, Empresa Metropolitana, IBERCOURIER, AWP, APSolutions e CARRISTUR.
 

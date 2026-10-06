@@ -1,0 +1,5 @@
+# Constraints de desenvolvimento e CI: versões exatas das ferramentas.
+#
+#     python -m pip install -e '.[dev]' -c requirements/runtime.txt -c requirements/dev.txt
+pytest==9.1.1
+ruff==0.16.10

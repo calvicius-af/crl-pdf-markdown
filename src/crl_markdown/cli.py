@@ -3,6 +3,7 @@ import json
 import sys
 from pathlib import Path
 
+from . import utf8_output
 from .cache import CachedConverter
 from .pipeline import Options, run
 from .quality import lint
@@ -10,6 +11,7 @@ from .recolha import add_arguments, collect
 
 
 def main(argv=None):
+    utf8_output()
     parser = argparse.ArgumentParser(description="PDF → Docling → Markdown para MAXQDA")
     commands = parser.add_subparsers(dest="command", required=True)
     collection = commands.add_parser(
