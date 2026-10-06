@@ -25,7 +25,7 @@ python -m venv .venv
 ```
 
 No Windows substituir `.venv/bin/python` por `.venv\Scripts\python.exe`.
-A interface gráfica requer Tkinter. O conteúdo é processado localmente,
+A interface gráfica requer Tkinter. A conversão é processada localmente,
 com serviços remotos e plugins externos desativados. Os modelos Docling precisam
 de estar disponíveis localmente ou de ser descarregados na primeira utilização.
 O OCR está desligado por omissão; usar `--ocr` para digitalizações.
@@ -37,6 +37,56 @@ O OCR está desligado por omissão; usar `--ocr` para digitalizações.
 
 A pesquisa de PDFs inclui subpastas, preservadas na saída. Saídas existentes
 requerem `--overwrite`. Uma falha não interrompe os restantes documentos.
+
+## Recolha dos documentos do site do BTE
+
+A recolha foi adaptada de `cct/recolha.py` do projeto original, commit
+`9faa8fef3c73d4a853e0c2f6592ce69ac42b7709`. Parte dos índices Excel da DGERT,
+com os cabeçalhos de 2025 ou 2026, e descarrega os PDFs individuais das ligações
+indicadas. Copiar os índices para `data/raw/indices/` antes de executar:
+
+```bash
+.venv/bin/python -m crl_markdown collect --indices data/raw/indices
+.venv/bin/python -m crl_markdown collect --indices data/raw/indices --confirmar-rede
+.venv/bin/python -m crl_markdown convert data/interim/recolha --out results/bte
+```
+
+O primeiro comando simula e escreve o catálogo, sem pedidos de rede. O segundo
+ativa as descargas; também pode usar-se `CRL_RECOLHA_REDE=1`. A rede fica limitada
+a HTTPS nos três anfitriões oficiais reconhecidos pelo projeto original. URLs e
+redirecionamentos externos são recusados. Na cloud, permitir esses anfitriões nas
+configurações de rede; a conversão requer também modelos locais ou acesso ao
+Hugging Face.
+
+Os PDFs mantêm o nome de origem em `data/interim/recolha/ANO/NUMERO/`. O catálogo
+`data/registo/registo_bte.jsonl` conserva tipo, título, outorgantes, código IRCT,
+URL, estado e SHA-256. Uma segunda corrida não volta a pedir os ficheiros cujo
+hash local coincide. Conservar os índices e o catálogo com os PDFs. A escrita é
+atómica; falhas e linhas inválidas ficam reportadas e fazem o comando terminar
+com código 1. Um PDF local sem hash registado não é substituído por conteúdo
+diferente. Ano, número BTE e nome do PDF são obrigatórios, fornecidos no índice
+ou derivados da ligação. Índices vazios ou não reconhecidos também falham.
+
+Usar `--destino` e `--registo` para outras pastas; `--familias` seleciona
+`convencao,extensao,adesao,aviso`; `--limite 5` limita documentos pedidos e
+`--pausa 1` controla o intervalo entre documentos. Tipos desconhecidos são
+registados e reportados, mas não descarregados. Os caminhos por omissão são
+relativos à pasta de trabalho. Executar da raiz deste repositório.
+
+Este mecanismo não descobre novos boletins nem descarrega os índices sozinho:
+segue o comportamento do original, baseado em índices fornecidos pela equipa.
+Também não recorta documentos de boletins históricos completos nem aplica a
+nomeação RNC do AppCCT. A conversão e auditoria mantêm os comandos existentes.
+
+## Utilização com Microsoft Copilot
+
+Ver [a análise de viabilidade](docs/copilot/viabilidade.md), as
+[instruções para o agente](docs/copilot/instrucoes-agente.txt) e o
+[protótipo de skill](docs/copilot/skill-bte/SKILL.md). O caminho proposto é recolher,
+converter e conferir fora do Copilot, depois disponibilizar o corpus aprovado
+como conhecimento do agente, preferencialmente em SharePoint. Skills do Agent
+Builder existem em preview Frontier; a disponibilidade no II precisa de ser
+confirmada. Os scripts dessas skills não têm rede nem instalação de pacotes.
 
 ## Regras recuperadas do projeto original
 

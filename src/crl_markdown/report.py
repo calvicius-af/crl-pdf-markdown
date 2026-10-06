@@ -293,9 +293,9 @@ def new_manifest(source: Path, output: Path, entries, options):
         "documents": [
             {
                 "source": str(pdf.resolve()),
-                "relative_source": str(
+                "relative_source": (
                     pdf.relative_to(source) if source.is_dir() else Path(pdf.name)
-                ),
+                ).as_posix(),
                 "output": str((output / relative).resolve()),
                 "state": "nao_processado",
             }

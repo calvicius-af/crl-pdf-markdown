@@ -6,7 +6,7 @@ requires-python = ">=3.11"
 readme = "README.md"
 license = {file = "LICENSE"}
 authors = [{name = "António Fula"}]
-dependencies = ["docling>=2.128,<3", "markdown-it-py>=3,<5", "pdfplumber>=0.11", "jsonschema>=4"]
+dependencies = ["docling>=2.128,<3", "markdown-it-py>=3,<5", "pdfplumber>=0.11", "jsonschema>=4", "openpyxl>=3.1,<4"]
 
 [project.optional-dependencies]
 dev = ["pytest>=8", "ruff>=0.11"]

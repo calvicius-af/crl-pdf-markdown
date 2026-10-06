@@ -6,11 +6,16 @@ from pathlib import Path
 from .cache import CachedConverter
 from .pipeline import Options, run
 from .quality import lint
+from .recolha import add_arguments, collect
 
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description="PDF → Docling → Markdown para MAXQDA")
     commands = parser.add_subparsers(dest="command", required=True)
+    collection = commands.add_parser(
+        "collect", help="Recolher PDFs a partir dos índices Excel do BTE"
+    )
+    add_arguments(collection)
     convert = commands.add_parser("convert", help="Converter PDF ou pasta recursivamente")
     convert.add_argument("source", type=Path)
     convert.add_argument("--out", required=True, type=Path)
@@ -30,6 +35,8 @@ def main(argv=None):
     check.add_argument("--strict", action="store_true")
     args = parser.parse_args(argv)
     try:
+        if args.command == "collect":
+            return collect(args)
         if args.command == "lint":
             files = sorted(args.source.rglob("*.md")) if args.source.is_dir() else [args.source]
             files = [p for p in files if "_auditoria" not in p.parts]
