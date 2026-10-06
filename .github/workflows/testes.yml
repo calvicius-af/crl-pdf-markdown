@@ -50,6 +50,7 @@ jobs:
           make_converter(Options(offline=True)); print('conversor criado')"
       - run: python -m crl_markdown --help
       - run: python -m crl_markdown collect --help
+      - run: python -m crl_markdown models --help
       - run: python -m pip install pytest -c requirements/dev.txt
       - run: python -m pytest --junitxml=pytest-results.xml
       - name: Report failed tests

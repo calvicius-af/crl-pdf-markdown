@@ -46,21 +46,44 @@ python3 -m venv .venv
 
 Não é preciso ativar o `.venv`: chamar o Python dele diretamente garante que se
 usa o interpretador onde as dependências foram instaladas. A conversão é
-processada localmente, com serviços remotos e plugins externos desativados. Os
-modelos Docling precisam de estar disponíveis localmente ou de ser descarregados
-na primeira utilização. O OCR está desligado por omissão; usar `--ocr` para
-digitalizações. Com modelos locais e sem rede:
-
-```powershell
-.venv\Scripts\python.exe -m crl_markdown convert data\pdfs --out results --models C:\caminho\modelos-docling --offline --timeout 900
-```
-
-```bash
-.venv/bin/python -m crl_markdown convert data/pdfs --out results --models /caminho/modelos-docling --offline --timeout 900
-```
+processada localmente, com serviços remotos e plugins externos desativados. O
+OCR está desligado por omissão; usar `--ocr` para digitalizações.
 
 A pesquisa de PDFs inclui subpastas, preservadas na saída. Saídas existentes
 requerem `--overwrite`. Uma falha não interrompe os restantes documentos.
+
+## Modelos Docling sem rede
+
+O Docling precisa de modelos (layout, tabelas e, com `--ocr`, o RapidOCR). Sem
+`--models`, descarrega-os do Hugging Face na primeira conversão, o que falha
+numa rede que bloqueie esse acesso. Nas estações, preparar os modelos uma vez
+numa máquina com rede e copiar a pasta inteira:
+
+```powershell
+.venv\Scripts\python.exe -m crl_markdown models download --dest C:\caminho\modelos-docling
+.venv\Scripts\python.exe -m crl_markdown models verify --folder L:\partilha\modelos-docling
+.venv\Scripts\python.exe -m crl_markdown convert data\pdfs --out results --models L:\partilha\modelos-docling --offline --timeout 900
+```
+
+```bash
+.venv/bin/python -m crl_markdown models download --dest /caminho/modelos-docling
+.venv/bin/python -m crl_markdown models verify --folder /caminho/modelos-docling
+.venv/bin/python -m crl_markdown convert data/pdfs --out results --models /caminho/modelos-docling --offline --timeout 900
+```
+
+O `download` escreve `manifesto_modelos.json`, com o tamanho e o SHA-256 de cada
+ficheiro e a versão do Docling. O `verify` confirma a cópia contra o manifesto, e
+a conversão repete essa verificação antes de começar: um ficheiro em falta,
+alterado ou a mais interrompe a corrida com uma mensagem, em vez de falhar em
+cada documento. Descarregar com a mesma versão do Docling que as estações usam
+(`requirements/runtime.txt`). `models inventory --folder` reescreve o manifesto
+de uma pasta preparada de outra forma.
+
+O OCR usa sempre o RapidOCR com o modelo de português. Não se usa a escolha
+automática do Docling, que depende do que está instalado e não do que está na
+pasta, e que em modo offline podia ir buscar modelos à rede. Por isso, `--ocr`
+com `--offline` exige `--models` com os modelos do OCR, e a conversão recusa-se
+a começar sem eles.
 
 ## Recolha dos documentos do site do BTE
 

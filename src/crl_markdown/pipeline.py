@@ -9,6 +9,7 @@ from dataclasses import asdict, dataclass
 from importlib.metadata import version
 from pathlib import Path
 
+from . import models
 from .audit import audit_pdf
 from .document import plain_markdown, prepare
 from .legacy import completude
@@ -47,11 +48,36 @@ def apply_offline(offline: bool):
         constants.HF_HUB_OFFLINE = offline or initial in {"1", "ON", "YES", "TRUE"}
 
 
+def check_models(options: Options):
+    """Recusa à partida o que falharia em cada documento por falta de modelos."""
+    if options.models and (options.models / models.MANIFEST).is_file():
+        problems = models.verify(options.models)
+        if problems:
+            shown = "; ".join(problems[:3]) + ("; …" if len(problems) > 3 else "")
+            raise ValueError(
+                f"Os modelos em {options.models} não correspondem ao manifesto ({shown}). "
+                "Copiar de novo a pasta preparada com `crl-md models download`."
+            )
+    if not options.ocr:
+        return
+    if options.models and not models.has_ocr_models(options.models):
+        raise ValueError(
+            f"OCR pedido, mas {options.models} não tem os modelos do OCR "
+            f"({models.OCR_FOLDER}). Prepará-los com `crl-md models download`."
+        )
+    if options.offline and not options.models:
+        raise ValueError(
+            "OCR em modo offline requer a pasta de modelos (--models), preparada com "
+            "`crl-md models download`; sem ela, o OCR iria buscar os modelos à rede."
+        )
+
+
 def make_converter(options: Options):
     if options.timeout <= 0:
         raise ValueError("O tempo máximo deve ser positivo.")
     if options.models and not options.models.is_dir():
         raise ValueError(f"Pasta de modelos inexistente: {options.models}")
+    check_models(options)
     apply_offline(options.offline)
     from docling.datamodel.base_models import InputFormat
     from docling.datamodel.pipeline_options import PdfPipelineOptions, TableFormerMode
@@ -65,6 +91,8 @@ def make_converter(options: Options):
         document_timeout=options.timeout,
         artifacts_path=options.models,
     )
+    if options.ocr:
+        pipeline.ocr_options = models.ocr_options()
     pipeline.table_structure_options.mode = TableFormerMode.ACCURATE
     pipeline.table_structure_options.do_cell_matching = True
     return DocumentConverter(
