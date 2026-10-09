@@ -95,13 +95,13 @@ indicadas. Copiar os índices para `data/raw/indices/` antes de executar:
 ```powershell
 .venv\Scripts\python.exe -m crl_markdown collect --indices data\raw\indices
 .venv\Scripts\python.exe -m crl_markdown collect --indices data\raw\indices --confirmar-rede
-.venv\Scripts\python.exe -m crl_markdown convert data\interim\recolha --out results\bte
+.venv\Scripts\python.exe -m crl_markdown convert data\raw\bte\bte_2026\convencoes --out results\bte
 ```
 
 ```bash
 .venv/bin/python -m crl_markdown collect --indices data/raw/indices
 .venv/bin/python -m crl_markdown collect --indices data/raw/indices --confirmar-rede
-.venv/bin/python -m crl_markdown convert data/interim/recolha --out results/bte
+.venv/bin/python -m crl_markdown convert data/raw/bte/bte_2026/convencoes --out results/bte
 ```
 
 O primeiro comando simula e escreve o catálogo, sem pedidos de rede. O segundo
@@ -122,15 +122,46 @@ diferente. Ano, número BTE e nome do PDF são obrigatórios, fornecidos no índ
 ou derivados da ligação. Índices vazios ou não reconhecidos também falham.
 
 Usar `--destino` e `--registo` para outras pastas; `--familias` seleciona
-`convencao,extensao,adesao,aviso`; `--limite 5` limita documentos pedidos e
+`convencao,extensao,adesao,acordao,aviso`; `--limite 5` limita documentos pedidos e
 `--pausa 1` controla o intervalo entre documentos. Tipos desconhecidos são
 registados e reportados, mas não descarregados. Os caminhos por omissão são
 relativos à pasta de trabalho. Executar da raiz deste repositório.
 
 Este mecanismo não descobre novos boletins nem descarrega os índices sozinho:
 segue o comportamento do original, baseado em índices fornecidos pela equipa.
-Também não recorta documentos de boletins históricos completos nem aplica a
-nomeação RNC do AppCCT. A conversão e auditoria mantêm os comandos existentes.
+Também não recorta documentos de boletins históricos completos. A conversão e
+auditoria mantêm os comandos existentes.
+
+### Nomes do RNC
+
+No fim de cada recolha, com ou sem rede, os PDFs recolhidos são copiados para
+`data/raw/bte/bte_ANO/` com o nome do esquema do RNC (ADR-0022 do AppCCT, de
+onde a nomeação foi portada). O Markdown herda o nome do PDF.
+
+| Família              | Pasta                            | Exemplo                                         |
+| -------------------- | -------------------------------- | ----------------------------------------------- |
+| Convenção            | `convencoes/PRI`, `SPE` ou `APU` | `2026_BTE_31_PRI_377_CCT_27251_ACRAL-CESP+3`    |
+| Portaria de extensão | `portarias_extensao`             | `2026_BTE_01_PE_012_0452-2025_27251_ACRAL-CESP` |
+| Acordo de adesão     | `acordos_adesao`                 | `2026_BTE_12_AA_412_27251_ABC-CESP`             |
+| Acórdão              | `acordaos`                       | `2026_BTE_05_JUR_101_27251_ACRAL-CESP`          |
+
+O nome começa por ano e número do BTE; o quarto campo é o âmbito numa convenção
+ou o tipo nas outras famílias; termina com o código IRCT da convenção de base e
+as siglas da primeira parte patronal e da primeira sindical (`+N` conta as
+restantes). Os índices que escrevem o tipo por extenso («ADESÃO», «ACORDÃO»)
+recebem o mesmo código (`AA`, `JUR`). Os acórdãos usam `JUR`, e não `AC`, para
+não se confundirem com ACT nem com acordo. Os avisos ficam só no catálogo.
+
+Um nome atribuído não muda. Por isso, um documento com dados incertos fica
+`por_confirmar` e não é copiado: siglas adivinhadas, âmbito proposto por regra
+ou pela lista do INE, outorgantes lidos do título, ou o código da convenção de
+base lido da cadeia de alterações do índice. Sem código de base, ou sem número e
+ano da portaria, nunca há nome. As siglas vêm do registo de organizações da
+DGERT (`vocabularios/siglas_organizacoes.csv`) e do `siglas.csv` da equipa, na
+pasta de trabalho (`nome;sigla`, sem cabeçalho), que tem prioridade. Para
+resolver os pendentes, acrescentar as siglas ao `siglas.csv` e repetir a
+recolha; depois de rever o resumo, `--aceitar-heuristicas` nomeia também os
+restantes. `--nomes` muda a pasta de destino e `--sem-nomear` desliga este passo.
 
 ## Utilização com Microsoft Copilot
 

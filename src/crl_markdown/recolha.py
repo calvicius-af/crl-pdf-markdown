@@ -61,11 +61,18 @@ TENTATIVAS = 3
 #               que substituem a convenção e têm cláusulas como ela
 #   extensao    PE, PCT, PRT — actos do Governo que alargam o âmbito de outro
 #   adesao      AA — uma parte adere a uma convenção existente
+#   acordao     acórdãos dos tribunais superiores publicados no BTE: decidem
+#               sobre uma convenção, mas não têm o articulado dela
 #   aviso       avisos de projeto de portaria, denúncias, caducidades
+#
+# Os índices trazem também o tipo por extenso («ADESÃO», «ACORDÃO», visto no
+# índice de 2026 dos BTE 1 a 10); depois de `_norm()` fica sem acentos.
 #
 # A ordem importa: o primeiro prefixo que encaixar ganha, pelo que os prefixos
 # mais longos vêm antes dos que os contêm (ACTV antes de ACT, AVISO antes de AV).
 PREFIXOS_FAMILIA = [
+    ("ACORDAO", "acordao"),
+    ("ADESAO", "adesao"),
     ("CCT", "convencao"),
     ("ACTV", "convencao"),
     ("ACEP", "convencao"),
@@ -83,14 +90,22 @@ PREFIXOS_FAMILIA = [
 # Os acordos de adesão passam a ser recolhidos por omissão. Estavam de fora, e
 # isso significava que uma adesão publicada no BTE não deixava rasto nenhum —
 # nem sequer uma linha no catálogo a dizer que existia.
-FAMILIAS_POR_OMISSAO = ("convencao", "extensao", "adesao", "aviso")
+FAMILIAS_POR_OMISSAO = ("convencao", "extensao", "adesao", "acordao", "aviso")
 
 REGISTO_OMISSAO = Path("data") / "registo" / "registo_bte.jsonl"
 DESTINO_OMISSAO = Path("data") / "interim" / "recolha"
 INDICES_OMISSAO = Path("data") / "raw" / "indices"
+NOMES_OMISSAO = Path("data") / "raw" / "bte"
 
 
 # ---------------------------------------------------------------- utilitários
+
+
+def sem_acentos(s) -> str:
+    """Remove as marcas de acentuação (NFD, descartando a categoria «Mn»)."""
+    return "".join(
+        c for c in unicodedata.normalize("NFD", str(s or "")) if unicodedata.category(c) != "Mn"
+    )
 
 
 def _norm(s) -> str:
@@ -729,7 +744,7 @@ def add_arguments(p):
     p.add_argument(
         "--familias",
         default=",".join(FAMILIAS_POR_OMISSAO),
-        help="famílias a descarregar (convencao,extensao,aviso,adesao)",
+        help="famílias a descarregar (convencao,extensao,adesao,acordao,aviso)",
     )
     p.add_argument(
         "--confirmar-rede", action="store_true", help="autoriza os pedidos de rede nesta corrida"
@@ -741,6 +756,27 @@ def add_arguments(p):
         help="segundos entre pedidos (por civilidade com o servidor)",
     )
     p.add_argument("--limite", type=int, help="máximo de descargas nesta corrida")
+    p.add_argument(
+        "--nomes",
+        default=str(NOMES_OMISSAO),
+        help="pasta onde ficam os PDF com o nome do RNC (bte_ANO/convencoes/PRI/...)",
+    )
+    p.add_argument(
+        "--siglas",
+        action="append",
+        default=[],
+        help="CSV de siglas adicional ('nome;sigla'); o siglas.csv da pasta de trabalho "
+        "e o registo de organizações da DGERT são sempre usados",
+    )
+    p.add_argument(
+        "--aceitar-heuristicas",
+        action="store_true",
+        help="nomeia também os documentos com siglas adivinhadas ou outros avisos, "
+        "sem confirmação; usar só numa corrida já revista",
+    )
+    p.add_argument(
+        "--sem-nomear", action="store_true", help="só recolhe; não atribui os nomes do RNC"
+    )
 
 
 def collect(args):
@@ -756,7 +792,9 @@ def collect(args):
 
     familias = tuple(f.strip() for f in args.familias.split(",") if f.strip())
     if not familias or set(familias) - set(FAMILIAS_POR_OMISSAO):
-        raise ValueError("Famílias inválidas: usar convencao, extensao, adesao ou aviso.")
+        raise ValueError(
+            "Famílias inválidas: usar convencao, extensao, adesao, acordao ou aviso."
+        )
     rede = args.confirmar_rede or os.environ.get("CRL_RECOLHA_REDE") == "1"
     registo = Registo.carregar(Path(args.registo))
     resumo = recolher(
@@ -771,7 +809,27 @@ def collect(args):
     print(texto_resumo(resumo, rede=rede))
     if not rede and resumo["por_estado"].get("por_descarregar"):
         print("\nPara descarregar mesmo: repetir com --confirmar-rede")
-    return 1 if resumo["problemas"] else 0
+    if args.sem_nomear:
+        return 1 if resumo["problemas"] else 0
+
+    # A nomeação corre sempre a seguir à recolha, com ou sem rede: é local e
+    # repetível, e só escreve o que não precisa de confirmação.
+    from . import nomeacao
+
+    for caminho in args.siglas:
+        if not Path(caminho).is_file():
+            raise ValueError(f"Ficheiro de siglas inexistente: {caminho}")
+    nomes = nomeacao.nomear(
+        registo,
+        Path(args.nomes),
+        aplicar=True,
+        tabela=nomeacao.tabela_de_siglas(args.siglas),
+        familias=familias,
+        aceitar_heuristicas=args.aceitar_heuristicas,
+    )
+    print()
+    print(nomeacao.texto_resumo(nomes))
+    return 1 if resumo["problemas"] or nomes["problemas"] else 0
 
 
 if __name__ == "__main__":
