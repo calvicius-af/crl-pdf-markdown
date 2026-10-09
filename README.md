@@ -46,21 +46,44 @@ python3 -m venv .venv
 
 Não é preciso ativar o `.venv`: chamar o Python dele diretamente garante que se
 usa o interpretador onde as dependências foram instaladas. A conversão é
-processada localmente, com serviços remotos e plugins externos desativados. Os
-modelos Docling precisam de estar disponíveis localmente ou de ser descarregados
-na primeira utilização. O OCR está desligado por omissão; usar `--ocr` para
-digitalizações. Com modelos locais e sem rede:
-
-```powershell
-.venv\Scripts\python.exe -m crl_markdown convert data\pdfs --out results --models C:\caminho\modelos-docling --offline --timeout 900
-```
-
-```bash
-.venv/bin/python -m crl_markdown convert data/pdfs --out results --models /caminho/modelos-docling --offline --timeout 900
-```
+processada localmente, com serviços remotos e plugins externos desativados. O
+OCR está desligado por omissão; usar `--ocr` para digitalizações.
 
 A pesquisa de PDFs inclui subpastas, preservadas na saída. Saídas existentes
 requerem `--overwrite`. Uma falha não interrompe os restantes documentos.
+
+## Modelos Docling sem rede
+
+O Docling precisa de modelos (layout, tabelas e, com `--ocr`, o RapidOCR). Sem
+`--models`, descarrega-os do Hugging Face na primeira conversão, o que falha
+numa rede que bloqueie esse acesso. Nas estações, preparar os modelos uma vez
+numa máquina com rede e copiar a pasta inteira:
+
+```powershell
+.venv\Scripts\python.exe -m crl_markdown models download --dest C:\caminho\modelos-docling
+.venv\Scripts\python.exe -m crl_markdown models verify --folder L:\partilha\modelos-docling
+.venv\Scripts\python.exe -m crl_markdown convert data\pdfs --out results --models L:\partilha\modelos-docling --offline --timeout 900
+```
+
+```bash
+.venv/bin/python -m crl_markdown models download --dest /caminho/modelos-docling
+.venv/bin/python -m crl_markdown models verify --folder /caminho/modelos-docling
+.venv/bin/python -m crl_markdown convert data/pdfs --out results --models /caminho/modelos-docling --offline --timeout 900
+```
+
+O `download` escreve `manifesto_modelos.json`, com o tamanho e o SHA-256 de cada
+ficheiro e a versão do Docling. O `verify` confirma a cópia contra o manifesto, e
+a conversão repete essa verificação antes de começar: um ficheiro em falta,
+alterado ou a mais interrompe a corrida com uma mensagem, em vez de falhar em
+cada documento. Descarregar com a mesma versão do Docling que as estações usam
+(`requirements/runtime.txt`). `models inventory --folder` reescreve o manifesto
+de uma pasta preparada de outra forma.
+
+O OCR usa sempre o RapidOCR com o modelo de português. Não se usa a escolha
+automática do Docling, que depende do que está instalado e não do que está na
+pasta, e que em modo offline podia ir buscar modelos à rede. Por isso, `--ocr`
+com `--offline` exige `--models` com os modelos do OCR, e a conversão recusa-se
+a começar sem eles.
 
 ## Recolha dos documentos do site do BTE
 
@@ -72,13 +95,13 @@ indicadas. Copiar os índices para `data/raw/indices/` antes de executar:
 ```powershell
 .venv\Scripts\python.exe -m crl_markdown collect --indices data\raw\indices
 .venv\Scripts\python.exe -m crl_markdown collect --indices data\raw\indices --confirmar-rede
-.venv\Scripts\python.exe -m crl_markdown convert data\interim\recolha --out results\bte
+.venv\Scripts\python.exe -m crl_markdown convert data\raw\bte\bte_2026\convencoes --out results\bte
 ```
 
 ```bash
 .venv/bin/python -m crl_markdown collect --indices data/raw/indices
 .venv/bin/python -m crl_markdown collect --indices data/raw/indices --confirmar-rede
-.venv/bin/python -m crl_markdown convert data/interim/recolha --out results/bte
+.venv/bin/python -m crl_markdown convert data/raw/bte/bte_2026/convencoes --out results/bte
 ```
 
 O primeiro comando simula e escreve o catálogo, sem pedidos de rede. O segundo
@@ -99,15 +122,55 @@ diferente. Ano, número BTE e nome do PDF são obrigatórios, fornecidos no índ
 ou derivados da ligação. Índices vazios ou não reconhecidos também falham.
 
 Usar `--destino` e `--registo` para outras pastas; `--familias` seleciona
-`convencao,extensao,adesao,aviso`; `--limite 5` limita documentos pedidos e
+`convencao,extensao,adesao,acordao,aviso`; `--limite 5` limita documentos pedidos e
 `--pausa 1` controla o intervalo entre documentos. Tipos desconhecidos são
 registados e reportados, mas não descarregados. Os caminhos por omissão são
 relativos à pasta de trabalho. Executar da raiz deste repositório.
 
 Este mecanismo não descobre novos boletins nem descarrega os índices sozinho:
 segue o comportamento do original, baseado em índices fornecidos pela equipa.
-Também não recorta documentos de boletins históricos completos nem aplica a
-nomeação RNC do AppCCT. A conversão e auditoria mantêm os comandos existentes.
+Também não recorta documentos de boletins históricos completos. A conversão e
+auditoria mantêm os comandos existentes.
+
+### Nomes do RNC
+
+No fim de cada recolha, com ou sem rede, os PDFs recolhidos são copiados para
+`data/raw/bte/bte_ANO/` com o nome do esquema do RNC (ADR-0022 do AppCCT, de
+onde a nomeação foi portada). O Markdown herda o nome do PDF.
+
+| Família              | Pasta                            | Exemplo                                         |
+| -------------------- | -------------------------------- | ----------------------------------------------- |
+| Convenção            | `convencoes/PRI`, `SPE` ou `APU` | `2026_BTE_31_PRI_377_CCT_27251_ACRAL-CESP+3`    |
+| Portaria de extensão | `portarias_extensao`             | `2026_BTE_01_PE_012_0452-2025_27251_ACRAL-CESP` |
+| Acordo de adesão     | `acordos_adesao`                 | `2026_BTE_12_AA_412_27251_ABC-CESP`             |
+| Acórdão              | `acordaos`                       | `2026_BTE_05_JUR_101_27251_ACRAL-CESP`          |
+
+O nome começa por ano e número do BTE; o quarto campo é o âmbito numa convenção
+ou o tipo nas outras famílias; termina com o código IRCT da convenção de base e
+as siglas da primeira parte patronal e da primeira sindical (`+N` conta as
+restantes). Os índices que escrevem o tipo por extenso («ADESÃO», «ACORDÃO»)
+recebem o mesmo código (`AA`, `JUR`). Os acórdãos usam `JUR`, e não `AC`, para
+não se confundirem com ACT nem com acordo. Os avisos ficam só no catálogo.
+
+Um nome atribuído não muda. Por isso, um documento com dados incertos fica
+`por_confirmar` e não é copiado: siglas adivinhadas, âmbito proposto por regra
+ou pela lista do INE, outorgantes lidos do título, ou o código da convenção de
+base lido da cadeia de alterações do índice. Sem código de base, ou sem número e
+ano da portaria, nunca há nome. As siglas vêm do registo de organizações da
+DGERT (`vocabularios/siglas_organizacoes.csv`) e do `siglas.csv` da equipa, na
+pasta de trabalho (`nome;sigla`, com ou sem cabeçalho), que tem prioridade.
+
+O registo da DGERT só tem associações e sindicatos: as siglas de empresas
+(acordos de empresa) são adivinhadas e ficam por confirmar. Cada recolha
+escreve-as em `data/registo/siglas_pendentes.csv`
+(`nome;sigla;documentos;atencao`), com os documentos que cada uma bloqueia, os
+mais frequentes primeiro; a coluna `atencao` assinala a mesma sigla sugerida
+para entidades diferentes. Abrir no
+Excel, corrigir a coluna `sigla`, apagar as linhas que não estiverem certas e
+copiar as restantes para o `siglas.csv` (guardado como CSV separado por ponto e
+vírgula, em UTF-8 ou no formato do Excel); repetir a recolha nomeia os
+documentos desbloqueados. Depois de rever o resumo, `--aceitar-heuristicas`
+nomeia também os restantes. `--nomes` muda a pasta de destino e `--sem-nomear` desliga este passo.
 
 ## Utilização com Microsoft Copilot
 
@@ -218,17 +281,38 @@ arquivados permitem identificar essa diferença.
 ## Saídas e nova renderização
 
 ```text
-results/documento.md                         ← documento para conferência/importação
-results/_auditoria/diagnostico.md             ← resumo e ações de revisão do lote
-results/_auditoria/detalhes.md                ← evidências e ocorrências completas
-results/_auditoria/relatorio.txt              ← inventário de todas as ocorrências
-results/_auditoria/manifest.json              ← dados e proveniência da corrida
-results/_auditoria/corridas/<id>/             ← relatórios de corridas anteriores
-results/_auditoria/documento.docling.md      ← exportação Markdown nativa
-results/_auditoria/documento.docling.json    ← itens e geometria Docling
-results/_auditoria/documento.qualidade.json  ← métricas, estrutura, alertas e hashes
-results/_auditoria/documento.qualidade.md    ← diagnóstico legível
+results/documento.md                                    ← documento para conferência/importação
+results/_auditoria/diagnostico.md                       ← resumo e ações de revisão do lote
+results/_auditoria/detalhes.md                          ← evidências e ocorrências completas
+results/_auditoria/relatorio.txt                        ← inventário de todas as ocorrências
+results/_auditoria/manifest.json                        ← dados e proveniência da corrida
+results/_auditoria/corridas/<id>/                       ← relatórios de corridas anteriores
+results/_auditoria/documentos/documento.docling.md      ← exportação Markdown nativa
+results/_auditoria/documentos/documento.docling.json    ← itens e geometria Docling
+results/_auditoria/documentos/documento.qualidade.json  ← métricas, estrutura, alertas e hashes
+results/_auditoria/documentos/documento.qualidade.md    ← diagnóstico legível
 ```
+
+Com uma pasta de entrada com subpastas, os Markdown repetem as subpastas e os
+ficheiros de auditoria de cada documento ficam em `_auditoria/documentos/`, com
+as mesmas subpastas. Os relatórios do lote são escritos logo no início e
+atualizados depois de cada documento: uma corrida interrompida deixa o
+diagnóstico do que foi feito, com o estado `interrompida`. Repetir a corrida
+com a mesma pasta de saída retoma-a: um documento já convertido a partir do
+mesmo PDF (mesmo SHA-256) é reaproveitado sem nova extração; um PDF diferente
+com saída existente continua a exigir `--overwrite`. As conversões feitas com a
+versão anterior, que tinham `_auditoria` em cada pasta, também são
+reaproveitadas, e os seus ficheiros de auditoria passam para
+`_auditoria/documentos/`. Na interface, fechar a janela durante uma conversão
+pede confirmação.
+
+O Docling corre num processo separado, com os modelos carregados uma vez e
+renovado a cada 25 documentos. Uma falha numa biblioteca em C (uma violação de
+acesso no Windows, que fechava a janela sem mensagem) leva só esse processo: a
+corrida regista-a, repete o documento num processo novo e, se voltar a falhar,
+marca-o como `falhou` e segue para o seguinte. Cada corrida acrescenta a
+`_auditoria/progresso.log` a hora e o documento em curso, e
+`_auditoria/falha_nativa.log` guarda o rasto de cada falha nativa.
 
 Importar apenas o documento final, excluindo `_auditoria`. Os relatórios conservam
 os hashes do PDF, do Markdown e dos itens Docling. É possível reaplicar novas

@@ -22,6 +22,10 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.setuptools.package-data]
+# Vocabulários da nomeação (siglas da DGERT, âmbitos, lista do INE).
+crl_markdown = ["vocabularios/*.csv"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]

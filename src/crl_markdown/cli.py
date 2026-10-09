@@ -3,7 +3,7 @@ import json
 import sys
 from pathlib import Path
 
-from . import utf8_output
+from . import models, utf8_output
 from .cache import CachedConverter
 from .pipeline import Options, run
 from .quality import lint
@@ -32,6 +32,10 @@ def main(argv=None):
         help="Reutilizar uma extração Docling auditada, verificando o hash do PDF",
     )
     convert.add_argument("--strict", action="store_true", help="Falhar também quando há avisos")
+    model_files = commands.add_parser(
+        "models", help="Descarregar e verificar os modelos Docling para uso sem rede"
+    )
+    models.add_arguments(model_files)
     check = commands.add_parser("lint", help="Validar Markdown existente, sem o modificar")
     check.add_argument("source", type=Path)
     check.add_argument("--strict", action="store_true")
@@ -39,6 +43,8 @@ def main(argv=None):
     try:
         if args.command == "collect":
             return collect(args)
+        if args.command == "models":
+            return models.run_command(args)
         if args.command == "lint":
             files = sorted(args.source.rglob("*.md")) if args.source.is_dir() else [args.source]
             files = [p for p in files if "_auditoria" not in p.parts]

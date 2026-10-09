@@ -89,21 +89,30 @@ def test_failed_documents_reported_and_previous_runs_preserved(tmp_path):
     assert "Relatório consolidado:" in logs[-1]
 
 
-@pytest.mark.parametrize("exception", [RuntimeError("Modelos indisponíveis"), KeyboardInterrupt()])
-def test_initialization_failure_records_unprocessed_documents(tmp_path, monkeypatch, exception):
+@pytest.mark.parametrize("failure", ["models", "interrupt"])
+def test_initialization_failure_records_unprocessed_documents(tmp_path, monkeypatch, failure):
+    # O Docling corre num processo à parte: um conversor que não arranca
+    # (modelos em falta) interrompe a corrida, como antes, em vez de falhar
+    # documento a documento.
+    from tests import worker_fakes
+
     pdf = tmp_path / "origem.pdf"
     pdf.touch()
+    kwargs = {"converter_factory": worker_fakes.sem_modelos}
+    expected, name = RuntimeError, "Modelos indisponíveis"
+    if failure == "interrupt":
 
-    def fail(_):
-        raise exception
+        def interrupt(*_args, **_kwargs):
+            raise KeyboardInterrupt
 
-    monkeypatch.setattr("crl_markdown.pipeline.make_converter", fail)
-    with pytest.raises(type(exception)):
-        run(pdf, tmp_path / "out", Options(), progress=lambda _: None)
+        monkeypatch.setattr("crl_markdown.pipeline.ConversorIsolado", interrupt)
+        kwargs, expected, name = {}, KeyboardInterrupt, "KeyboardInterrupt"
+    with pytest.raises(expected):
+        run(pdf, tmp_path / "out", Options(), progress=lambda _: None, **kwargs)
     manifest = json.loads((tmp_path / "out/_auditoria/manifest.json").read_text("utf-8"))
     assert manifest["status"] == "interrompida"
     assert manifest["counts"] == {"nao_processado": 1}
-    assert type(exception).__name__ in manifest["error"]
+    assert name in manifest["error"]
 
 
 def test_interruption_retains_completed_attempts_and_pending_documents(tmp_path):

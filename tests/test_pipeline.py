@@ -111,6 +111,121 @@ def test_batch_nested_paths_and_continues_on_failure(tmp_path, converter):
     assert (tmp_path / "out/nested/good.md").exists()
 
 
+def _bte_inputs(tmp_path):
+    inputs = tmp_path / "inputs"
+    for bte, name in (("29", "a.pdf"), ("30", "b.pdf"), ("31", "c.pdf")):
+        (inputs / "2026" / bte).mkdir(parents=True)
+        (inputs / "2026" / bte / name).write_bytes(f"%PDF {name}".encode())
+    return inputs
+
+
+def test_audit_files_are_kept_together_outside_the_document_folders(tmp_path, converter):
+    # Antes, cada pasta de BTE recebia o seu próprio _auditoria ao lado dos
+    # Markdown; o que se importa no MAXQDA fica agora sozinho nessas pastas.
+    out = tmp_path / "out"
+    run(_bte_inputs(tmp_path), out, Options(), converter=converter, progress=lambda _: None)
+    finals = [p for p in out.rglob("*.md") if "_auditoria" not in p.parts]
+    assert sorted(p.relative_to(out).as_posix() for p in finals) == [
+        "2026/29/a.md",
+        "2026/30/b.md",
+        "2026/31/c.md",
+    ]
+    assert [p.relative_to(out).as_posix() for p in out.rglob("_auditoria")] == ["_auditoria"]
+    documents = out / "_auditoria" / "documentos" / "2026" / "30"
+    assert {p.name for p in documents.iterdir()} == {
+        "b.docling.md",
+        "b.docling.json",
+        "b.qualidade.json",
+        "b.qualidade.md",
+    }
+    assert (out / "_auditoria" / "diagnostico.md").is_file()
+
+
+def test_reports_written_while_the_batch_runs(tmp_path, converter):
+    # Uma corrida longa interrompida a meio tem de deixar o relatório do lote.
+    out = tmp_path / "out"
+    original = converter.convert
+
+    def convert(path):
+        if path.name == "c.pdf":
+            manifest = json.loads((out / "_auditoria" / "manifest.json").read_text("utf-8"))
+            assert manifest["status"] == "em_curso"
+            assert [d["state"] for d in manifest["documents"]][:2] != ["nao_processado"] * 2
+            raise KeyboardInterrupt
+        return original(path)
+
+    converter.convert = convert
+    with pytest.raises(KeyboardInterrupt):
+        run(_bte_inputs(tmp_path), out, Options(), converter=converter, progress=lambda _: None)
+    manifest = json.loads((out / "_auditoria" / "manifest.json").read_text("utf-8"))
+    assert manifest["status"] == "interrompida"
+    assert (out / "_auditoria" / "diagnostico.md").is_file()
+
+
+def test_rerun_resumes_from_documents_already_converted(tmp_path, converter):
+    inputs, out = _bte_inputs(tmp_path), tmp_path / "out"
+    run(inputs, out, Options(), converter=converter, progress=lambda _: None)
+    calls = []
+    original = converter.convert
+    converter.convert = lambda path: calls.append(path.name) or original(path)
+    (inputs / "2026" / "31" / "c.pdf").write_bytes(b"%PDF outro conteudo")
+    reports = run(inputs, out, Options(), converter=converter, progress=lambda _: None)
+    assert calls == []  # a e b reaproveitados; c mudou e não é sobrescrito sem --overwrite
+    assert [r.get("reused", False) for r in reports] == [True, True, False]
+    assert reports[2]["state"] == "falhou" and "overwrite" in reports[2]["error"]
+    run(inputs, out, Options(), overwrite=True, converter=converter, progress=lambda _: None)
+    assert calls == ["a.pdf", "b.pdf", "c.pdf"]
+
+
+def test_rerun_adopts_conversions_in_the_previous_layout(tmp_path, converter):
+    # Resultados convertidos antes desta versão, com _auditoria em cada pasta.
+    inputs, out = _bte_inputs(tmp_path), tmp_path / "out"
+    pdf, target = inputs / "2026/30/b.pdf", out / "2026/30/b.md"
+    convert_pdf(pdf, target, converter, Options())
+    assert (out / "2026/30/_auditoria/b.qualidade.json").is_file()
+    calls = []
+    original = converter.convert
+    converter.convert = lambda path: calls.append(path.name) or original(path)
+    reports = run(inputs, out, Options(), converter=converter, progress=lambda _: None)
+    assert calls == ["a.pdf", "c.pdf"]
+    assert reports[1]["reused"] is True
+    assert not (out / "2026/30/_auditoria").exists()
+    assert (out / "_auditoria/documentos/2026/30/b.qualidade.json").is_file()
+
+
+def test_native_crash_leaves_progress_and_traceback(tmp_path):
+    # Em Windows, a janela fechou-se sozinha a meio do lote, sem mensagem: é o
+    # que acontece quando uma biblioteca em C falha ao ler um PDF.
+    inputs, out = _bte_inputs(tmp_path), tmp_path / "out"
+    script = tmp_path / "crash.py"
+    script.write_text(
+        "import faulthandler, sys\n"
+        "from pathlib import Path\n"
+        "from types import SimpleNamespace\n"
+        "from crl_markdown.pipeline import Options, run\n"
+        "def convert(path):\n"
+        "    if path.name == 'b.pdf':\n"
+        "        faulthandler._sigsegv()\n"
+        "    raise RuntimeError('sem extração neste ensaio')\n"
+        "run(Path(sys.argv[1]), Path(sys.argv[2]), Options(),\n"
+        "    converter=SimpleNamespace(convert=convert), progress=lambda _: None)\n",
+        encoding="utf-8",
+    )
+    src = Path(__file__).resolve().parents[1] / "src"
+    environment = {**os.environ, "PYTHONPATH": str(src)}
+    environment.pop("PYTHONFAULTHANDLER", None)
+    result = subprocess.run(
+        [sys.executable, str(script), str(inputs), str(out)], capture_output=True, env=environment
+    )
+    assert result.returncode != 0
+    progress = (out / "_auditoria" / "progresso.log").read_text("utf-8")
+    assert progress.rstrip().endswith("b.pdf"), "a última linha é o documento que falhou"
+    assert "Fatal Python error" in (out / "_auditoria" / "falha_nativa.log").read_text("utf-8")
+    manifest = json.loads((out / "_auditoria" / "manifest.json").read_text("utf-8"))
+    assert manifest["status"] == "em_curso"
+    assert [d["state"] for d in manifest["documents"]] == ["falhou", "nao_processado", "nao_processado"]
+
+
 def test_case_collisions_rejected(tmp_path, converter):
     (tmp_path / "same.pdf").touch()
     (tmp_path / "same.PDF").touch()
