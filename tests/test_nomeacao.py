@@ -206,3 +206,32 @@ def test_collect_nomeia_automaticamente(tmp_path, monkeypatch, capsys):
     assert entrada["nomeacao"]["estado"] == "nomeado"
     assert main(argumentos + ["--sem-nomear"]) == 0
     assert "Nomeação" not in capsys.readouterr().out
+
+
+def test_collect_usa_o_vocabulario_de_ambitos_do_pacote(tmp_path, monkeypatch, capsys):
+    # A EPAL está em vocabularios/empregadores_ambito.csv como SPE. Sem esse
+    # vocabulário caía em PRI por omissão, sem aviso, e o nome ficava errado
+    # para sempre, porque um nome atribuído não muda.
+    from crl_markdown import recolha
+    from crl_markdown.cli import main
+
+    epal = (
+        "390/2026",
+        "Acordo de empresa entre a EPAL - Empresa Portuguesa das Águas Livres, S.A. e o "
+        "SINDEL - Sindicato Nacional da Indústria e da Energia",
+        "AE",
+        "47300",
+        "EPAL - Empresa Portuguesa das Águas Livres, S.A.; "
+        "SINDEL - Sindicato Nacional da Indústria e da Energia",
+        "",
+        "00950099.pdf",
+    )
+    monkeypatch.setattr(recolha, "abridor_urllib", AbridorFalso())
+    monkeypatch.chdir(tmp_path)
+    indice = escrever_indice(tmp_path, [epal])
+    assert main(["collect", "--indices", str(indice), "--pausa", "0", "--confirmar-rede"]) == 0
+    assert "nomeado: 1" in capsys.readouterr().out
+    nomeados = [p.relative_to(tmp_path).as_posix() for p in tmp_path.rglob("data/raw/bte/**/*.pdf")]
+    assert nomeados == [
+        "data/raw/bte/bte_2026/convencoes/SPE/2026_BTE_31_SPE_390_AE_47300_EPAL-SINDEL.pdf"
+    ]

@@ -429,8 +429,10 @@ def nome_documento(
         acórdão     {ANO}_BTE_{NN}_JUR_{SEQ}_{CODIRCT}_{SIGLAS}
 
     `NomeRNCInvalido` diz que falta um campo estrutural e que o ficheiro não
-    pode ser escrito de todo.
+    pode ser escrito de todo. Sem `vocabulario_ambito`, usa o do pacote.
     """
+    if vocabulario_ambito is None:
+        vocabulario_ambito = mod_ambito.vocabulario_por_omissao()
     avisos: list[str] = []
     ano = int(entrada.get("ano") or 0)
     num_bte = int(entrada.get("num_bte") or 0)
@@ -571,8 +573,11 @@ def nomear(
     e não é escrito: a confirmação tem de acontecer antes de o nome existir,
     porque um nome atribuído não muda. `aceitar_heuristicas=True` desliga esta
     proteção para uma corrida já revista. Um nome novo diferente do que já foi
-    escrito é `conflito` e não substitui nada.
+    escrito é `conflito` e não substitui nada. Sem `vocabulario_ambito`, usa o
+    `empregadores_ambito.csv` do pacote.
     """
+    if vocabulario_ambito is None:
+        vocabulario_ambito = mod_ambito.vocabulario_por_omissao()
     resumo: dict[str, Any] = {
         "ordinais_novos": atribuir_ordinais(registo, familias),
         "por_estado": {},

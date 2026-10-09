@@ -144,6 +144,17 @@ def classificar(empregador: str, tipo: str = "",
     return OMISSAO, "omissao", None
 
 
+@lru_cache(maxsize=1)
+def vocabulario_por_omissao() -> dict[str, str]:
+    """O `empregadores_ambito.csv` incluído no pacote, lido uma vez por processo.
+
+    É o que a nomeação usa quando não lhe passam outro vocabulário: sem ele, um
+    empregador conhecido como a EPAL cai em PRI por omissão, sem aviso, e o nome
+    atribuído, que não muda, fica com o âmbito errado.
+    """
+    return carregar_vocabulario()
+
+
 def processavel(ambito: str) -> bool:
     """O pipeline lê PRI e SPE. APU recolhe-se e cataloga-se; não se processa."""
     return (ambito or OMISSAO).upper() in ("PRI", "SPE")
