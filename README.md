@@ -158,10 +158,17 @@ ou pela lista do INE, outorgantes lidos do título, ou o código da convenção 
 base lido da cadeia de alterações do índice. Sem código de base, ou sem número e
 ano da portaria, nunca há nome. As siglas vêm do registo de organizações da
 DGERT (`vocabularios/siglas_organizacoes.csv`) e do `siglas.csv` da equipa, na
-pasta de trabalho (`nome;sigla`, sem cabeçalho), que tem prioridade. Para
-resolver os pendentes, acrescentar as siglas ao `siglas.csv` e repetir a
-recolha; depois de rever o resumo, `--aceitar-heuristicas` nomeia também os
-restantes. `--nomes` muda a pasta de destino e `--sem-nomear` desliga este passo.
+pasta de trabalho (`nome;sigla`, com ou sem cabeçalho), que tem prioridade.
+
+O registo da DGERT só tem associações e sindicatos: as siglas de empresas
+(acordos de empresa) são adivinhadas e ficam por confirmar. Cada recolha
+escreve-as em `data/registo/siglas_pendentes.csv` (`nome;sigla;documentos`),
+com os documentos que cada uma bloqueia, os mais frequentes primeiro. Abrir no
+Excel, corrigir a coluna `sigla`, apagar as linhas que não estiverem certas e
+copiar as restantes para o `siglas.csv` (guardado como CSV separado por ponto e
+vírgula, em UTF-8 ou no formato do Excel); repetir a recolha nomeia os
+documentos desbloqueados. Depois de rever o resumo, `--aceitar-heuristicas`
+nomeia também os restantes. `--nomes` muda a pasta de destino e `--sem-nomear` desliga este passo.
 
 ## Utilização com Microsoft Copilot
 
@@ -296,6 +303,11 @@ versão anterior, que tinham `_auditoria` em cada pasta, também são
 reaproveitadas, e os seus ficheiros de auditoria passam para
 `_auditoria/documentos/`. Na interface, fechar a janela durante uma conversão
 pede confirmação.
+
+Cada corrida acrescenta a `_auditoria/progresso.log` a hora e o documento em
+curso. Se o processo terminar sem mensagem (uma falha numa biblioteca em C ao
+ler um PDF fecha a janela sem exceção Python), a última linha diz qual era o
+documento, e `_auditoria/falha_nativa.log` guarda o rasto da falha.
 
 Importar apenas o documento final, excluindo `_auditoria`. Os relatórios conservam
 os hashes do PDF, do Markdown e dos itens Docling. É possível reaplicar novas

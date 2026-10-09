@@ -265,8 +265,16 @@ def carregar_siglas(caminho: Path) -> dict[str, str]:
     `vocabularios/siglas_organizacoes.csv`). Separador `;`, UTF-8 com ou sem BOM.
     """
     tabela: dict[str, str] = {}
-    with open(caminho, encoding="utf-8-sig", newline="") as f:
-        linhas = [linha for linha in csv.reader(f, delimiter=";") if linha and linha[0].strip()]
+    try:
+        texto = Path(caminho).read_text(encoding="utf-8-sig")
+    except UnicodeDecodeError:
+        # O Excel em Windows guarda «CSV (separado por ponto e vírgula)» em cp1252.
+        texto = Path(caminho).read_text(encoding="cp1252")
+    linhas = [
+        linha
+        for linha in csv.reader(texto.splitlines(), delimiter=";")
+        if linha and linha[0].strip()
+    ]
     if not linhas:
         return tabela
     i_nome, i_sigla = 0, 1
@@ -312,6 +320,38 @@ def tabela_de_siglas(caminhos=(), *, equipa: Path = SIGLAS_EQUIPA, dgert: bool =
         for nome, valor in carregar_siglas(caminho).items():
             tabela.setdefault(nome, valor)
     return tabela
+
+
+def siglas_derivadas(entrada: dict, tabela: dict[str, str] | None = None):
+    """(outorgante, sigla sugerida) das siglas do nome que foram adivinhadas."""
+    escolhidos, _nomes, _avisos = _outorgantes_escolhidos(entrada)
+    derivadas = []
+    for nome in escolhidos:
+        valor, aviso = sigla(nome, tabela)
+        if aviso and valor:
+            derivadas.append((nome.strip(" .;,"), valor))
+    return derivadas
+
+
+def escrever_siglas_pendentes(pendentes: dict, caminho: Path) -> Path | None:
+    """Escreve `nome;sigla;documentos` das siglas adivinhadas, para revisão.
+
+    O ficheiro é refeito a cada corrida e apagado quando não há pendentes. As
+    duas primeiras colunas têm o formato do siglas.csv da equipa: revistas e
+    corrigidas, as linhas passam para lá, ou o ficheiro inteiro entra numa
+    corrida com `--siglas`. Escreve-se com BOM, para o Excel abrir os acentos.
+    """
+    caminho = Path(caminho)
+    if not pendentes:
+        caminho.unlink(missing_ok=True)
+        return None
+    caminho.parent.mkdir(parents=True, exist_ok=True)
+    with open(caminho, "w", encoding="utf-8-sig", newline="") as f:
+        escritor = csv.writer(f, delimiter=";", lineterminator="\n")
+        escritor.writerow(["nome", "sigla", "documentos"])
+        for nome, dados in sorted(pendentes.items(), key=lambda i: (-len(i[1]["documentos"]), i[0])):
+            escritor.writerow([nome, dados["sigla"], " ".join(dados["documentos"])])
+    return caminho
 
 
 # ------------------------------------------------------------------- campos
@@ -584,6 +624,7 @@ def nomear(
         "avisos": [],
         "problemas": [],
         "nomes": [],
+        "siglas_pendentes": {},
     }
     resolver_convencoes_base(registo.entradas.values())
 
@@ -683,6 +724,11 @@ def nomear(
             if avisos_heuristica and not aceitar_heuristicas:
                 nomeacao["estado"] = "por_confirmar"
                 contar("por_confirmar")
+                for outorgante, sugerida in siglas_derivadas(e, tabela):
+                    pendente = resumo["siglas_pendentes"].setdefault(
+                        outorgante, {"sigla": sugerida, "documentos": []}
+                    )
+                    pendente["documentos"].append(nome)
                 continue
             if not aplicar:
                 nomeacao["estado"] = "por_nomear"
@@ -712,6 +758,11 @@ def texto_resumo(resumo: dict) -> str:
         linhas.append(
             "  (por confirmar: acrescentar as siglas em falta ao siglas.csv da equipa e "
             "repetir, ou aceitar conscientemente o risco com --aceitar-heuristicas)"
+        )
+    if resumo.get("ficheiro_siglas_pendentes"):
+        linhas.append(
+            f"  siglas adivinhadas para rever: {len(resumo['siglas_pendentes'])} em "
+            f"{resumo['ficheiro_siglas_pendentes']}"
         )
     if resumo["avisos"]:
         linhas.append(f"  a confirmar ({len(resumo['avisos'])}):")

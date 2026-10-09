@@ -827,6 +827,9 @@ def collect(args):
         familias=familias,
         aceitar_heuristicas=args.aceitar_heuristicas,
     )
+    pendentes = Path(args.registo).parent / "siglas_pendentes.csv"
+    if nomeacao.escrever_siglas_pendentes(nomes["siglas_pendentes"], pendentes):
+        nomes["ficheiro_siglas_pendentes"] = str(pendentes)
     print()
     print(nomeacao.texto_resumo(nomes))
     return 1 if resumo["problemas"] or nomes["problemas"] else 0

@@ -74,7 +74,10 @@ RE_SPE = re.compile(
 # Entidades da Administração Pública em sentido estrito.
 RE_APU = re.compile(
     r"(?:\bmunicipio\b|\bcamara\s+municipal\b|\bjunta\s+de\s+freguesia\b"
-    r"|\bfreguesia\s+de\b|\bcomunidade\s+intermunicipal\b"
+    # «Freguesia de», «da», «do», «das», «dos» e «União das Freguesias de»: só
+    # «de» deixava a «Freguesia da Barrosa» em PRI, sem aviso.
+    r"|\bfreguesias?\s+d[aeo]s?\b|\buniao\s+(?:das\s+)?freguesias\b"
+    r"|\bcomunidade\s+intermunicipal\b"
     r"|\buniversidade\b|\binstituto\s+politecnico\b|\bpolitecnico\b"
     r"|\bdirecao[- ]geral\b|\bsecretaria[- ]geral\b"
     r"|\badministracao\s+regional\b|\bgoverno\s+regional\b"
@@ -85,6 +88,28 @@ TIPOS_APU = ("ACEP",)   # acordo coletivo de empregador público (LTFP)
 
 def _normalizar(nome: str) -> str:
     return re.sub(r"\s+", " ", _sem_acentos(nome or "").lower()).strip()
+
+
+def _colapsar(nome: str) -> str:
+    """Só letras e algarismos: «E. P. E.» e «EPE» passam a ser o mesmo."""
+    return re.sub(r"[^a-z0-9]", "", _normalizar(nome))
+
+
+RE_SIGLA_A_CABECA = re.compile(r"^[a-z0-9.]{2,12}\s*[-–—]\s*(?P<resto>.+)$")
+
+
+def _chaves(chave: str) -> list[str]:
+    """Formas de uma entrada do vocabulário para comparar com o índice.
+
+    O nome completo, sem pontuação nem espaços, e, quando começa por uma sigla
+    («STCP - Sociedade de Transportes…»), também o nome sem ela: o índice
+    escreve muitas vezes a sigla no fim, entre parênteses, ou não a escreve.
+    """
+    formas = [_colapsar(chave)]
+    m = RE_SIGLA_A_CABECA.match(_normalizar(chave))
+    if m and len(_colapsar(m.group("resto"))) >= 12:
+        formas.append(_colapsar(m.group("resto")))
+    return [f for f in formas if f]
 
 
 def carregar_vocabulario(caminho: Path | None = None) -> dict[str, str]:
@@ -129,9 +154,11 @@ def classificar(empregador: str, tipo: str = "",
     if vocabulario:
         if nome in vocabulario:
             return vocabulario[nome], "vocabulario", None
+        colapsado = _colapsar(empregador)
         for chave, valor in vocabulario.items():
-            if chave and len(chave) >= 6 and chave in nome:
-                return valor, "vocabulario", None
+            for forma in _chaves(chave):
+                if forma == colapsado or (len(forma) >= 6 and forma in colapsado):
+                    return valor, "vocabulario", None
 
     if tipo_norm.startswith(TIPOS_APU):
         return "APU", "regra", f"tipo {tipo} → APU por regra — confirmar"

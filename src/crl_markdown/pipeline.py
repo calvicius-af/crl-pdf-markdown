@@ -1,11 +1,13 @@
 """Conversão local com Docling e saídas Markdown auditáveis."""
 
+import faulthandler
 import hashlib
 import json
 import os
 import sys
 import tempfile
 from dataclasses import asdict, dataclass
+from datetime import datetime
 from importlib.metadata import version
 from pathlib import Path
 
@@ -311,6 +313,23 @@ def run(
     # memória, falha de energia) deixa o diagnóstico do que foi feito.
     manifest["status"] = "em_curso"
     write_reports(manifest, output, atomic_write)
+    # Uma falha nativa (numa biblioteca em C, ao ler um PDF) fecha o processo
+    # sem exceção Python: a janela desaparece sem mensagem. O registo de
+    # progresso diz em que documento ia, e o faulthandler deixa o rasto.
+    audit = output / "_auditoria"
+    log = open(audit / "progresso.log", "a", encoding="utf-8")  # noqa: SIM115
+    native = None
+    if not faulthandler.is_enabled():
+        native = open(audit / "falha_nativa.log", "a", encoding="utf-8")  # noqa: SIM115
+        faulthandler.enable(file=native)
+    shown = progress
+
+    def progress(line):
+        log.write(f"{datetime.now().isoformat(timespec='seconds')} {line}\n")
+        log.flush()
+        shown(line)
+
+    progress(f"Corrida {manifest['run_id']}: {len(entries)} PDF de {source}")
     try:
         converter = converter if converter is not None else make_converter(options)
         for index, (pdf, relative) in enumerate(entries, 1):
@@ -350,4 +369,10 @@ def run(
     finally:
         report_path = write_reports(manifest, output, atomic_write)
         progress(f"Relatório consolidado: {report_path.resolve()}")
+        log.close()
+        if native is not None:
+            faulthandler.disable()
+            native.close()
+            if (audit / "falha_nativa.log").stat().st_size == 0:
+                (audit / "falha_nativa.log").unlink()
     return reports

@@ -193,6 +193,39 @@ def test_rerun_adopts_conversions_in_the_previous_layout(tmp_path, converter):
     assert (out / "_auditoria/documentos/2026/30/b.qualidade.json").is_file()
 
 
+def test_native_crash_leaves_progress_and_traceback(tmp_path):
+    # Em Windows, a janela fechou-se sozinha a meio do lote, sem mensagem: é o
+    # que acontece quando uma biblioteca em C falha ao ler um PDF.
+    inputs, out = _bte_inputs(tmp_path), tmp_path / "out"
+    script = tmp_path / "crash.py"
+    script.write_text(
+        "import faulthandler, sys\n"
+        "from pathlib import Path\n"
+        "from types import SimpleNamespace\n"
+        "from crl_markdown.pipeline import Options, run\n"
+        "def convert(path):\n"
+        "    if path.name == 'b.pdf':\n"
+        "        faulthandler._sigsegv()\n"
+        "    raise RuntimeError('sem extração neste ensaio')\n"
+        "run(Path(sys.argv[1]), Path(sys.argv[2]), Options(),\n"
+        "    converter=SimpleNamespace(convert=convert), progress=lambda _: None)\n",
+        encoding="utf-8",
+    )
+    src = Path(__file__).resolve().parents[1] / "src"
+    environment = {**os.environ, "PYTHONPATH": str(src)}
+    environment.pop("PYTHONFAULTHANDLER", None)
+    result = subprocess.run(
+        [sys.executable, str(script), str(inputs), str(out)], capture_output=True, env=environment
+    )
+    assert result.returncode != 0
+    progress = (out / "_auditoria" / "progresso.log").read_text("utf-8")
+    assert progress.rstrip().endswith("b.pdf"), "a última linha é o documento que falhou"
+    assert "Fatal Python error" in (out / "_auditoria" / "falha_nativa.log").read_text("utf-8")
+    manifest = json.loads((out / "_auditoria" / "manifest.json").read_text("utf-8"))
+    assert manifest["status"] == "em_curso"
+    assert [d["state"] for d in manifest["documents"]] == ["falhou", "nao_processado", "nao_processado"]
+
+
 def test_case_collisions_rejected(tmp_path, converter):
     (tmp_path / "same.pdf").touch()
     (tmp_path / "same.PDF").touch()

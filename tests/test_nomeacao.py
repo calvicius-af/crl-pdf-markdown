@@ -235,3 +235,58 @@ def test_collect_usa_o_vocabulario_de_ambitos_do_pacote(tmp_path, monkeypatch, c
     assert nomeados == [
         "data/raw/bte/bte_2026/convencoes/SPE/2026_BTE_31_SPE_390_AE_47300_EPAL-SINDEL.pdf"
     ]
+
+
+@pytest.mark.parametrize(
+    "empregador, esperado",
+    [
+        # «Freguesia da» caía em PRI por omissão, sem aviso (só «de» era regra).
+        ("Freguesia da Barrosa", ("APU", "regra")),
+        ("Freguesia dos Anjos", ("APU", "regra")),
+        # Pontuação e sigla à cabeça não impedem o vocabulário de reconhecer.
+        ("Metropolitano de Lisboa, EPE", ("SPE", "vocabulario")),
+        (
+            "Sociedade de Transportes Colectivos do Porto, EIM, SA (STCP, EIM, SA)",
+            ("SPE", "vocabulario"),
+        ),
+        ("Associação do Comércio e Serviços da Região do Algarve - ACRAL", ("PRI", "omissao")),
+    ],
+)
+def test_ambito_no_indice_de_2026(empregador, esperado):
+    from crl_markdown import ambito
+
+    vocabulario = ambito.vocabulario_por_omissao()
+    assert ambito.classificar_com_ine(empregador, "ACT", vocabulario)[:2] == esperado
+
+
+def test_siglas_adivinhadas_ficam_num_ficheiro_para_rever(tmp_path, monkeypatch, capsys):
+    from crl_markdown import recolha
+    from crl_markdown.cli import main
+
+    empresa = (
+        "386/2026",
+        "Acordo de empresa entre a Petrogal, SA e o SITESE",
+        "AE-ALT",
+        "46748",
+        "Petrogal, SA; SITESE - Sindicato dos Trabalhadores e Técnicos de Serviços",
+        "",
+        "01400145.pdf",
+    )
+    monkeypatch.setattr(recolha, "abridor_urllib", AbridorFalso())
+    monkeypatch.chdir(tmp_path)
+    indice = escrever_indice(tmp_path, [empresa])
+    argumentos = ["collect", "--indices", str(indice), "--pausa", "0", "--confirmar-rede"]
+    assert main(argumentos) == 0
+    pendentes = tmp_path / "data" / "registo" / "siglas_pendentes.csv"
+    assert "siglas adivinhadas para rever: 1" in capsys.readouterr().out
+    linhas = pendentes.read_text("utf-8-sig").splitlines()
+    assert linhas == ["nome;sigla;documentos", "Petrogal, SA;Petrogal;2026_BTE_31_PRI_386_AE-ALT_46748_Petrogal-SITESE"]
+    assert not list(tmp_path.rglob("data/raw/bte/**/*.pdf"))
+
+    # Revisto no Excel e guardado em cp1252, passa a siglas.csv da equipa.
+    (tmp_path / "siglas.csv").write_bytes("nome;sigla\nPetrogal, SA;GALP\n".encode("cp1252"))
+    assert main(argumentos) == 0
+    assert [p.name for p in tmp_path.rglob("data/raw/bte/**/*.pdf")] == [
+        "2026_BTE_31_PRI_386_AE-ALT_46748_GALP-SITESE.pdf"
+    ]
+    assert not pendentes.exists()
