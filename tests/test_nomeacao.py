@@ -280,7 +280,10 @@ def test_siglas_adivinhadas_ficam_num_ficheiro_para_rever(tmp_path, monkeypatch,
     pendentes = tmp_path / "data" / "registo" / "siglas_pendentes.csv"
     assert "siglas adivinhadas para rever: 1" in capsys.readouterr().out
     linhas = pendentes.read_text("utf-8-sig").splitlines()
-    assert linhas == ["nome;sigla;documentos", "Petrogal, SA;Petrogal;2026_BTE_31_PRI_386_AE-ALT_46748_Petrogal-SITESE"]
+    assert linhas == [
+        "nome;sigla;documentos;atencao",
+        "Petrogal, SA;Petrogal;2026_BTE_31_PRI_386_AE-ALT_46748_Petrogal-SITESE;",
+    ]
     assert not list(tmp_path.rglob("data/raw/bte/**/*.pdf"))
 
     # Revisto no Excel e guardado em cp1252, passa a siglas.csv da equipa.
@@ -290,3 +293,33 @@ def test_siglas_adivinhadas_ficam_num_ficheiro_para_rever(tmp_path, monkeypatch,
         "2026_BTE_31_PRI_386_AE-ALT_46748_GALP-SITESE.pdf"
     ]
     assert not pendentes.exists()
+
+
+@pytest.mark.parametrize(
+    "outorgante, esperada",
+    [
+        # A forma jurídica no fim escondia a sigla que vem antes dela.
+        ("Imprensa Nacional - Casa da Moeda, SA - INCM, SA", "INCM"),
+        ("Auto-Estradas Norte Litoral - Sociedade Concessionária - AENL, SA", "AENL"),
+        ("Autoestrada do Algarve - Via do Infante - Sociedade Concessionária - AAVI, SA", "AAVI"),
+    ],
+)
+def test_sigla_antes_da_forma_juridica(outorgante, esperada):
+    assert sigla(outorgante) == (esperada, None)
+
+
+def test_siglas_pendentes_assinalam_a_mesma_sigla_para_entidades_diferentes(tmp_path):
+    from crl_markdown.nomeacao import escrever_siglas_pendentes
+
+    caminho = escrever_siglas_pendentes(
+        {
+            "Município de Viana do Alentejo": {"sigla": "MunicipioViana", "documentos": ["A"]},
+            "Município de Viana do Castelo": {"sigla": "MunicipioViana", "documentos": ["B"]},
+            "Petrogal, SA": {"sigla": "Petrogal", "documentos": ["C"]},
+        },
+        tmp_path / "siglas_pendentes.csv",
+    )
+    linhas = caminho.read_text("utf-8-sig").splitlines()
+    assert linhas[1].endswith(";mesma sigla sugerida para: Município de Viana do Castelo")
+    assert linhas[2].endswith(";mesma sigla sugerida para: Município de Viana do Alentejo")
+    assert linhas[3].endswith(";")

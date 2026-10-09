@@ -106,6 +106,11 @@ GENERICOS = {"sindicato", "sindicatos", "sindical", "sindicais", "associacao",
              "portugues", "portuguesa", "portugueses", "portugal"}  # fmt: skip
 
 RE_PARENTESES = re.compile(r"\(([^)]{2,30})\)")
+RE_FORMA_NO_FIM = re.compile(
+    r"(?:,?\s*(?:S\.?\s*A\.?|L\.?da\.?|Lda|CRL|E\.?\s*P\.?\s*E\.?|E\.?\s*M\.?"
+    r"|E\.?\s*I\.?\s*M\.?|Unipessoal))+\s*$",
+    re.IGNORECASE,
+)
 RE_FIM_APOS_TRACO = re.compile(r"[-–—]\s*([^-–—,;()]{2,30})\s*$")
 RE_INICIO_ANTES_TRACO = re.compile(r"^\s*([^-–—,;()]{2,30}?)\s*[-–—]\s")
 RE_ENTRE_TRACOS = re.compile(r"[-–—]\s*([^-–—,;()]{2,30}?)\s*(?=[-–—]|$)")
@@ -179,10 +184,14 @@ def sigla(nome: str, tabela: dict[str, str] | None = None) -> tuple[str, str | N
         )
         if melhor:
             return tabela[melhor], None
-    for regex in (RE_PARENTESES, RE_FIM_APOS_TRACO, RE_INICIO_ANTES_TRACO, RE_ENTRE_TRACOS):
-        for m in regex.finditer(nome):
-            if _e_sigla(m.group(1)):
-                return _limpar_sigla(m.group(1)), None
+    # A forma jurídica no fim esconde a sigla que vem antes dela:
+    # «Imprensa Nacional - Casa da Moeda, SA - INCM, SA» tem a sigla INCM.
+    sem_forma = RE_FORMA_NO_FIM.sub("", nome)
+    for texto in dict.fromkeys((nome, sem_forma)):
+        for regex in (RE_PARENTESES, RE_FIM_APOS_TRACO, RE_INICIO_ANTES_TRACO, RE_ENTRE_TRACOS):
+            for m in regex.finditer(texto):
+                if _e_sigla(m.group(1)):
+                    return _limpar_sigla(m.group(1)), None
     return _camel(nome), f"sigla derivada de «{nome[:60]}» — confirmar"
 
 
@@ -334,7 +343,7 @@ def siglas_derivadas(entrada: dict, tabela: dict[str, str] | None = None):
 
 
 def escrever_siglas_pendentes(pendentes: dict, caminho: Path) -> Path | None:
-    """Escreve `nome;sigla;documentos` das siglas adivinhadas, para revisão.
+    """Escreve `nome;sigla;documentos;atencao` das siglas adivinhadas, para revisão.
 
     O ficheiro é refeito a cada corrida e apagado quando não há pendentes. As
     duas primeiras colunas têm o formato do siglas.csv da equipa: revistas e
@@ -348,9 +357,16 @@ def escrever_siglas_pendentes(pendentes: dict, caminho: Path) -> Path | None:
     caminho.parent.mkdir(parents=True, exist_ok=True)
     with open(caminho, "w", encoding="utf-8-sig", newline="") as f:
         escritor = csv.writer(f, delimiter=";", lineterminator="\n")
-        escritor.writerow(["nome", "sigla", "documentos"])
+        # A mesma sigla sugerida para entidades diferentes daria a dois
+        # outorgantes distintos o mesmo nome; assinala-se para decidir.
+        por_sigla: dict[str, list[str]] = {}
+        for nome, dados in pendentes.items():
+            por_sigla.setdefault(dados["sigla"], []).append(nome)
+        escritor.writerow(["nome", "sigla", "documentos", "atencao"])
         for nome, dados in sorted(pendentes.items(), key=lambda i: (-len(i[1]["documentos"]), i[0])):
-            escritor.writerow([nome, dados["sigla"], " ".join(dados["documentos"])])
+            outros = [n for n in por_sigla[dados["sigla"]] if n != nome]
+            atencao = ("mesma sigla sugerida para: " + "; ".join(outros)) if outros else ""
+            escritor.writerow([nome, dados["sigla"], " ".join(dados["documentos"]), atencao])
     return caminho
 
 

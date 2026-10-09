@@ -162,8 +162,10 @@ pasta de trabalho (`nome;sigla`, com ou sem cabeçalho), que tem prioridade.
 
 O registo da DGERT só tem associações e sindicatos: as siglas de empresas
 (acordos de empresa) são adivinhadas e ficam por confirmar. Cada recolha
-escreve-as em `data/registo/siglas_pendentes.csv` (`nome;sigla;documentos`),
-com os documentos que cada uma bloqueia, os mais frequentes primeiro. Abrir no
+escreve-as em `data/registo/siglas_pendentes.csv`
+(`nome;sigla;documentos;atencao`), com os documentos que cada uma bloqueia, os
+mais frequentes primeiro; a coluna `atencao` assinala a mesma sigla sugerida
+para entidades diferentes. Abrir no
 Excel, corrigir a coluna `sigla`, apagar as linhas que não estiverem certas e
 copiar as restantes para o `siglas.csv` (guardado como CSV separado por ponto e
 vírgula, em UTF-8 ou no formato do Excel); repetir a recolha nomeia os
