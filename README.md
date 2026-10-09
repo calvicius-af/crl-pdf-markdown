@@ -304,10 +304,13 @@ reaproveitadas, e os seus ficheiros de auditoria passam para
 `_auditoria/documentos/`. Na interface, fechar a janela durante uma conversão
 pede confirmação.
 
-Cada corrida acrescenta a `_auditoria/progresso.log` a hora e o documento em
-curso. Se o processo terminar sem mensagem (uma falha numa biblioteca em C ao
-ler um PDF fecha a janela sem exceção Python), a última linha diz qual era o
-documento, e `_auditoria/falha_nativa.log` guarda o rasto da falha.
+O Docling corre num processo separado, com os modelos carregados uma vez e
+renovado a cada 25 documentos. Uma falha numa biblioteca em C (uma violação de
+acesso no Windows, que fechava a janela sem mensagem) leva só esse processo: a
+corrida regista-a, repete o documento num processo novo e, se voltar a falhar,
+marca-o como `falhou` e segue para o seguinte. Cada corrida acrescenta a
+`_auditoria/progresso.log` a hora e o documento em curso, e
+`_auditoria/falha_nativa.log` guarda o rasto de cada falha nativa.
 
 Importar apenas o documento final, excluindo `_auditoria`. Os relatórios conservam
 os hashes do PDF, do Markdown e dos itens Docling. É possível reaplicar novas

@@ -14,6 +14,7 @@ from pathlib import Path
 from . import models
 from .audit import audit_pdf
 from .document import plain_markdown, prepare
+from .isolamento import ConversorIsolado, FalhaArranque
 from .legacy import completude
 from .quality import lint, parser
 from .report import new_manifest, write_reports
@@ -74,12 +75,17 @@ def check_models(options: Options):
         )
 
 
-def make_converter(options: Options):
+def validate_options(options: Options):
+    """O que se pode recusar antes de carregar o Docling."""
     if options.timeout <= 0:
         raise ValueError("O tempo máximo deve ser positivo.")
     if options.models and not options.models.is_dir():
         raise ValueError(f"Pasta de modelos inexistente: {options.models}")
     check_models(options)
+
+
+def make_converter(options: Options):
+    validate_options(options)
     apply_offline(options.offline)
     from docling.datamodel.base_models import InputFormat
     from docling.datamodel.pipeline_options import PdfPipelineOptions, TableFormerMode
@@ -286,8 +292,22 @@ def convert_pdf(
 
 
 def run(
-    source: Path, output: Path, options: Options, *, overwrite=False, progress=print, converter=None
+    source: Path,
+    output: Path,
+    options: Options,
+    *,
+    overwrite=False,
+    progress=print,
+    converter=None,
+    converter_factory=None,
 ) -> list[dict]:
+    """Converte um PDF ou uma pasta de PDFs.
+
+    Sem `converter`, o Docling corre num processo separado (`isolamento.py`),
+    criado com `converter_factory` (por omissão `make_converter`): uma falha
+    nativa leva esse processo, não a corrida. Com `converter`, a conversão
+    corre neste processo, como nos testes e na reaplicação de uma cache.
+    """
     entries = discover(source)
     if not entries:
         raise ValueError("Não foram encontrados PDFs.")
@@ -330,8 +350,19 @@ def run(
         shown(line)
 
     progress(f"Corrida {manifest['run_id']}: {len(entries)} PDF de {source}")
+    isolated = None
     try:
-        converter = converter if converter is not None else make_converter(options)
+        if converter is None:
+            validate_options(options)
+            # O processo de conversão herda o ambiente: o modo offline tem de
+            # estar decidido antes de ele arrancar.
+            apply_offline(options.offline)
+            isolated = ConversorIsolado(
+                options,
+                converter_factory or make_converter,
+                registo_falhas=audit / "falha_nativa.log",
+                aviso=progress,
+            )
         for index, (pdf, relative) in enumerate(entries, 1):
             progress(f"[{index}/{len(entries)}] {pdf.name}")
             target = output / relative
@@ -341,16 +372,20 @@ def run(
                 if report is not None:
                     # Retomar uma corrida: o mesmo PDF já foi convertido.
                     report["reused"] = True
+                elif isolated is not None:
+                    report = isolated.convert_pdf(pdf, target, overwrite, audit_dir)
                 else:
                     report = convert_pdf(
                         pdf, target, converter, options, overwrite, audit_dir=audit_dir
                     )
             except Exception as exc:
+                if isinstance(exc, FalhaArranque):
+                    raise
                 report = {
                     "source": str(pdf.resolve()),
                     "state": "falhou",
                     "error": str(exc),
-                    "error_type": type(exc).__name__,
+                    "error_type": getattr(exc, "error_type", type(exc).__name__),
                 }
             report = {**manifest["documents"][index - 1], **report}
             manifest["documents"][index - 1] = report
@@ -367,6 +402,8 @@ def run(
         manifest["error"] = f"{type(exc).__name__}: {exc}"
         raise
     finally:
+        if isolated is not None:
+            isolated.fechar()
         report_path = write_reports(manifest, output, atomic_write)
         progress(f"Relatório consolidado: {report_path.resolve()}")
         log.close()
