@@ -272,17 +272,30 @@ arquivados permitem identificar essa diferença.
 ## Saídas e nova renderização
 
 ```text
-results/documento.md                         ← documento para conferência/importação
-results/_auditoria/diagnostico.md             ← resumo e ações de revisão do lote
-results/_auditoria/detalhes.md                ← evidências e ocorrências completas
-results/_auditoria/relatorio.txt              ← inventário de todas as ocorrências
-results/_auditoria/manifest.json              ← dados e proveniência da corrida
-results/_auditoria/corridas/<id>/             ← relatórios de corridas anteriores
-results/_auditoria/documento.docling.md      ← exportação Markdown nativa
-results/_auditoria/documento.docling.json    ← itens e geometria Docling
-results/_auditoria/documento.qualidade.json  ← métricas, estrutura, alertas e hashes
-results/_auditoria/documento.qualidade.md    ← diagnóstico legível
+results/documento.md                                    ← documento para conferência/importação
+results/_auditoria/diagnostico.md                       ← resumo e ações de revisão do lote
+results/_auditoria/detalhes.md                          ← evidências e ocorrências completas
+results/_auditoria/relatorio.txt                        ← inventário de todas as ocorrências
+results/_auditoria/manifest.json                        ← dados e proveniência da corrida
+results/_auditoria/corridas/<id>/                       ← relatórios de corridas anteriores
+results/_auditoria/documentos/documento.docling.md      ← exportação Markdown nativa
+results/_auditoria/documentos/documento.docling.json    ← itens e geometria Docling
+results/_auditoria/documentos/documento.qualidade.json  ← métricas, estrutura, alertas e hashes
+results/_auditoria/documentos/documento.qualidade.md    ← diagnóstico legível
 ```
+
+Com uma pasta de entrada com subpastas, os Markdown repetem as subpastas e os
+ficheiros de auditoria de cada documento ficam em `_auditoria/documentos/`, com
+as mesmas subpastas. Os relatórios do lote são escritos logo no início e
+atualizados depois de cada documento: uma corrida interrompida deixa o
+diagnóstico do que foi feito, com o estado `interrompida`. Repetir a corrida
+com a mesma pasta de saída retoma-a: um documento já convertido a partir do
+mesmo PDF (mesmo SHA-256) é reaproveitado sem nova extração; um PDF diferente
+com saída existente continua a exigir `--overwrite`. As conversões feitas com a
+versão anterior, que tinham `_auditoria` em cada pasta, também são
+reaproveitadas, e os seus ficheiros de auditoria passam para
+`_auditoria/documentos/`. Na interface, fechar a janela durante uma conversão
+pede confirmação.
 
 Importar apenas o documento final, excluindo `_auditoria`. Os relatórios conservam
 os hashes do PDF, do Markdown e dos itens Docling. É possível reaplicar novas

@@ -57,6 +57,22 @@ def main():
     log.pack(fill="both", expand=True)
 
     report_path = None
+    running = threading.Event()
+
+    def close():
+        # A conversão corre numa thread que morre com a janela. Os documentos
+        # já convertidos ficam, e a próxima corrida sobre a mesma pasta de
+        # saída retoma a partir deles; ainda assim, fechar tem de ser pedido.
+        if running.is_set() and not messagebox.askyesno(
+            "Conversão em curso",
+            "A conversão ainda está a decorrer. Fechar agora interrompe-a.\n\n"
+            "Os documentos já convertidos ficam guardados, e uma nova corrida "
+            "com a mesma pasta de saída continua a partir deles. Fechar?",
+        ):
+            return
+        root.destroy()
+
+    root.protocol("WM_DELETE_WINDOW", close)
 
     def open_report():
         if report_path:
@@ -76,6 +92,7 @@ def main():
         previous_run = previous_manifest.read_bytes() if previous_manifest.exists() else None
         button.configure(state="disabled")
         report_button.configure(state="disabled")
+        running.set()
 
         def worker():
             try:
@@ -122,6 +139,7 @@ def main():
                 report_path = text
                 report_button.configure(state="normal")
             elif kind == "done":
+                running.clear()
                 button.configure(state="normal")
             else:
                 log.configure(state="normal")

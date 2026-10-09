@@ -127,11 +127,64 @@ def atomic_write(path: Path, content: str):
         temporary.unlink(missing_ok=True)
 
 
+def audit_paths(target: Path, audit_dir: Path | None = None) -> tuple[Path, Path]:
+    """Exportação Docling e relatório de qualidade de um documento."""
+    folder = audit_dir if audit_dir is not None else target.parent / "_auditoria"
+    return folder / (target.stem + ".docling.md"), folder / (target.stem + ".qualidade.json")
+
+
+def previous_report(pdf: Path, target: Path, audit_dir: Path | None = None) -> dict | None:
+    """O relatório de uma conversão anterior completa do mesmo PDF, se existir.
+
+    O Markdown final é o último ficheiro escrito; com ele e o relatório, e o
+    mesmo SHA-256 do PDF, a conversão terminou e pode ser reaproveitada.
+    """
+    _raw, report_target = audit_paths(target, audit_dir)
+    if not (target.is_file() and report_target.is_file()):
+        return None
+    try:
+        report = json.loads(report_target.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    if report.get("source_sha256") != hashlib.sha256(pdf.read_bytes()).hexdigest():
+        return None
+    return report
+
+
+def adopt_previous_report(pdf: Path, target: Path, audit_dir: Path) -> dict | None:
+    """Reaproveita uma conversão anterior, incluindo as do formato antigo.
+
+    Até aqui, a auditoria de cada documento ficava em `_auditoria` ao lado do
+    Markdown. Uma conversão completa nesse formato é reaproveitada e os seus
+    ficheiros passam para `audit_dir`; a pasta antiga sai se ficar vazia.
+    """
+    report = previous_report(pdf, target, audit_dir)
+    if report is not None:
+        return report
+    legacy = target.parent / "_auditoria"
+    report = previous_report(pdf, target, legacy)
+    if report is None:
+        return None
+    audit_dir.mkdir(parents=True, exist_ok=True)
+    for suffix in (".docling.md", ".docling.json", ".qualidade.json", ".qualidade.md"):
+        old = legacy / (target.stem + suffix)
+        if old.is_file():
+            old.replace(audit_dir / old.name)
+    if not any(legacy.iterdir()):
+        legacy.rmdir()
+    return report
+
+
 def convert_pdf(
-    pdf: Path, target: Path, converter, options: Options, overwrite: bool = False
+    pdf: Path,
+    target: Path,
+    converter,
+    options: Options,
+    overwrite: bool = False,
+    *,
+    audit_dir: Path | None = None,
 ) -> dict:
-    raw_target = target.parent / "_auditoria" / (target.stem + ".docling.md")
-    report_target = target.parent / "_auditoria" / (target.stem + ".qualidade.json")
+    raw_target, report_target = audit_paths(target, audit_dir)
     if not overwrite and any(
         p.exists()
         for p in (
@@ -253,13 +306,26 @@ def run(
         },
     )
     reports = []
-    manifest["status"] = "interrompida"
+    # Os relatórios do lote são escritos já no início e atualizados a cada
+    # documento: uma corrida longa interrompida (janela fechada, falta de
+    # memória, falha de energia) deixa o diagnóstico do que foi feito.
+    manifest["status"] = "em_curso"
+    write_reports(manifest, output, atomic_write)
     try:
         converter = converter if converter is not None else make_converter(options)
         for index, (pdf, relative) in enumerate(entries, 1):
             progress(f"[{index}/{len(entries)}] {pdf.name}")
+            target = output / relative
+            audit_dir = output / "_auditoria" / "documentos" / relative.parent
             try:
-                report = convert_pdf(pdf, output / relative, converter, options, overwrite)
+                report = None if overwrite else adopt_previous_report(pdf, target, audit_dir)
+                if report is not None:
+                    # Retomar uma corrida: o mesmo PDF já foi convertido.
+                    report["reused"] = True
+                else:
+                    report = convert_pdf(
+                        pdf, target, converter, options, overwrite, audit_dir=audit_dir
+                    )
             except Exception as exc:
                 report = {
                     "source": str(pdf.resolve()),
@@ -270,9 +336,15 @@ def run(
             report = {**manifest["documents"][index - 1], **report}
             manifest["documents"][index - 1] = report
             reports.append(report)
-            progress(f"  {report['state']}" + (f": {report['error']}" if "error" in report else ""))
+            progress(
+                f"  {report['state']}"
+                + (" (já convertido, reaproveitado)" if report.get("reused") else "")
+                + (f": {report['error']}" if "error" in report else "")
+            )
+            write_reports(manifest, output, atomic_write)
         manifest["status"] = "concluida"
     except BaseException as exc:
+        manifest["status"] = "interrompida"
         manifest["error"] = f"{type(exc).__name__}: {exc}"
         raise
     finally:
