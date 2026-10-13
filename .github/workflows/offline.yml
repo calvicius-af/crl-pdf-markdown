@@ -1,6 +1,14 @@
 name: Ensaio de pacote offline Windows
 on:
   workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/offline.yml'
+      - 'scripts/*offline*'
+      - 'scripts/Instalar_CRL.bat'
+      - 'requirements/**'
+      - 'src/crl_markdown/models.py'
+      - 'pyproject.toml'
 permissions:
   contents: read
 jobs:

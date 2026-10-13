@@ -229,7 +229,8 @@ relatório completo; não são inferidos de uma aprovação textual.
 
 ## Questões a fechar
 
-- Versão/build do MaxQDA, via de importação e perfil final para tabelas complexas.
+- MAXQDA 27.0.0: importação direta e codificação simples demonstradas; falta
+  concluir o perfil e a conferência de estruturas jurídicas/tabelas complexas.
 - Campos/identidade da convenção de base para PE/AA e representação de portarias
   com referências como `457/2025/1`.
 - Quem confirma siglas/âmbito e quem aprova cada lote; amostra e tolerância de revisão.
