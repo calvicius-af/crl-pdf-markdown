@@ -2,7 +2,7 @@
   "name": "crl-pdf-markdown-quality",
   "private": true,
   "scripts": {
-    "lint:md": "markdownlint-cli2 README.md VALIDACAO.md \"examples/**/*.md\" \"docs/copilot/**/*.md\""
+    "lint:md": "markdownlint-cli2 README.md VALIDACAO.md \"examples/**/*.md\" \"docs/copilot/**/*.md\" docs/README.md \"docs/operacao/**/*.md\" \"docs/validacao/fecho*.md\" \"specs/**/*.md\" vocabularios/README.md"
   },
   "devDependencies": {
     "markdownlint-cli2": "0.23.3"

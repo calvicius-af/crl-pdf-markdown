@@ -305,3 +305,14 @@ def test_real_pdf_conversion(tmp_path):
     assert report["tables"] >= 1
     assert "1250,00" in text and "1000,00" in text
     assert "MAXQDA" in text
+
+@pytest.mark.parametrize('artifact', ['a.md', 'a.docling.json', 'a.docling.md'])
+def test_resume_refuses_modified_output_artifacts(tmp_path, converter, artifact):
+    inputs, out = _bte_inputs(tmp_path), tmp_path / 'out'
+    run(inputs, out, Options(), converter=converter, progress=lambda _: None)
+    folder = out / '2026/29' if artifact.endswith('a.md') else out / '_auditoria/documentos/2026/29'
+    (folder / artifact).write_text('conteúdo alterado', encoding='utf-8')
+    reports = run(inputs, out, Options(), converter=converter, progress=lambda _: None)
+    assert reports[0]['state'] == 'falhou'
+    assert not reports[0].get('reused')
+    assert reports[1]['reused'] and reports[2]['reused']

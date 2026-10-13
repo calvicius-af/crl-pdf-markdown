@@ -27,7 +27,7 @@ class CachedConverter:
         if metadata["source_sha256"] != hashlib.sha256(pdf.read_bytes()).hexdigest():
             raise ValueError(f"O PDF não corresponde ao hash da extração em cache: {pdf.name}")
         expected = metadata.get("docling_document_sha256")
-        if expected and expected != hashlib.sha256(path.read_bytes()).hexdigest():
+        if not isinstance(expected, str) or expected != hashlib.sha256(path.read_bytes()).hexdigest():
             raise ValueError(f"Extração Docling em cache alterada: {path.name}")
         self.docling_version = metadata["docling_version"]
         self.extraction_options = metadata["options"]

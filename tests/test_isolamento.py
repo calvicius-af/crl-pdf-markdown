@@ -67,6 +67,8 @@ def test_python_errors_in_the_worker_keep_their_type(tmp_path, monkeypatch):
         ("ValueError", "PDF ilegível neste ensaio")
     ]
     assert len(reports) == 4
+    assert "worker_fakes.py" in failed[0]["traceback"]
+    assert "ValueError: PDF ilegível" in failed[0]["traceback"]
 
 
 def test_worker_is_renewed_every_few_documents(tmp_path, monkeypatch):
@@ -87,3 +89,15 @@ def test_worker_dying_at_startup_does_not_break_the_run(tmp_path):
         converter_factory=worker_fakes.cai_ao_arrancar,
     )
     assert {(r["state"], r["error_type"]) for r in reports} == {("falhou", "FalhaNativa")}
+
+
+def test_crash_at_startup_never_overwrites_existing_manual_output(tmp_path):
+    inputs = _bte_inputs(tmp_path)
+    out = tmp_path / 'out'
+    target = out / '2026/29/a.md'
+    target.parent.mkdir(parents=True)
+    target.write_text('Texto conferido manualmente', encoding='utf-8')
+    reports = run(inputs, out, Options(), progress=lambda _: None,
+                  converter_factory=worker_fakes.cai_ao_arrancar)
+    assert reports[0]['error_type'] == 'FileExistsError'
+    assert target.read_text(encoding='utf-8') == 'Texto conferido manualmente'

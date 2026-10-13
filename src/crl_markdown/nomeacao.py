@@ -18,19 +18,18 @@ precisa, ou com siglas adivinhadas, fica `por_confirmar` e não é escrito.
 
 import csv
 import re
-import shutil
-import time
 from pathlib import Path
-from typing import Any
 
 from . import ambito as mod_ambito
-from .recolha import INTERVALO_PERSISTENCIA, Registo, familia, sem_acentos, sha256_ficheiro
+from .recolha import Registo, familia, sem_acentos
 
 # O siglas.csv da equipa, na pasta de trabalho (não vem no repositório). Uma
 # sigla confirmada uma vez não volta a ser perguntada.
 SIGLAS_EQUIPA = Path("siglas.csv")
 # As siglas do registo de organizações da DGERT, versionadas com o código.
 SIGLAS_DGERT = Path(__file__).resolve().parent / "vocabularios" / "siglas_organizacoes.csv"
+SIGLAS_CONSOLIDADAS = Path(__file__).resolve().parent / "vocabularios" / "siglas.csv"
+ESQUEMAS = ("v4", "adr0022")
 
 MAX_SIGLAS = 2  # a primeira patronal e a primeira sindical; o resto em "+N"
 
@@ -73,7 +72,6 @@ ESTADOS_COM_FICHEIRO = {"descarregado", "ja_existente", "inalterado"}
 
 MAX_NOME = 63  # limite de nome de documento do MAXQDA
 MAX_SIGLA = 20
-MIN_CHAVE_PARCIAL = 12  # ver a nota em sigla(), sobre correspondência parcial
 
 
 class NomeRNCInvalido(ValueError):
@@ -143,7 +141,16 @@ def normalizar_sigla(valor: str) -> str:
 
 def chave_entidade(nome: str) -> str:
     """A regra única de «a mesma entidade» na tabela de siglas."""
-    return sem_acentos((nome or "").strip().strip(" .;,")).lower()
+    return "".join(c.lower() for c in sem_acentos(nome or "") if c.isalnum())
+
+
+class TabelaSiglas(dict):
+    """Valores seguros e identidades recusadas, para não reabrir um fallback literal."""
+
+    def __init__(self):
+        super().__init__()
+        self.nomes_pendentes = set()
+        self.siglas_pendentes = set()
 
 
 def _camel(nome: str, max_chars: int = MAX_SIGLA) -> str:
@@ -170,20 +177,12 @@ def sigla(nome: str, tabela: dict[str, str] | None = None) -> tuple[str, str | N
     nome = (nome or "").strip(" .;,")
     if not nome:
         return "", "outorgante vazio"
-    if tabela:
+    if tabela is not None:
         chave = chave_entidade(nome)
+        if chave in getattr(tabela, "nomes_pendentes", set()):
+            return _camel(nome), f"sigla de «{nome[:60]}» pendente ou ambígua no vocabulário — confirmar"
         if chave in tabela:
             return tabela[chave], None
-        # Correspondência parcial, só com chaves longas e ganha a mais longa:
-        # numa tabela de milhares de entradas, uma chave curta encaixa por
-        # acaso dentro de outro nome e daria a sigla errada em silêncio.
-        melhor = max(
-            (k for k in tabela if len(k) >= MIN_CHAVE_PARCIAL and k in chave),
-            key=len,
-            default=None,
-        )
-        if melhor:
-            return tabela[melhor], None
     # A forma jurídica no fim esconde a sigla que vem antes dela:
     # «Imprensa Nacional - Casa da Moeda, SA - INCM, SA» tem a sigla INCM.
     sem_forma = RE_FORMA_NO_FIM.sub("", nome)
@@ -191,7 +190,10 @@ def sigla(nome: str, tabela: dict[str, str] | None = None) -> tuple[str, str | N
         for regex in (RE_PARENTESES, RE_FIM_APOS_TRACO, RE_INICIO_ANTES_TRACO, RE_ENTRE_TRACOS):
             for m in regex.finditer(texto):
                 if _e_sigla(m.group(1)):
-                    return _limpar_sigla(m.group(1)), None
+                    literal = _limpar_sigla(m.group(1))
+                    if literal.casefold() in getattr(tabela, "siglas_pendentes", set()):
+                        return literal, f"sigla literal {literal} pendente ou ambígua no vocabulário — confirmar"
+                    return literal, None
     return _camel(nome), f"sigla derivada de «{nome[:60]}» — confirmar"
 
 
@@ -223,7 +225,7 @@ def separar_outorgantes(outorgantes: str, titulo: str = "") -> tuple[list[str], 
 def _outorgantes_escolhidos(entrada: dict, maximo: int = MAX_SIGLAS):
     """Os outorgantes que entram no nome, todos os outorgantes, e os avisos."""
     avisos: list[str] = []
-    nomes = [n.strip() for n in re.split(r"[;\n]", entrada.get("outorgantes") or "") if n.strip()]
+    nomes = list(dict.fromkeys(n.strip() for n in re.split(r"[;\n]", entrada.get("outorgantes") or "") if n.strip()))
     if not nomes:
         nomes = _partes_do_titulo(entrada.get("titulo", ""))
         if nomes:
@@ -273,7 +275,7 @@ def carregar_siglas(caminho: Path) -> dict[str, str]:
     cabeçalho, com as colunas encontradas pelo nome (o
     `vocabularios/siglas_organizacoes.csv`). Separador `;`, UTF-8 com ou sem BOM.
     """
-    tabela: dict[str, str] = {}
+    tabela = TabelaSiglas()
     try:
         texto = Path(caminho).read_text(encoding="utf-8-sig")
     except UnicodeDecodeError:
@@ -298,11 +300,22 @@ def carregar_siglas(caminho: Path) -> dict[str, str]:
             return tabela
         i_sigla = candidatos[0]
         linhas = linhas[1:]
+    i_estado = cabecalho.index("estado") if tem_cabecalho and "estado" in cabecalho else None
+    i_codigo = cabecalho.index("codigo_dgert") if tem_cabecalho and "codigo_dgert" in cabecalho else None
+    claims = {}
+    linhagens = {}
     i_origem = (
         cabecalho.index(COLUNA_ORIGEM) if tem_cabecalho and COLUNA_ORIGEM in cabecalho else None
     )
     for linha in linhas:
         if max(i_nome, i_sigla) >= len(linha):
+            continue
+        nome = chave_entidade(linha[i_nome])
+        valor = normalizar_sigla(linha[i_sigla])
+        if i_estado is not None and (i_estado >= len(linha) or linha[i_estado].strip().lower() not in {"confirmada", "documentada"}):
+            tabela.nomes_pendentes.add(nome)
+            if valor:
+                tabela.siglas_pendentes.add(valor.casefold())
             continue
         # A origem pode vir composta (`recurso+desambiguada`): conta a primeira parte.
         if (
@@ -310,11 +323,22 @@ def carregar_siglas(caminho: Path) -> dict[str, str]:
             and i_origem < len(linha)
             and linha[i_origem].strip().lower().split("+")[0] in ORIGENS_IGNORADAS
         ):
+            tabela.nomes_pendentes.add(nome)
+            if valor:
+                tabela.siglas_pendentes.add(valor.casefold())
             continue
-        nome = chave_entidade(linha[i_nome])
-        valor = normalizar_sigla(linha[i_sigla])
         if nome and valor:
-            tabela.setdefault(nome, valor)
+            claims.setdefault(nome, set()).add(valor)
+            if i_codigo is not None:
+                codigo = linha[i_codigo].strip() if i_codigo < len(linha) else ""
+                linhagem = ".".join(codigo.split(".")[:2]) or nome
+                linhagens.setdefault(valor.casefold(), set()).add(linhagem)
+    for nome, valores in claims.items():
+        if len(valores) != 1 or any(len(linhagens.get(valor.casefold(), {nome})) > 1 for valor in valores):
+            tabela.nomes_pendentes.add(nome)
+            tabela.siglas_pendentes.update(valor.casefold() for valor in valores)
+        elif nome not in tabela.nomes_pendentes:
+            tabela[nome] = next(iter(valores))
     return tabela
 
 
@@ -322,18 +346,25 @@ def tabela_de_siglas(caminhos=(), *, equipa: Path = SIGLAS_EQUIPA, dgert: bool =
     """O siglas.csv da equipa primeiro (ganha), depois os indicados e o da DGERT."""
     ordem = [Path(equipa)] if Path(equipa).is_file() else []
     ordem += [Path(c) for c in caminhos]
-    if dgert and SIGLAS_DGERT.is_file():
-        ordem.append(SIGLAS_DGERT)
-    tabela: dict[str, str] = {}
+    packaged = SIGLAS_CONSOLIDADAS if SIGLAS_CONSOLIDADAS.is_file() else SIGLAS_DGERT
+    if dgert and packaged.is_file():
+        ordem.append(packaged)
+    tabela = TabelaSiglas()
     for caminho in ordem:
-        for nome, valor in carregar_siglas(caminho).items():
-            tabela.setdefault(nome, valor)
+        carregada = carregar_siglas(caminho)
+        tabela.nomes_pendentes.update(nome for nome in carregada.nomes_pendentes if nome not in tabela)
+        tabela.siglas_pendentes.update(carregada.siglas_pendentes)
+        for nome, valor in carregada.items():
+            if nome not in tabela.nomes_pendentes:
+                tabela.setdefault(nome, valor)
     return tabela
 
 
-def siglas_derivadas(entrada: dict, tabela: dict[str, str] | None = None):
+def siglas_derivadas(entrada: dict, tabela: dict[str, str] | None = None, *, scheme="adr0022"):
     """(outorgante, sigla sugerida) das siglas do nome que foram adivinhadas."""
     escolhidos, _nomes, _avisos = _outorgantes_escolhidos(entrada)
+    if scheme == "v4":
+        escolhidos = list(dict.fromkeys(n.strip() for n in re.split(r"[;\n]", entrada.get("outorgantes") or "") if n.strip()))[:3]
     derivadas = []
     for nome in escolhidos:
         valor, aviso = sigla(nome, tabela)
@@ -399,6 +430,8 @@ def referencia_portaria(entrada: dict) -> tuple[int, str, int] | None:
         m = RE_PORTARIA.search(texto if "ortaria" in texto else f"Portaria n.º {texto}")
         if not m:
             continue
+        if re.match(r"\s*/", texto[m.end():]):
+            raise NomeRNCInvalido("Referência de portaria com segmento adicional; confirme a representação completa.")
         numero, ano_dr = int(m.group("num")), int(m.group("ano"))
         # A portaria sai no DR antes de ser publicitada no BTE.
         if numero == 0 or (ano_bte and ano_dr > ano_bte):
@@ -409,12 +442,14 @@ def referencia_portaria(entrada: dict) -> tuple[int, str, int] | None:
 
 def _codigos(valor) -> list[str]:
     """`"27251; 26760"` → `["27251", "26760"]`, pela ordem, sem repetidos."""
-    partes = (re.sub(r"\D", "", p) for p in re.split(r"[;,\s]+", str(valor or "")))
-    return list(dict.fromkeys(c for c in partes if c))
+    partes = [p for p in re.split(r"[;,\s]+", str(valor or "").strip()) if p]
+    if any(not re.fullmatch(r"\d+", p) for p in partes):
+        raise NomeRNCInvalido("Código IRCT inválido; confirme o índice.")
+    return list(dict.fromkeys(partes))
 
 
 def _familia(entrada: dict) -> str:
-    return entrada.get("familia") or familia(entrada.get("tipo", "")) or "convencao"
+    return entrada.get("familia") or familia(entrada.get("tipo", "")) or "por_classificar"
 
 
 def cod_irct_base(entrada: dict) -> str | None:
@@ -422,6 +457,10 @@ def cod_irct_base(entrada: dict) -> str | None:
     nas outras famílias (resolvido por `resolver_convencoes_base`)."""
     campo = "cod_irct" if _familia(entrada) == "convencao" else "cod_irct_base"
     codigos = _codigos(entrada.get(campo))
+    if codigos and any(int(codigo) == 0 for codigo in codigos):
+        raise NomeRNCInvalido("Código IRCT inválido; não use zero como identidade.")
+    if _familia(entrada) == "convencao" and len(codigos) > 1:
+        raise NomeRNCInvalido("Múltiplos códigos IRCT na convenção; confirme a identidade documental.")
     return codigos[0] if codigos else None
 
 
@@ -460,8 +499,11 @@ def resolver_convencoes_base(entradas) -> None:
                     for c in convencoes.get((str(int(m.group("seq"))), m.group("ano")), [])
                     if tipo_normalizado(c.get("tipo")) == m.group("tipo")
                 ]
-            cods = _codigos(alvos[0].get("cod_irct")) if len(alvos) == 1 else []
-            if cods:
+            try:
+                cods = _codigos(alvos[0].get("cod_irct")) if len(alvos) == 1 else []
+            except NomeRNCInvalido:
+                cods = []
+            if len(cods) == 1 and int(cods[0]) > 0:
                 codigos.append(cods[0])
             else:
                 por_resolver.append(ref.strip())
@@ -475,7 +517,7 @@ def resolver_convencoes_base(entradas) -> None:
 
 
 def nome_documento(
-    entrada: dict, ordinal: int, tabela: dict[str, str] | None = None, *, vocabulario_ambito=None
+    entrada: dict, ordinal: int = 0, tabela: dict[str, str] | None = None, *, vocabulario_ambito=None, scheme="adr0022"
 ) -> tuple[str, list[str]]:
     """Nome (sem extensão) no esquema do ADR-0022 e os avisos a confirmar.
 
@@ -484,24 +526,34 @@ def nome_documento(
         adesão      {ANO}_BTE_{NN}_AA_{SEQ}_{CODIRCT}_{SIGLAS}
         acórdão     {ANO}_BTE_{NN}_JUR_{SEQ}_{CODIRCT}_{SIGLAS}
 
+    `ordinal` é conservado apenas na assinatura de compatibilidade; nunca substitui IDDocumento.
+    `scheme="v4"` conserva a disposição anterior e até três siglas, para compatibilidade.
     `NomeRNCInvalido` diz que falta um campo estrutural e que o ficheiro não
     pode ser escrito de todo. Sem `vocabulario_ambito`, usa o do pacote.
     """
+    if scheme not in ESQUEMAS:
+        raise NomeRNCInvalido("Esquema desconhecido; use v4 ou adr0022.")
     if vocabulario_ambito is None:
         vocabulario_ambito = mod_ambito.vocabulario_por_omissao()
     avisos: list[str] = []
     ano = int(entrada.get("ano") or 0)
     num_bte = int(entrada.get("num_bte") or 0)
-    tipo = tipo_normalizado(entrada.get("tipo"))
+    tipo_bruto = sem_acentos(str(entrada.get("tipo") or "")).strip().upper()
+    if not re.fullmatch(r"[A-Z]+(?:-[A-Z]+)*", tipo_bruto):
+        raise NomeRNCInvalido("Tipo de documento inválido; confirme o índice.")
+    tipo = tipo_normalizado(tipo_bruto)
     fam = _familia(entrada)
 
-    seq = sequencial_bte(entrada)
-    if seq is None:
-        seq = ordinal
-        avisos.append(
-            f"sem «ID: nnn/aaaa» no índice — usado o ordinal interno ({ordinal}); "
-            "o número não corresponde ao do boletim"
-        )
+    identificador = re.fullmatch(r"(\d+)/(\d{4})", str(entrada.get("id_dgert") or "").strip())
+    if not identificador or int(identificador[2]) != ano or int(identificador[1]) < 1:
+        raise NomeRNCInvalido("IDDocumento ausente ou diferente do ano; confirme o índice.")
+    if not 1 <= num_bte <= 99 or not 1900 <= ano <= 2200:
+        raise NomeRNCInvalido("Ano ou número do BTE inválido; confirme o índice.")
+    seq = int(identificador[1])
+    if fam not in {*PASTA_FAMILIA, "aviso"}:
+        raise NomeRNCInvalido("Família documental desconhecida; confirme o índice.")
+    if fam == "convencao" and not re.fullmatch(r"(?:CCT|ACT|ACTV|AE|ACEP|DA)(?:-[A-Z]+)*", tipo):
+        raise NomeRNCInvalido("Tipo de convenção inválido; confirme o índice.")
 
     patronais, _sindicais = separar_outorgantes(
         entrada.get("outorgantes", ""), entrada.get("titulo", "")
@@ -511,7 +563,8 @@ def nome_documento(
         entrada.get("tipo", ""),
         vocabulario_ambito,
     )
-    entrada.setdefault("nomeacao", {}).update({"ambito": amb, "ambito_origem": origem})
+    if amb not in mod_ambito.VALORES:
+        raise NomeRNCInvalido("Âmbito inválido no vocabulário; use PRI, SPE ou APU.")
 
     if fam in QUARTO_CAMPO_TIPO:
         # O âmbito não entra no nome destas famílias; fica no catálogo.
@@ -531,9 +584,7 @@ def nome_documento(
                 )
             numero, sufixo, ano_dr = ref
             miolo = f"_{numero:04d}{sufixo}-{ano_dr:04d}"
-            entrada["nomeacao"]["portaria_dr"] = (
-                f"{numero}{'-' + sufixo if sufixo else ''}/{ano_dr}"
-            )
+
         cod = cod_irct_base(entrada)
         if cod is None:
             if fam == "aviso":  # sem ficheiro: o nome é só chave de catálogo
@@ -559,16 +610,27 @@ def nome_documento(
         quarto, miolo = amb, f"_{tipo}"
         cod = cod_irct_base(entrada)
         if cod is None:
-            cod = "0"
-            avisos.append("sem COD: (IRCT) no índice — a série da convenção fica por identificar")
+            raise NomeRNCInvalido("Código IRCT ausente; confirme o índice.")
 
-    siglas, restantes, avisos_siglas = siglas_outorgantes(entrada, tabela)
+    if scheme == "v4":
+        nomes = list(dict.fromkeys(n.strip() for n in re.split(r"[;\n]", entrada.get("outorgantes") or "") if n.strip()))
+        if not nomes:
+            raise NomeRNCInvalido("Outorgantes ausentes; confirme o índice.")
+        siglas, avisos_siglas = [], []
+        for entidade in nomes[:3]:
+            valor, aviso = sigla(entidade, tabela)
+            siglas.append(valor)
+            if aviso:
+                avisos_siglas.append(aviso)
+        restantes = max(0, len(nomes) - 3)
+        token_tipo = tipo if fam == "convencao" else quarto
+        prefixo = f"{ano:04d}_{amb}_{seq:03d}_{token_tipo}_{cod}_BTE_{num_bte:02d}_"
+    else:
+        siglas, restantes, avisos_siglas = siglas_outorgantes(entrada, tabela)
+        if not siglas:
+            raise NomeRNCInvalido("Outorgantes ausentes; confirme o índice.")
+        prefixo = f"{ano:04d}_BTE_{num_bte:02d}_{quarto}_{seq:03d}{miolo}_{cod}_"
     avisos.extend(avisos_siglas)
-    if not siglas:
-        siglas = [_camel(entrada.get("titulo", ""))]
-        avisos.append("nome derivado do título — confirmar")
-
-    prefixo = f"{ano:04d}_BTE_{num_bte:02d}_{quarto}_{seq:03d}{miolo}_{cod}_"
     cauda = f"+{restantes}" if restantes else ""
     nome = prefixo + "-".join(siglas) + cauda
     if len(nome) > MAX_NOME:  # encurta as siglas, nunca a cabeça nem o miolo
@@ -584,183 +646,39 @@ def nome_documento(
     return nome, avisos
 
 
-def atribuir_ordinais(registo: Registo, familias) -> int:
-    """Numera os documentos por ano e família; um ordinal atribuído não muda.
-
-    O ordinal só entra no nome quando falta o `IDDocumento` (com aviso).
-    """
-    novos = 0
-    grupos: dict[tuple, list[dict]] = {}
-    for e in registo.entradas.values():
-        if (
-            e.get("familia") in familias
-            and (e.get("descarga") or {}).get("estado") in ESTADOS_COM_FICHEIRO
-        ):
-            grupos.setdefault((e.get("ano"), e.get("familia")), []).append(e)
-    for grupo in grupos.values():
-        usados = {o for e in grupo if (o := (e.get("nomeacao") or {}).get("ordinal"))}
-        proximo = max(usados) + 1 if usados else 1
-        por_atribuir = [e for e in grupo if not (e.get("nomeacao") or {}).get("ordinal")]
-        por_atribuir.sort(key=lambda e: (e.get("num_bte") or 0, e.get("posicao") or 0, e["chave"]))
-        for e in por_atribuir:
-            e.setdefault("nomeacao", {})["ordinal"] = proximo
-            proximo += 1
-            novos += 1
-    return novos
-
-
 # ------------------------------------------------------------------ nomear
 
 
 def nomear(
-    registo: Registo,
-    destino: Path,
-    *,
-    aplicar: bool = False,
-    tabela: dict[str, str] | None = None,
+    registo: Registo, destino: Path, *, aplicar=False, tabela=None,
     familias=("convencao", "extensao", "adesao", "acordao"),
-    aceitar_heuristicas: bool = False,
-    vocabulario_ambito: dict[str, str] | None = None,
+    aceitar_heuristicas=False, vocabulario_ambito=None, scheme="adr0022", workspace=False,
 ) -> dict:
-    """Atribui nomes e, com `aplicar=True`, copia os PDFs para o destino.
+    """Adaptador de compatibilidade; execução e verificações partilhadas com naming."""
+    from .naming import execute_records
 
-    Um documento com avisos (sigla derivada, outorgante em falta, nome do
-    título, nome encurtado, código de base lido da cadeia) fica `por_confirmar`
-    e não é escrito: a confirmação tem de acontecer antes de o nome existir,
-    porque um nome atribuído não muda. `aceitar_heuristicas=True` desliga esta
-    proteção para uma corrida já revista. Um nome novo diferente do que já foi
-    escrito é `conflito` e não substitui nada. Sem `vocabulario_ambito`, usa o
-    `empregadores_ambito.csv` do pacote.
-    """
-    if vocabulario_ambito is None:
-        vocabulario_ambito = mod_ambito.vocabulario_por_omissao()
-    resumo: dict[str, Any] = {
-        "ordinais_novos": atribuir_ordinais(registo, familias),
-        "por_estado": {},
-        "avisos": [],
-        "problemas": [],
-        "nomes": [],
-        "siglas_pendentes": {},
-    }
-    resolver_convencoes_base(registo.entradas.values())
-
-    def contar(estado):
-        resumo["por_estado"][estado] = resumo["por_estado"].get(estado, 0) + 1
-
-    entradas = [
-        e
-        for e in registo.entradas.values()
-        if e.get("familia") in familias
-        and e.get("familia") not in FAMILIAS_SO_METADADO
-        and (e.get("descarga") or {}).get("estado") in ESTADOS_COM_FICHEIRO
-    ]
-    entradas.sort(
-        key=lambda e: (
-            e.get("ano") or 0,
-            e.get("num_bte") or 0,
-            (e.get("nomeacao") or {}).get("ordinal") or 0,
-        )
-    )
-    vistos: dict[tuple, list[str]] = {}
-    escritos = 0
-    try:
-        for e in entradas:
-            nomeacao = e.setdefault("nomeacao", {})
-            sha_recolhido = (e.get("descarga") or {}).get("sha256")
-            origem = Path((e.get("descarga") or {}).get("caminho", ""))
-            if not origem.is_file():
-                # A cópia da recolha é descartável; uma cópia nomeada com o
-                # mesmo conteúdo serve de origem.
-                ja_nomeado = Path(nomeacao.get("caminho") or "")
-                if (
-                    ja_nomeado.name
-                    and ja_nomeado.is_file()
-                    and sha256_ficheiro(ja_nomeado) == sha_recolhido
-                ):
-                    origem = ja_nomeado
-                else:
-                    resumo["problemas"].append(
-                        f"{e['chave']}: PDF recolhido não encontrado ({origem})"
-                    )
-                    contar("sem_origem")
-                    continue
-            try:
-                nome, avisos = nome_documento(
-                    e, nomeacao["ordinal"], tabela, vocabulario_ambito=vocabulario_ambito
-                )
-            except NomeRNCInvalido as exc:
-                nomeacao["estado"] = "por_confirmar"
-                nomeacao["avisos"] = [str(exc)]
-                resumo["problemas"].append(f"{e['chave']}: {exc} — PDF não escrito")
-                contar("por_confirmar")
-                continue
-            nome_anterior = nomeacao.get("doc_id")
-            if (
-                nome_anterior
-                and nome_anterior != nome
-                and nomeacao.get("estado") in {"nomeado", "ja_existente", "conflito"}
-            ):
-                # Um nome já escrito pode estar no MAXQDA: não se cria outra
-                # cópia nem se substitui a identidade em silêncio.
-                nomeacao["estado"] = "conflito"
-                resumo["problemas"].append(
-                    f"{e['chave']}: nome já atribuído {nome_anterior}; novo nome proposto "
-                    f"{nome} — nenhum PDF escrito"
-                )
-                contar("conflito")
-                continue
-            avisos_heuristica = list(avisos)
-            chave_par = (e.get("ano"), e.get("familia"), nome.rsplit("_", 1)[-1])
-            vistos.setdefault(chave_par, []).append(nome)
-            if len(vistos[chave_par]) > 1:
-                avisos.append(
-                    "outro documento do mesmo par de outorgantes neste ano: "
-                    + ", ".join(vistos[chave_par][:-1])
-                )
-            fam = e.get("familia") or ""
-            pasta = destino / f"bte_{e['ano']}" / PASTA_FAMILIA.get(fam, PASTA_FAMILIA_DESCONHECIDA)
-            if fam in FAMILIAS_COM_AMBITO:
-                pasta = pasta / nomeacao.get("ambito", mod_ambito.OMISSAO)
-            alvo = pasta / f"{nome}.pdf"
-            nomeacao.update({"doc_id": nome, "caminho": str(alvo), "avisos": avisos})
-            resumo["nomes"].append((e["chave"], nome))
-            resumo["avisos"].extend(f"{nome}: {a}" for a in avisos)
-
-            if alvo.exists():
-                if sha256_ficheiro(alvo) == sha_recolhido:
-                    nomeacao["estado"] = "ja_existente"
-                    contar("ja_existente")
-                else:
-                    nomeacao["estado"] = "conflito"
-                    resumo["problemas"].append(
-                        f"{nome}: já existe um ficheiro diferente no destino — não foi escrito"
-                    )
-                    contar("conflito")
-                continue
-            if avisos_heuristica and not aceitar_heuristicas:
-                nomeacao["estado"] = "por_confirmar"
-                contar("por_confirmar")
-                for outorgante, sugerida in siglas_derivadas(e, tabela):
-                    pendente = resumo["siglas_pendentes"].setdefault(
-                        outorgante, {"sigla": sugerida, "documentos": []}
-                    )
-                    pendente["documentos"].append(nome)
-                continue
-            if not aplicar:
-                nomeacao["estado"] = "por_nomear"
-                contar("por_nomear")
-                continue
-            pasta.mkdir(parents=True, exist_ok=True)
-            temp = alvo.with_suffix(".pdf.part")
-            shutil.copyfile(origem, temp)
-            temp.replace(alvo)
-            nomeacao.update({"estado": "nomeado", "data": time.strftime("%Y-%m-%dT%H:%M:%S")})
-            contar("nomeado")
-            escritos += 1
-            if escritos % INTERVALO_PERSISTENCIA == 0:
-                registo.guardar()
-    finally:
-        registo.guardar()
+    if tabela is None:
+        tabela = tabela_de_siglas()
+    results = execute_records(registo, destino, tabela,
+                              vocabulario_ambito, apply=aplicar, scheme=scheme,
+                              families=familias, workspace=workspace,
+                              accept_warnings=aceitar_heuristicas)
+    resumo = {"ordinais_novos": 0, "por_estado": {}, "avisos": [], "problemas": [],
+              "nomes": [], "siglas_pendentes": {}}
+    for result in results:
+        state = result["estado"]
+        if state == "proposto":
+            state = "por_nomear"
+        resumo["por_estado"][state] = resumo["por_estado"].get(state, 0) + 1
+        if result["nome"]:
+            resumo["nomes"].append((result["chave"], result["nome"]))
+        if result["motivo"] and result["motivo"] != "; ".join(result.get("avisos", [])):
+            resumo["problemas"].append(f"{result['chave']}: {result['motivo']}")
+        resumo["avisos"].extend(result.get("avisos", []))
+        e = registo.entradas[result["chave"]]
+        if state == "por_confirmar":
+            for entidade, valor in siglas_derivadas(e, tabela, scheme=scheme):
+                resumo["siglas_pendentes"].setdefault(entidade, {"sigla": valor, "documentos": []})["documentos"].append(result["nome"])
     return resumo
 
 

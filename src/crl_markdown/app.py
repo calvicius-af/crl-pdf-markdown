@@ -11,16 +11,36 @@ from .pipeline import Options, run
 
 
 def main():
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--models", type=Path)
+    parser.add_argument("--offline", action="store_true")
+    args = parser.parse_args()
     root = tk.Tk()
     root.title("CRL — PDF para Markdown")
-    root.geometry("780x500")
+    root.geometry("900x760")
+    root.minsize(750, 560)
     frame = ttk.Frame(root, padding=16)
     frame.pack(fill="both", expand=True)
-    source, output = tk.StringVar(), tk.StringVar()
+    source, output, workspace_path = tk.StringVar(), tk.StringVar(), tk.StringVar()
     ocr, offline, overwrite = tk.BooleanVar(), tk.BooleanVar(), tk.BooleanVar()
     models = tk.StringVar()
+    if args.models:
+        models.set(str(args.models))
+    offline.set(args.offline)
     events = queue.Queue()
     ttk.Label(frame, text="Preparar documentos Markdown para importação no MAXQDA").pack(anchor="w")
+    def use_workspace():
+        from .workspace import initialize
+        folder = filedialog.askdirectory(title="Escolha ou crie a pasta RNC_Dados_AAAA")
+        if folder:
+            workspace = initialize(Path(folder))
+            workspace_path.set(str(workspace))
+            source.set(str(workspace / "1_fontes/irct/convencoes"))
+            output.set(str(workspace / "2_processamento/texto"))
+            messagebox.showinfo("Pastas prontas", "A árvore RNC está pronta. Os ficheiros existentes "
+                                "foram conservados. Coloque os índices em 1_fontes/indices_bte.")
+    ttk.Button(frame, text="Criar / usar pasta RNC…", command=use_workspace).pack(anchor="w", pady=4)
     for label, variable in (
         ("PDF ou pasta de PDFs", source),
         ("Pasta de saída", output),
@@ -79,6 +99,8 @@ def main():
             webbrowser.open(report_path.resolve().as_uri())
 
     def start():
+        if running.is_set():
+            return
         if not source.get().strip() or not output.get().strip():
             messagebox.showerror("Campos em falta", "Escolhe a entrada e a pasta de saída.")
             return
@@ -110,7 +132,16 @@ def main():
                     )
                 )
             except Exception as exc:
-                events.put(("log", f"Erro: {exc}"))
+                from .diagnostics import save_failure
+                try:
+                    failure = save_failure(exc, args[1] / "_assistencia", "Conversão pela interface")
+                    events.put(("log", f"A conversão não terminou. Como resolver: {failure}"))
+                    events.put(("report", failure))
+                except OSError:
+                    from tempfile import gettempdir
+                    failure = save_failure(exc, Path(gettempdir()) / "CRL-assistencia", "Conversão")
+                    events.put(("log", f"Como resolver: {failure}"))
+                    events.put(("report", failure))
             finally:
                 path = args[1] / "_auditoria" / "diagnostico.md"
                 current_manifest = args[1] / "_auditoria" / "manifest.json"
@@ -130,6 +161,136 @@ def main():
         frame, text="Abrir relatório do lote", command=open_report, state="disabled"
     )
     report_button.pack(pady=(4, 0))
+
+    def callback_error(error_type, error, tb):
+        from tempfile import gettempdir
+
+        from .diagnostics import save_failure
+        try:
+            path = save_failure(error.with_traceback(tb), Path(gettempdir()) / "CRL-assistencia", "Interface")
+            messagebox.showerror("A operação não terminou", f"{error}\n\nComo resolver: {path}")
+        except Exception:
+            messagebox.showerror("A operação não terminou", str(error))
+    root.report_callback_exception = callback_error
+
+    def collect_workspace():
+        if running.is_set():
+            return
+        if not workspace_path.get():
+            use_workspace()
+        if not workspace_path.get():
+            return
+        import argparse
+        import contextlib
+        import io
+
+        from .recolha import add_arguments, collect
+        parser = argparse.ArgumentParser()
+        add_arguments(parser)
+        selected = parser.parse_args(["--workspace", workspace_path.get(), "--confirmar-rede"])
+        running.set()
+        def work():
+            transcript = io.StringIO()
+            try:
+                with contextlib.redirect_stdout(transcript):
+                    result = collect(selected)
+                events.put(("log", transcript.getvalue()))
+                events.put(("log", "Recolha terminada. Confira as pendências no relatório." if result
+                            else "Recolha e nomeação terminadas. Pode construir o Markdown."))
+            except Exception as exc:
+                from tempfile import gettempdir
+
+                from .diagnostics import save_failure
+                try:
+                    path = save_failure(exc, Path(gettempdir()) / "CRL-assistencia", "Recolha")
+                    events.put(("report", path))
+                finally:
+                    events.put(("log", f"A recolha não terminou: {exc}\n{transcript.getvalue()}"))
+            finally:
+                events.put(("done", ""))
+        threading.Thread(target=work, daemon=True).start()
+
+    def review_document():
+        if running.is_set():
+            return
+        import json
+
+        from .models import _sha256
+        from .validation import decide
+        folder = Path(output.get())
+        manifest = json.loads((folder / "_auditoria/manifest.json").read_text(encoding="utf-8"))
+        documents = manifest["documents"]
+        expected = {}
+        for document in documents:
+            relative = Path(document["relative_source"])
+            report = folder / "_auditoria/documentos" / relative.parent / (relative.stem + ".qualidade.json")
+            if report.is_file():
+                expected[document["relative_source"]] = {
+                    "source_sha256": document.get("source_sha256"),
+                    "markdown_sha256": document.get("markdown_sha256"),
+                    "report_sha256": _sha256(report),
+                }
+        dialog = tk.Toplevel(root)
+        dialog.title("Conferir texto com o PDF original")
+        dialog.transient(root)
+        dialog.grab_set()
+        dialog.geometry("760x530")
+        body = ttk.Frame(dialog, padding=14)
+        body.pack(fill="both", expand=True)
+        ttk.Label(body, text="Abra o PDF, o Markdown e o relatório. Confira o texto e todas as tabelas.",
+                  wraplength=700).pack(anchor="w")
+        selected = tk.StringVar()
+        choices = [d["relative_source"] for d in documents]
+        ttk.Combobox(body, textvariable=selected, values=choices, state="readonly", width=95).pack(fill="x", pady=8)
+        if choices:
+            selected.set(choices[0])
+        def document():
+            return next(d for d in documents if d["relative_source"] == selected.get())
+        links = ttk.Frame(body)
+        links.pack(fill="x")
+        for title, field in (("Abrir PDF original", "source"), ("Abrir Markdown", "output")):
+            ttk.Button(links, text=title, command=lambda key=field:
+                       webbrowser.open(Path(document()[key]).resolve().as_uri())).pack(side="left")
+        ttk.Button(links, text="Abrir evidências", command=lambda:
+                   webbrowser.open((folder / "_auditoria/detalhes.md").resolve().as_uri())).pack(side="left")
+        reviewer = tk.StringVar()
+        ttk.Label(body, text="Nome de quem fez a conferência").pack(anchor="w", pady=(10, 0))
+        ttk.Entry(body, textvariable=reviewer).pack(fill="x")
+        integral = tk.BooleanVar()
+        ttk.Checkbutton(body, text="Conferi integralmente este documento, incluindo tabelas e anexos",
+                        variable=integral).pack(anchor="w", pady=8)
+        ttk.Label(body, text="O que conferiu / resolução de cada aviso (obrigatório se há avisos)").pack(anchor="w")
+        notes = tk.Text(body, height=8, wrap="word")
+        notes.pack(fill="both", expand=True)
+        def record(decision):
+            path = decide(folder, selected.get(), reviewer=reviewer.get(), decision=decision,
+                          scope="integral" if integral.get() else "amostra", notes=notes.get("1.0", "end").strip(),
+                          expected=expected.get(selected.get(), {}))
+            messagebox.showinfo("Conferência registada", f"Decisão guardada: {path}", parent=dialog)
+        actions = ttk.Frame(body)
+        actions.pack(pady=8)
+        ttk.Button(actions, text="Registar aprovação", command=lambda: record("aprovado")).pack(side="left")
+        ttk.Button(actions, text="Registar rejeição", command=lambda: record("rejeitado")).pack(side="left")
+
+    def deliver_approved():
+        if running.is_set():
+            return
+        from datetime import datetime
+
+        from .validation import deliver
+        parent = filedialog.askdirectory(title="Onde guardar a nova entrega aprovada?")
+        if parent:
+            destination = Path(parent) / ("entrega_" + datetime.now().strftime("%Y%m%d_%H%M%S"))
+            path = deliver(Path(output.get()), destination)
+            webbrowser.open(path.resolve().as_uri())
+            messagebox.showinfo("Entrega pronta", f"Importe os Markdown da pasta documentos.\n{destination}\n\n"
+                                "O relatório de conformidade acompanha a entrega.")
+
+    workflow = ttk.Frame(frame)
+    workflow.pack(pady=8)
+    ttk.Button(workflow, text="Recolher PDFs (usa internet)", command=collect_workspace).pack(side="left")
+    ttk.Button(workflow, text="Conferir / aprovar…", command=review_document).pack(side="left")
+    ttk.Button(workflow, text="Entregar aprovados…", command=deliver_approved).pack(side="left")
 
     def poll():
         nonlocal report_path

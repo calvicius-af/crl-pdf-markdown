@@ -523,25 +523,16 @@ def test_descarregar_item_recusa_caminho_fora_do_destino_mesmo_sem_completar(amb
 # --------------------------------------------------- validação do registo
 
 
-def test_registo_carrega_ignorando_linha_invalida(ambiente, capsys):
-    """Ver PR #35, achado nº10: uma linha malformada não pode contaminar
-    o resto do registo nem propagar valores errados para cct.nomeacao."""
+def test_corrupt_registry_is_preserved_and_refused_before_rewrite(ambiente):
     indice, registo, interim = ambiente
     recolher([indice], interim, registo, rede=True, abridor=AbridorFalso(), pausa=0)
+    with registo.caminho.open("a", encoding="utf-8") as handle:
+        handle.write("isto nem sequer é JSON\n")
+    before = registo.caminho.read_bytes()
+    with pytest.raises(ValueError, match="Conserve o ficheiro"):
+        Registo.carregar(registo.caminho)
+    assert registo.caminho.read_bytes() == before
 
-    with open(registo.caminho, "a", encoding="utf-8") as f:
-        f.write('{"chave": "invalida/sem/ano", "ano": "não é um número"}\n')
-        f.write("isto nem sequer é JSON\n")
-        f.write('{"num_bte": 31}\n')  # sem "chave" — required
-
-    capsys.readouterr()  # limpa o que já foi impresso
-    relido = Registo.carregar(registo.caminho)
-    saida = capsys.readouterr().out
-    assert saida.count("AVISO —") == 3
-    assert "invalida/sem/ano" not in relido.entradas
-    # as entradas válidas (incluindo a "ignorada" por família fora de âmbito)
-    # continuam todas presentes — só as 3 linhas injectadas foram rejeitadas
-    assert len(relido.entradas) == len(LINHAS)
 
 
 def test_registo_sobrevive_a_uma_ida_ao_disco(ambiente):

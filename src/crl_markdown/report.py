@@ -137,6 +137,8 @@ def diagnostic(manifest, parent, *, detailed=True):
         )
     if manifest.get("error"):
         lines += ["", "## Falha da corrida", "", block(manifest["error"])]
+        if manifest.get("recovery"):
+            lines += ["", "O que fazer: " + manifest["recovery"]["action"], ""]
     lines += ["", "## Problemas por regra", ""]
     rules = Counter(f["rule"] for r in reports for f in r.get("findings", []))
     if rules:
@@ -154,6 +156,8 @@ def diagnostic(manifest, parent, *, detailed=True):
             lines += [f"### {escaped(report['relative_source'])}", ""]
             if report.get("error"):
                 lines += [escaped(report["error"]), ""]
+                if report.get("recovery"):
+                    lines += ["O que fazer: " + escaped(report["recovery"]["action"]), ""]
             grouped = {}
             for finding in report.get("findings", []):
                 if finding["severity"] == "info":
@@ -182,6 +186,8 @@ def diagnostic(manifest, parent, *, detailed=True):
         ]
         if report.get("error"):
             lines += [block(report["error"])]
+            if report.get("recovery"):
+                lines += ["O que fazer: " + escaped(report["recovery"]["action"]), ""]
         if "quality_status" not in report:
             lines += ["Não foi publicado um Markdown nesta tentativa.", ""]
             continue

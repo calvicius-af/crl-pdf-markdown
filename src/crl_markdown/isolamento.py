@@ -17,6 +17,7 @@ de dezenas de documentos, e um processo novo não herda o estado do anterior.
 import faulthandler
 import multiprocessing
 import time
+import traceback
 from pathlib import Path
 
 # Hipótese de mitigação, não um valor medido: renovar custa recarregar os
@@ -42,7 +43,8 @@ class FalhaArranque(RuntimeError):
 class ErroNoProcesso(RuntimeError):
     """Uma exceção Python dentro do processo de conversão, com o tipo original."""
 
-    def __init__(self, error_type: str, message: str):
+    def __init__(self, error_type: str, message: str, remote_traceback: str = ""):
+        self.remote_traceback = remote_traceback
         super().__init__(message)
         self.error_type = error_type
 
@@ -66,13 +68,13 @@ def _trabalhador(ligacao, options, factory, registo_falhas):
             try:
                 converter = factory(options)
             except Exception as exc:
-                ligacao.send(("arranque", type(exc).__name__, str(exc)))
+                ligacao.send(("arranque", type(exc).__name__, str(exc), traceback.format_exc()))
                 break
         try:
             report = convert_pdf(pdf, target, converter, options, overwrite, audit_dir=audit_dir)
             ligacao.send(("ok", report))
         except Exception as exc:
-            ligacao.send(("erro", type(exc).__name__, str(exc)))
+            ligacao.send(("erro", type(exc).__name__, str(exc), traceback.format_exc()))
 
 
 class ConversorIsolado:
@@ -145,6 +147,10 @@ class ConversorIsolado:
             return None
 
     def convert_pdf(self, pdf: Path, target: Path, overwrite: bool, audit_dir: Path) -> dict:
+        from .pipeline import check_output_paths
+        # A fábrica pode cair antes de o trabalhador conferir as saídas.
+        # Só permitir repetir/substituir artefactos criados por esta tentativa.
+        check_output_paths(target, audit_dir, overwrite=overwrite)
         prazo = 2 * self.options.timeout + ARRANQUE_S
         for tentativa in (1, 2):
             self._iniciar()
@@ -175,11 +181,13 @@ class ConversorIsolado:
                 )
             if resultado[0] == "arranque":
                 self._descartar()
-                raise FalhaArranque(f"{resultado[1]}: {resultado[2]}")
+                error = FalhaArranque(f"{resultado[1]}: {resultado[2]}")
+                error.remote_traceback = resultado[3]
+                raise error
             self.feitos += 1
             if self.feitos >= self.renovar_a_cada:
                 self.fechar()
             if resultado[0] == "ok":
                 return resultado[1]
-            raise ErroNoProcesso(resultado[1], resultado[2])
+            raise ErroNoProcesso(resultado[1], resultado[2], resultado[3])
         raise AssertionError("inalcançável")

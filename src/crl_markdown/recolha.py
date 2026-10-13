@@ -24,6 +24,7 @@ import unicodedata
 import urllib.error
 import urllib.request
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
@@ -85,6 +86,7 @@ PREFIXOS_FAMILIA = [
     ("AVISO", "aviso"),
     ("AV", "aviso"),
     ("AA", "adesao"),
+    ("ADESAO", "adesao"),  # grafia por extenso observada no índice fornecido em 13/10
 ]
 
 # Os acordos de adesão passam a ser recolhidos por omissão. Estavam de fora, e
@@ -339,14 +341,7 @@ class Registo:
 
     @classmethod
     def carregar(cls, caminho: Path) -> "Registo":
-        """Carrega o registo, validando cada entrada contra REGISTO_SCHEMA.
-
-        Uma linha inválida (JSON malformado, sem "chave", ou com "ano"/
-        "num_bte"/ordinal do tipo errado) é ignorada com um aviso — em vez de
-        entrar sem verificação e produzir mais tarde um nome de ficheiro como
-        "00_PR_000_BTE_00_…" (ver PR #35, achado nº10) — mas não interrompe a
-        leitura do resto do ficheiro.
-        """
+        """Recusa corrupção antes de reescrever: nenhuma linha recebida é apagada."""
         import jsonschema
 
         caminho = Path(caminho)
@@ -360,21 +355,22 @@ class Registo:
                     e = json.loads(linha)
                     validar_registo(e)
                 except (json.JSONDecodeError, jsonschema.ValidationError, KeyError) as exc:
-                    print(
-                        f"AVISO — {caminho.name}, linha {n}: entrada de registo "
-                        f"inválida, ignorada: {exc}"
-                    )
-                    continue
-                entradas[e["chave"]] = e  # última linha ganha
+                    raise ValueError(
+                        f"Registo {caminho}, linha {n}: entrada inválida. "
+                        "Conserve o ficheiro e peça ao apoio que repare esta linha antes de repetir. "
+                        f"Detalhe: {exc}"
+                    ) from exc
+                if e["chave"] in entradas and entradas[e["chave"]] != e:
+                    raise ValueError(f"Registo {caminho}, linha {n}: chave repetida com conteúdo diferente. "
+                                     "Conserve as duas versões e peça revisão ao apoio.")
+                entradas[e["chave"]] = e
         return cls(caminho, entradas)
 
     def guardar(self) -> None:
-        self.caminho.parent.mkdir(parents=True, exist_ok=True)
-        temp = self.caminho.with_suffix(self.caminho.suffix + ".part")
-        with open(temp, "w", encoding="utf-8", newline="\n") as f:
-            for chave_ in sorted(self.entradas):
-                f.write(json.dumps(self.entradas[chave_], ensure_ascii=False) + "\n")
-        os.replace(temp, self.caminho)
+        from .pipeline import atomic_write
+        content = "".join(json.dumps(self.entradas[key], ensure_ascii=False) + "\n"
+                          for key in sorted(self.entradas))
+        atomic_write(self.caminho, content)
 
     def get(self, chave_: str) -> dict | None:
         return self.entradas.get(chave_)
@@ -741,6 +737,8 @@ def add_arguments(p):
     )
     p.add_argument("--destino", default=str(DESTINO_OMISSAO))
     p.add_argument("--registo", default=str(REGISTO_OMISSAO))
+    p.add_argument("--workspace", type=Path, help="Raiz RNC_Dados_AAAA")
+    p.add_argument("--esquema", choices=["adr0022", "v4"], default="adr0022")
     p.add_argument(
         "--familias",
         default=",".join(FAMILIAS_POR_OMISSAO),
@@ -781,6 +779,19 @@ def add_arguments(p):
 
 def collect(args):
     """Executa a recolha com os argumentos já validados pelo parser."""
+    workspace = getattr(args, "workspace", None)
+    if workspace:
+        from .workspace import initialize
+        initialize(workspace)
+        for key, default, relative in (
+            ("indices", INDICES_OMISSAO, "1_fontes/indices_bte"),
+            ("destino", DESTINO_OMISSAO, "2_processamento/recolha_original"),
+            ("registo", REGISTO_OMISSAO, "0_gestao/catalogo/registo_bte.jsonl"),
+        ):
+            if Path(getattr(args, key)) == default:
+                setattr(args, key, str(workspace / relative))
+        args.siglas = list(args.siglas) or [str(workspace / "0_gestao/vocabularios/siglas.csv")]
+
     caminho_indices = Path(args.indices)
     if caminho_indices.is_dir():
         indices = sorted(caminho_indices.glob("*.xlsx"))
@@ -807,6 +818,17 @@ def collect(args):
         limite=args.limite,
     )
     print(texto_resumo(resumo, rede=rede))
+    from .pipeline import atomic_write
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
+    report_folder = Path(args.registo).parent / "relatorios_recolha" / stamp
+    atomic_write(report_folder / "recolha.json", json.dumps(resumo, ensure_ascii=False, indent=2))
+    atomic_write(report_folder / "recolha.md", "# Recolha do BTE\n\n```text\n" + texto_resumo(
+        resumo, rede=rede) + "\n```\n\n"
+        "Se faltar uma ligação ou um campo, confirme a linha indicada no índice Excel. "
+        "Se a ligação falhar, abra-a no navegador para confirmar o acesso ao BTE. "
+        "Repita a recolha; os PDFs já verificados não são descarregados novamente. "
+        "Entregue este relatório e o registo JSONL ao apoio informático se continuar.\n")
+    print(f"Relatório de recolha: {report_folder / 'recolha.md'}")
     if not rede and resumo["por_estado"].get("por_descarregar"):
         print("\nPara descarregar mesmo: repetir com --confirmar-rede")
     if args.sem_nomear:
@@ -821,8 +843,10 @@ def collect(args):
             raise ValueError(f"Ficheiro de siglas inexistente: {caminho}")
     nomes = nomeacao.nomear(
         registo,
-        Path(args.nomes),
+        workspace if workspace and Path(args.nomes) == NOMES_OMISSAO else Path(args.nomes),
         aplicar=True,
+        scheme=getattr(args, "esquema", "adr0022"),
+        workspace=bool(workspace and Path(args.nomes) == NOMES_OMISSAO),
         tabela=nomeacao.tabela_de_siglas(args.siglas),
         familias=familias,
         aceitar_heuristicas=args.aceitar_heuristicas,

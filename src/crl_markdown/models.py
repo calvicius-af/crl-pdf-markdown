@@ -16,8 +16,9 @@ RapidOCR vêm da origem definida pelo próprio Docling.
 
 import hashlib
 import json
+import re
 from datetime import datetime, timezone
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 MANIFEST = "manifesto_modelos.json"
 
@@ -90,22 +91,64 @@ def verify(folder: Path) -> list[str]:
     path = folder / MANIFEST
     if not path.is_file():
         return [f"sem {MANIFEST} em {folder}: correr `crl-md models inventory` na origem"]
-    manifest = json.loads(path.read_text(encoding="utf-8"))
-    expected = {f["path"]: f for f in manifest.get("files", [])}
+    try:
+        manifest = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        return [f"manifesto ilegível: {exc}; copiar novamente o pacote original"]
+    if not isinstance(manifest, dict) or not isinstance(manifest.get("files"), list) or not manifest["files"]:
+        return ["manifesto sem lista de ficheiros válida; voltar a preparar os modelos"]
+    expected, problems = {}, []
+    for entry in manifest["files"]:
+        if not isinstance(entry, dict):
+            problems.append("entrada inválida no manifesto")
+            continue
+        name = entry.get("path")
+        if (not isinstance(name, str) or not name or "\\" in name or ":" in name
+                or PurePosixPath(name).is_absolute() or ".." in PurePosixPath(name).parts
+                or name != PurePosixPath(name).as_posix()):
+            problems.append(f"caminho inválido no manifesto: {name!r}")
+            continue
+        if name in expected:
+            problems.append(f"entrada repetida: {name}")
+        if not re.fullmatch(r"[0-9a-f]{64}", str(entry.get("sha256", ""))):
+            problems.append(f"SHA-256 inválido: {name}")
+        if not isinstance(entry.get("bytes"), int) or entry["bytes"] < 0:
+            problems.append(f"tamanho inválido: {name}")
+        expected[name] = entry
     present = {p.relative_to(folder).as_posix(): p for p in _files(folder)}
-    problems = []
     for name, entry in expected.items():
         if name not in present:
             problems.append(f"em falta: {name}")
-        elif _sha256(present[name]) != entry["sha256"]:
-            problems.append(f"alterado (SHA-256 diferente): {name}")
+        elif not present[name].resolve().is_relative_to(folder.resolve()):
+            problems.append(f"ficheiro fora da pasta: {name}")
+        elif (_sha256(present[name]) != entry.get("sha256")
+              or present[name].stat().st_size != entry.get("bytes")):
+            problems.append(f"alterado (SHA-256 ou tamanho diferente): {name}")
     problems += [f"a mais (não está no manifesto): {n}" for n in present if n not in expected]
     return problems
 
 
 def has_ocr_models(folder: Path) -> bool:
-    ocr = folder / OCR_FOLDER
-    return ocr.is_dir() and any(p.is_file() for p in ocr.rglob("*"))
+    """Pré-verificação; o ensaio de conversão confirma compatibilidade e língua."""
+    files = [p for p in (folder / OCR_FOLDER).rglob("*")
+             if p.is_file() and p.stat().st_size and p.suffix in {".pth", ".pt", ".safetensors"}]
+    return all(any(task in p.name.lower() for p in files) for task in ("det", "cls", "rec"))
+
+
+def required_files_problems(folder: Path, *, ocr: bool = False) -> list[str]:
+    """Perfil mínimo do pipeline fixado; integridade e execução são verificações separadas."""
+    required = (
+        "docling-project--docling-layout-heron/config.json",
+        "docling-project--docling-layout-heron/preprocessor_config.json",
+        "docling-project--docling-layout-heron/model.safetensors",
+        "docling-project--docling-models/model_artifacts/tableformer/accurate/tm_config.json",
+        "docling-project--docling-models/model_artifacts/tableformer/accurate/tableformer_accurate.safetensors",
+    )
+    problems = [f"modelo obrigatório ausente ou vazio: {name}" for name in required
+                if not (folder / name).is_file() or not (folder / name).stat().st_size]
+    if ocr and not has_ocr_models(folder):
+        problems.append("modelos do OCR incompletos: são necessários deteção, classificação e reconhecimento torch")
+    return problems
 
 
 def download(destination: Path) -> Path:

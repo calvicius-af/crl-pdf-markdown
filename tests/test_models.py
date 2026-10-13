@@ -16,7 +16,8 @@ def _model_folder(root: Path, *, ocr=True) -> Path:
     if ocr:
         rapid = folder / models.OCR_FOLDER / "torch" / "PP-OCRv6"
         rapid.mkdir(parents=True)
-        (rapid / "rec.pth").write_bytes(b"pesos do OCR")
+        for task in ("rec", "det", "cls"):
+            (rapid / f"{task}.pth").write_bytes(b"pesos do OCR")
     return folder
 
 
@@ -27,6 +28,8 @@ def test_manifest_detects_missing_changed_and_extra_files(tmp_path):
     assert {f["path"] for f in manifest["files"]} == {
         "docling-project--docling-layout-heron/model.safetensors",
         "RapidOcr/torch/PP-OCRv6/rec.pth",
+        "RapidOcr/torch/PP-OCRv6/det.pth",
+        "RapidOcr/torch/PP-OCRv6/cls.pth",
     }
     assert models.verify(folder) == []
 
@@ -58,7 +61,7 @@ def test_models_cli(tmp_path, monkeypatch, capsys):
     target = tmp_path / "nova"
     assert main(["models", "download", "--dest", str(target)]) == 0
     manifest = json.loads((target / "modelos" / models.MANIFEST).read_text("utf-8"))
-    assert len(manifest["files"]) == 2
+    assert len(manifest["files"]) == 4
 
 
 @pytest.mark.parametrize(
@@ -101,3 +104,20 @@ def test_converter_uses_fixed_portuguese_ocr_engine(tmp_path):
     assert (ocr.kind, ocr.backend) == ("rapidocr", "torch")
     # O Docling normaliza a etiqueta (iso:pt → iso:pt-Latn).
     assert len(ocr.lang) == 1 and ocr.lang[0].startswith("iso:pt")
+
+@pytest.mark.parametrize('data', [[], {}, {'files': []}, {'files': [{}]},
+    {'files': [{'path': '../outside', 'sha256': '0'*64, 'bytes': 1}]},
+    {'files': [{'path': 'model.bin', 'bytes': 1}]}])
+def test_malformed_manifest_is_diagnostic_not_success_or_crash(tmp_path, data):
+    (tmp_path / models.MANIFEST).write_text(json.dumps(data), encoding='utf-8')
+    (tmp_path / 'model.bin').write_bytes(b'x')
+    assert models.verify(tmp_path)
+
+
+def test_fonts_and_partial_ocr_are_not_offline_models(tmp_path):
+    ocr = tmp_path / models.OCR_FOLDER
+    ocr.mkdir()
+    (ocr / 'font.ttf').write_bytes(b'font')
+    (ocr / 'rec.pth').write_bytes(b'model')
+    assert not models.has_ocr_models(tmp_path)
+    assert models.required_files_problems(tmp_path, ocr=True)

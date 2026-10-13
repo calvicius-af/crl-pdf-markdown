@@ -1,11 +1,13 @@
 """Conversão local com Docling e saídas Markdown auditáveis."""
 
+import difflib
 import faulthandler
 import hashlib
 import json
 import os
 import sys
 import tempfile
+import traceback
 from dataclasses import asdict, dataclass
 from datetime import datetime
 from importlib.metadata import version
@@ -154,7 +156,17 @@ def previous_report(pdf: Path, target: Path, audit_dir: Path | None = None) -> d
         report = json.loads(report_target.read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return None
-    if report.get("source_sha256") != hashlib.sha256(pdf.read_bytes()).hexdigest():
+    if not isinstance(report, dict) or report.get("quality_status") not in {"passed", "review", "blocked"}:
+        return None
+    artifacts = [(pdf, "source_sha256"), (target, "markdown_sha256"),
+                 (_raw.with_suffix(".json"), "docling_document_sha256")]
+    if report.get("raw_markdown_sha256"):
+        artifacts.append((_raw, "raw_markdown_sha256"))
+    try:
+        if any(not p.is_file() or report.get(key) != models._sha256(p)
+               for p, key in artifacts):
+            return None
+    except OSError:
         return None
     return report
 
@@ -183,15 +195,7 @@ def adopt_previous_report(pdf: Path, target: Path, audit_dir: Path) -> dict | No
     return report
 
 
-def convert_pdf(
-    pdf: Path,
-    target: Path,
-    converter,
-    options: Options,
-    overwrite: bool = False,
-    *,
-    audit_dir: Path | None = None,
-) -> dict:
+def check_output_paths(target: Path, audit_dir: Path | None, *, overwrite=False):
     raw_target, report_target = audit_paths(target, audit_dir)
     if not overwrite and any(
         p.exists()
@@ -204,6 +208,19 @@ def convert_pdf(
         )
     ):
         raise FileExistsError(f"Saída já existente: {target}; usar --overwrite para substituir.")
+
+
+def convert_pdf(
+    pdf: Path,
+    target: Path,
+    converter,
+    options: Options,
+    overwrite: bool = False,
+    *,
+    audit_dir: Path | None = None,
+) -> dict:
+    raw_target, report_target = audit_paths(target, audit_dir)
+    check_output_paths(target, audit_dir, overwrite=overwrite)
     result = converter.convert(pdf)
     status = getattr(result.status, "value", str(result.status))
     if status != "success":
@@ -251,6 +268,7 @@ def convert_pdf(
         "output": str(target.resolve()),
         "source_sha256": hashlib.sha256(pdf.read_bytes()).hexdigest(),
         "markdown_sha256": hashlib.sha256(markdown.encode("utf-8")).hexdigest(),
+        "raw_markdown_sha256": hashlib.sha256(raw.encode("utf-8")).hexdigest(),
         "docling_version": getattr(converter, "docling_version", None) or version("docling"),
         "docling_document_sha256": hashlib.sha256(document_json.encode("utf-8")).hexdigest(),
         "cached_extraction": hasattr(converter, "extraction_options"),
@@ -265,6 +283,13 @@ def convert_pdf(
         "pages": len(result.document.pages),
         "tables": len(result.document.tables),
         "title_from_filename": title_added,
+        "generated_headings": prepared.generated_headings,
+        "transformations": prepared.transformations,
+        "rendering_diff": "".join(difflib.unified_diff(raw.splitlines(keepends=True),
+            markdown.splitlines(keepends=True), fromfile="Docling bruto", tofile="Markdown final")),
+        "structure_nodes": prepared.structure["nos"],
+        "structure_offsets_reference": "structured_text, não são posições no Markdown",
+        "structured_text": prepared.structured_text,
         "structure": {
             "clauses": sum(n["tipo"] == "clausula" for n in prepared.structure["nos"]),
             "articles": sum(n["tipo"] == "artigo" for n in prepared.structure["nos"]),
@@ -291,7 +316,7 @@ def convert_pdf(
     return report
 
 
-def run(
+def _run(
     source: Path,
     output: Path,
     options: Options,
@@ -381,11 +406,14 @@ def run(
             except Exception as exc:
                 if isinstance(exc, FalhaArranque):
                     raise
+                from .diagnostics import explain
                 report = {
                     "source": str(pdf.resolve()),
                     "state": "falhou",
                     "error": str(exc),
                     "error_type": getattr(exc, "error_type", type(exc).__name__),
+                    "recovery": explain(exc),
+                    "traceback": getattr(exc, "remote_traceback", "") or "".join(traceback.format_exception(exc)),
                 }
             report = {**manifest["documents"][index - 1], **report}
             manifest["documents"][index - 1] = report
@@ -399,7 +427,10 @@ def run(
         manifest["status"] = "concluida"
     except BaseException as exc:
         manifest["status"] = "interrompida"
+        from .diagnostics import explain
         manifest["error"] = f"{type(exc).__name__}: {exc}"
+        manifest["recovery"] = explain(exc)
+        manifest["traceback"] = getattr(exc, "remote_traceback", "") or "".join(traceback.format_exception(exc))
         raise
     finally:
         if isolated is not None:
@@ -413,3 +444,10 @@ def run(
             if (audit / "falha_nativa.log").stat().st_size == 0:
                 (audit / "falha_nativa.log").unlink()
     return reports
+
+
+def run(source: Path, output: Path, options: Options, **kwargs) -> list[dict]:
+    from .locking import exclusive
+
+    with exclusive(output / "_auditoria" / ".operacao.lock"):
+        return _run(source, output, options, **kwargs)

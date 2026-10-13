@@ -12,6 +12,43 @@ A versão 0.2 recupera o núcleo de extração, legibilidade e auditoria do proj
 original. Não executa pré-codificação, comparação temática nem geração de QDPX.
 O formato documental de trabalho é Markdown; os dados de auditoria ficam à parte.
 
+## Organização RNC e fecho do desenvolvimento
+
+O desenvolvimento deste percurso pertence a este fork; o AppCCT é contexto e fonte
+de regras/vocabulários. A [especificação de fecho](specs/0001-fecho-documental.md)
+reúne a nota sobre fidelidade documental e as seis orientações adicionais.
+O [índice de documentação](docs/README.md) identifica guias, fontes e pendências.
+
+A árvore segue as fases do README RNC fornecido. Por decisão de 13/10/2026,
+a nomeação final é a mais recente do PR #3 (ADR-0022):
+`2026_BTE_31_PRI_377_CCT_27251_ACRAL-CESP+3`. Nomes já atribuídos são conservados.
+Ver [árvore e nomes](docs/organizacao-rnc.md).
+
+```powershell
+.venv\Scripts\python.exe -m crl_markdown init C:\Dados\RNC_Dados_2026
+.venv\Scripts\python.exe -m crl_markdown collect --workspace C:\Dados\RNC_Dados_2026
+.venv\Scripts\python.exe -m crl_markdown name --workspace C:\Dados\RNC_Dados_2026
+.venv\Scripts\python.exe -m crl_markdown name --workspace C:\Dados\RNC_Dados_2026 --aplicar
+.venv\Scripts\python.exe -m crl_markdown convert --workspace C:\Dados\RNC_Dados_2026 --models C:\modelos-docling --offline
+```
+
+Após criar a árvore, copie os índices para `1_fontes/indices_bte`. A recolha acima
+simula; autorize descargas com `--confirmar-rede` apenas quando pretende ligar ao BTE.
+Documentos sem campos/siglas confirmados ficam pendentes no catálogo.
+O [siglas.csv](siglas.csv) consolidado tem fontes e estados; propostas não são usadas
+automaticamente. Consulte o [guia de utilização](docs/operacao/guia-utilizacao.md).
+
+Na interface, **Criar / usar pasta RNC…** prepara a árvore e preenche entrada/saída.
+**Recolher PDFs**, **Conferir / aprovar…** e **Entregar aprovados…** completam o percurso.
+As decisões são vinculadas aos hashes; a entrega inclui relatório metodológico.
+O caminho antigo `data/`/`results/` continua disponível para compatibilidade;
+`--workspace` é o caminho recomendado para novos lotes.
+
+Para estações sem rede, usar o [pacote e instalador offline](docs/operacao/instalacao-offline.md).
+Os scripts foram preparados; a instalação numa estação Windows e a importação
+direta no MaxQDA continuam gates de aceitação por realizar. Docling mantém-se
+como único motor principal de conversão, com cache auditada e auditores auxiliares.
+
 ## Instalar e utilizar
 
 Python 3.11 a 3.13; as estações do CRL usam Windows com Python 3.13. Instalar o
