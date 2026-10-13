@@ -64,6 +64,8 @@ def test_percent_sign_and_negative_amount_cannot_disappear(tmp_path):
         (3, 'A variação é -25%.', 'A variação é 25%.'),
         (4, 'O saldo é - 125,00 euros.', 'O saldo é 125,00 euros.'),
         (5, 'O prazo é < 25 dias.', 'O prazo é > 25 dias.'),
+        (6, 'O saldo é –125,00 euros.', 'O saldo é 125,00 euros.'),
+        (7, 'O saldo é —125,00 euros.', 'O saldo é 125,00 euros.'),
     ):
         pdf = escrever_pdf(tmp_path / f'simbolos{number}.pdf', [pagina_bte(1, [original])])
         doc, text = estruturar(original, 'teste')

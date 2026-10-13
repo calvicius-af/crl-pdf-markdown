@@ -8,14 +8,14 @@ from pathlib import Path
 from .legacy import auditoria, completude, sanidade
 from .quality import Finding
 
-AMOUNT = re.compile(r"(?<![\d.,])[-−+]?(?:\d{1,3}(?:[ .\u00a0]\d{3})+|\d+)[,.]\d{2}(?!\d)")
+AMOUNT = re.compile(r"(?<![\d.,])[-−–—+]?(?:\d{1,3}(?:[ .\u00a0]\d{3})+|\d+)[,.]\d{2}(?!\d)")
 SIGNED = re.compile(
-    r"(?<![\w.,])[-−+][ \t\u00a0]*(?:\d{1,3}(?:[ .\u00a0]\d{3})+|\d+)(?:[.,]\d+)?"
+    r"(?<![\w.,])[-−–—+][ \t\u00a0]*(?:\d{1,3}(?:[ .\u00a0]\d{3})+|\d+)(?:[.,]\d+)?"
 )
 
 
 def canonical_number(value: str) -> str:
-    value = re.sub(r"[ \t\u00a0]", "", value).replace("−", "-")
+    value = re.sub(r"[ \t\u00a0]", "", value).replace("−", "-").replace("–", "-").replace("—", "-")
     return value.replace(".", "") if "," in value else value.replace(".", ",")
 
 
@@ -51,8 +51,8 @@ def _pdf_numeric_tokens(pdf: Path):
                     else:
                         gap, aligned = 100, False
                     close = aligned and 0 <= gap <= 4 and previous.get('direction', 'ltr') == direction
-                    sign = tokens[-1] in {'-', '−', '+'} and re.match(r"^\d", value)
-                    thousands = (re.fullmatch(r"[-−+]?\d+", tokens[-1])
+                    sign = tokens[-1] in {'-', '−', '–', '—', '+'} and re.match(r"^\d", value)
+                    thousands = (re.fullmatch(r"[-−–—+]?\d+", tokens[-1])
                                  and re.fullmatch(r"\d{3}(?:[,.]\d{2})?", value))
                     if close and (sign or thousands):
                         tokens[-1] += value
@@ -128,7 +128,7 @@ def audit_pdf(
             return Counter(ch for ch in text if ch in "%‰€$£§<>≤≥≠±")
         def critical_values(value):
             tokens = re.findall(r"\d+(?:[.,]\d+)?\s*[%‰]", value)
-            return Counter(re.sub(r"\s+", "", v).replace("−", "-") for v in tokens)
+            return Counter(re.sub(r"\s+", "", v).replace("−", "-").replace("–", "-").replace("—", "-") for v in tokens)
 
         expected_symbols = symbols(reference_text) + critical_values(reference_text)
         actual_symbols = symbols(plain) + critical_values(plain)
