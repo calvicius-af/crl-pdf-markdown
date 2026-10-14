@@ -121,3 +121,15 @@ def test_fonts_and_partial_ocr_are_not_offline_models(tmp_path):
     (ocr / 'rec.pth').write_bytes(b'model')
     assert not models.has_ocr_models(tmp_path)
     assert models.required_files_problems(tmp_path, ocr=True)
+
+
+def test_installed_ocr_registry_resolves_portuguese_without_network():
+    pytest.importorskip('docling')
+    pytest.importorskip('rapidocr')
+    # Integração entre as versões fixadas: importar/criar opções não detetava
+    # a remoção de PP_OCRV6_LANGS no RapidOCR 3.10.
+    from docling.models.stages.ocr.rapid_ocr_model import _resolve_rapidocr
+
+    spec = _resolve_rapidocr(models.OCR_LANGUAGE, models.OCR_BACKEND)
+    assert spec.rapidocr_code == 'pt'
+    assert spec.backend == 'torch'

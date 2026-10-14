@@ -50,7 +50,7 @@ def make_package(folder):
     (folder / 'vocabularios' / 'siglas.csv').write_text('sigla;nome\nCRL;CRL\n')
     for name in ('siglas.csv', 'siglas.manifest.json', 'LEIA_PRIMEIRO.md'):
         (folder / name).write_text('conteudo de ensaio')
-    (folder / 'offline_models.py').write_text((ROOT / 'src/crl_markdown/models.py').read_text())
+    (folder / 'offline_models.py').write_text((ROOT / 'src/crl_markdown/models.py').read_text(encoding="utf-8"), encoding="utf-8")
     load_script('preparar_offline').write_smoke(folder / 'smoke.pdf')
     wheels = folder / 'wheelhouse'
     wheels.mkdir()
@@ -65,7 +65,7 @@ def make_package(folder):
 
 def refresh_manifest(folder, manifest=None):
     if manifest is None:
-        manifest = json.loads((folder / 'pacote.json').read_text())
+        manifest = json.loads((folder / 'pacote.json').read_text(encoding="utf-8"))
     manifest['files'] = {p.relative_to(folder).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest()
                          for p in folder.rglob('*') if p.is_file() and p.name != 'pacote.json'}
     (folder / 'pacote.json').write_text(json.dumps(manifest))
@@ -80,7 +80,7 @@ def fake_tk(monkeypatch):
                                     'modelos\\outside.txt', 'modelos/../outside.txt'])
 def test_bundle_rejects_path_traversal(installer, tmp_path, attack):
     package = make_package(tmp_path / 'package')
-    manifest = json.loads((package / 'pacote.json').read_text())
+    manifest = json.loads((package / 'pacote.json').read_text(encoding="utf-8"))
     manifest['files'][attack] = '0' * 64
     (package / 'pacote.json').write_text(json.dumps(manifest))
     with pytest.raises(ValueError, match='Caminho inválido'):
@@ -126,7 +126,7 @@ def test_package_with_bad_model_manifest_is_rejected(installer, tmp_path):
 
 def test_package_with_wrong_docling_models_is_rejected(installer, tmp_path):
     package = make_package(tmp_path / 'package')
-    manifest = json.loads((package / 'pacote.json').read_text())
+    manifest = json.loads((package / 'pacote.json').read_text(encoding="utf-8"))
     manifest['versions']['docling'] = 'impossible'
     refresh_manifest(package, manifest)
     with pytest.raises(ValueError, match='outra versão'):
@@ -156,7 +156,7 @@ def test_install_runs_local_conversion_before_publication(installer, tmp_path, m
     destination = tmp_path / 'instalação com espaços'
     launcher = installer.install(package, destination, tmp_path / 'log.txt')
     assert launcher.is_file()
-    configuration = json.loads((destination / 'instalacao.json').read_text())
+    configuration = json.loads((destination / 'instalacao.json').read_text(encoding="utf-8"))
     resources = Path(configuration['resources'])
     pip_command, pip_options = commands[0]
     assert '--require-hashes' in pip_command and '--only-binary=:all:' in pip_command
@@ -174,7 +174,7 @@ def test_install_runs_local_conversion_before_publication(installer, tmp_path, m
     assert pip_options['env']['PIP_CONFIG_FILE'] == installer.os.devnull
     assert (resources / 'siglas.csv').is_file()
     assert not (destination / '.instalacao-em-curso').exists()
-    assert configuration['python'] in launcher.read_text()
+    assert configuration['python'] in launcher.read_text(encoding="utf-8")
 
 
 @pytest.mark.parametrize('failure', ['pip', 'smoke'])
@@ -192,8 +192,8 @@ def test_failed_install_keeps_previous_configuration_and_launcher(
                      lambda command: ('pip' in command) if failure == 'pip' else '-c' in command)
     with pytest.raises(RuntimeError, match='anterior continua disponível'):
         installer.install(package, destination, tmp_path / 'log.txt')
-    assert config.read_text() == 'previous valid configuration'
-    assert old_launcher.read_text() == 'previous valid launcher'
+    assert config.read_text(encoding="utf-8") == 'previous valid configuration'
+    assert old_launcher.read_text(encoding="utf-8") == 'previous valid launcher'
     assert not (destination / '.instalacao-em-curso').exists()
 
 
@@ -223,8 +223,8 @@ def test_all_transitive_wheels_are_exact_and_hash_pinned(tmp_path):
     lock = tmp_path / 'requirements.install.txt'
     versions = preparer.lock_wheels(tmp_path, lock)
     assert versions['transitive'] == '1.7'
-    assert 'transitive==1.7 --hash=sha256:' in lock.read_text()
-    assert all('--hash=sha256:' in line for line in lock.read_text().splitlines())
+    assert 'transitive==1.7 --hash=sha256:' in lock.read_text(encoding="utf-8")
+    assert all('--hash=sha256:' in line for line in lock.read_text(encoding="utf-8").splitlines())
 
 
 def test_doctor_does_not_accept_arbitrary_weights(tmp_path, monkeypatch):
@@ -234,7 +234,7 @@ def test_doctor_does_not_accept_arbitrary_weights(tmp_path, monkeypatch):
     monkeypatch.setattr(doctor.importlib, 'import_module', lambda module: object())
     monkeypatch.setattr(doctor, 'version', lambda package: 'test')
     assert not doctor.check(folder, tmp_path / 'report')
-    report = json.loads((tmp_path / 'report' / 'instalacao.json').read_text())
+    report = json.loads((tmp_path / 'report' / 'instalacao.json').read_text(encoding="utf-8"))
     result = next(item for item in report['checks'] if item['item'] == 'Modelos locais')
     assert not result['ok'] and models.MANIFEST in result['detail']
     assert not report['ocr_files_verified']
@@ -244,9 +244,9 @@ def test_diagnostics_omit_explicit_secrets_and_offer_disk_recovery(tmp_path):
     error = RuntimeError('failed https://user:secret@example.com api_key=private-value')
     target = save_failure(error, tmp_path, 'instalação')
     for path in (target, target.with_suffix('.json')):
-        assert 'secret' not in path.read_text()
-        assert 'private-value' not in path.read_text()
-    assert 'Se continuar' in target.read_text()
+        assert 'secret' not in path.read_text(encoding="utf-8")
+        assert 'private-value' not in path.read_text(encoding="utf-8")
+    assert 'Se continuar' in target.read_text(encoding="utf-8")
     result = explain(OSError(errno.ENOSPC, 'no space'))
     assert result['code'] == 'CRL-ESPACO'
     assert 'espaço' in result['action']
@@ -269,7 +269,7 @@ def test_windows_launcher_selects_utf8_before_accented_paths(installer, tmp_path
     assert 'setlocal DisableDelayedExpansion' in text
     assert 'Instalação 100%% com espaços' in text
     config = json.loads((destination / 'instalacao.json').read_text('utf-8'))
-    assert config['python'].endswith('Scripts/python.exe')
+    assert Path(config['python']).parts[-2:] == ('Scripts', 'python.exe')
     assert '100%' in config['resources'] and '100%%' not in config['resources']
 
 

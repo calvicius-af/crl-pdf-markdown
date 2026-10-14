@@ -54,7 +54,7 @@ def test_copy_keeps_original_and_refuses_hash_mismatch_or_existing_different_pdf
     assert target.read_bytes() == source.read_bytes()
     assert name_records(registry_path, root, siglas, scopes, apply=True)[0]["estado"] == "nomeado"
     catalog = root / "0_gestao/catalogo/catalogo_irct_2026.csv"
-    rows = list(csv.DictReader(catalog.open(), delimiter=";"))
+    rows = list(csv.DictReader(catalog.open(encoding="utf-8"), delimiter=";"))
     rows[0]["observacoes_equipa"] = "Conferido pela analista"
     with catalog.open("w") as handle:
         writer = csv.DictWriter(handle, fieldnames=list(rows[0]), delimiter=";")
@@ -64,14 +64,14 @@ def test_copy_keeps_original_and_refuses_hash_mismatch_or_existing_different_pdf
     failed = name_records(registry_path, root, siglas, scopes, apply=True)
     assert failed[0]["estado"] == "por_confirmar"
     assert target.read_bytes() == b"different"
-    assert "Conferido pela analista" in catalog.read_text()
+    assert "Conferido pela analista" in catalog.read_text(encoding="utf-8")
 
 
 def test_diagnostic_has_recovery_and_technical_trace(tmp_path):
     error = PermissionError("pasta sem acesso")
     path = save_failure(error, tmp_path, "Conversão")
-    assert "O que fazer agora" in path.read_text()
-    data = json.loads(path.with_suffix(".json").read_text())
+    assert "O que fazer agora" in path.read_text(encoding="utf-8")
+    data = json.loads(path.with_suffix(".json").read_text(encoding="utf-8"))
     assert data["code"] == "CRL-PERMISSOES" and "PermissionError" in data["traceback"]
     assert explain(FileExistsError("saída"))["code"] == "CRL-SAIDA-EXISTENTE"
 
@@ -131,7 +131,7 @@ def test_preview_preserves_assigned_identity_registry_and_catalog_notes(tmp_path
     assert result[0]["estado"] == "por_confirmar"
     assert records.caminho.read_bytes() == before
     catalog = root / "0_gestao/catalogo/catalogo_irct_2026.csv"
-    row = next(csv.DictReader(catalog.open(), delimiter=";"))
+    row = next(csv.DictReader(catalog.open(encoding="utf-8"), delimiter=";"))
     assert row["nome_canonico"].endswith("ACRAL-CESP+3")
     assert row["estado_nomeacao"] == "nomeado"
     assert row["estado_proposta"] == "por_confirmar"
@@ -147,7 +147,7 @@ def test_invalid_catalog_rejected_before_copy_or_registry_write(tmp_path):
     with pytest.raises(ValueError, match="chave estável"):
         execute_records(records, root, {key(s): s for s in ["ACRAL", "CESP", "STRUP"]}, {}, apply=True)
     assert records.caminho.read_bytes() == before
-    assert catalog.read_text().endswith("legado;conservar\n")
+    assert catalog.read_text(encoding="utf-8").endswith("legado;conservar\n")
     assert not list((root / "1_fontes").rglob("*.pdf"))
 
 
@@ -169,10 +169,10 @@ def test_initialize_uses_packaged_vocabulary_and_preserves_team_changes(tmp_path
     monkeypatch.chdir(tmp_path)
     root = initialize(tmp_path / "RNC")
     siglas = root / "0_gestao/vocabularios/siglas.csv"
-    assert len(list(csv.DictReader(siglas.open(), delimiter=";"))) > 3000
+    assert len(list(csv.DictReader(siglas.open(encoding="utf-8"), delimiter=";"))) > 3000
     siglas.write_text("nome;sigla;estado\nEquipa;EQ;confirmada\n")
     initialize(root)
-    assert "Equipa;EQ;confirmada" in siglas.read_text()
+    assert "Equipa;EQ;confirmada" in siglas.read_text(encoding="utf-8")
     assert (root / "1_fontes/irct/acordaos").is_dir()
 
 
@@ -218,7 +218,7 @@ def test_siglas_consolidation_does_not_confirm_an_acronym_fragment_identity(tmp_
     workbook.save(docs / "indice.xlsx")
     output = tmp_path / "proposta.csv"
     module.consolidate(docs, complement, output)
-    rows = list(csv.DictReader(output.open(), delimiter=";"))
+    rows = list(csv.DictReader(output.open(encoding="utf-8"), delimiter=";"))
     other = next(row for row in rows if "Diferente" in row["nome"])
     assert other["codigo_dgert"] == ""
     assert other["estado"] == "ambigua"
@@ -239,11 +239,11 @@ def test_siglas_consolidation_preserves_reviewed_decision_with_evidence(tmp_path
                          "Sindicato Alfa;ALFA;1.2.0;trabalhadores;confirmada;equipa;Ata 12;Analista;2026-10-13\n")
     output = tmp_path / "proposta.csv"
     module.consolidate(docs, complement, output, decisions=decisions)
-    row = next(csv.DictReader(output.open(), delimiter=";"))
+    row = next(csv.DictReader(output.open(encoding="utf-8"), delimiter=";"))
     assert row["estado"] == "confirmada" and row["sigla"] == "ALFA"
     assert row["responsavel"] == "Analista" and row["fonte"] == "Ata 12"
-    assert "ALFA" in decisions.read_text()
-    decisions.write_text(decisions.read_text().replace(";Analista;", ";;"))
+    assert "ALFA" in decisions.read_text(encoding="utf-8")
+    decisions.write_text(decisions.read_text(encoding="utf-8").replace(";Analista;", ";;"))
     with pytest.raises(ValueError, match="responsável"):
         module.consolidate(docs, complement, tmp_path / "second.csv", decisions=decisions)
     assert not (tmp_path / "second.csv").exists()
@@ -306,7 +306,7 @@ def test_siglas_identical_human_decisions_deduplicate_and_keep_evidence(tmp_path
     )
     output = tmp_path / "proposta.csv"
     module.consolidate(docs, complement, output, decisions=decisions)
-    rows = list(csv.DictReader(output.open(), delimiter=";"))
+    rows = list(csv.DictReader(output.open(encoding="utf-8"), delimiter=";"))
     assert len(rows) == 1
     assert rows[0]["sigla"] == "ALFA" and rows[0]["estado"] == "confirmada"
     assert rows[0]["fonte"] == "Ata 12 | Ata 13"
@@ -369,7 +369,7 @@ def test_exact_full_name_and_acronym_link_the_same_lineage(tmp_path, variant):
     workbook.save(docs / 'indice.xlsx')
     output = tmp_path / 'proposta.csv'
     module.consolidate(docs, complement, output)
-    with output.open() as handle:
+    with output.open(encoding="utf-8") as handle:
         rows = list(csv.DictReader(handle, delimiter=';'))
     assert len(rows) == 2
     assert all(row['codigo_dgert'] == '1.2.0' for row in rows)
