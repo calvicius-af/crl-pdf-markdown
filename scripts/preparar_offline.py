@@ -61,7 +61,10 @@ def lock_wheels(wheels, target):
     versions, requirements = {}, []
     for wheel in sorted(wheels.glob('*.whl')):
         with zipfile.ZipFile(wheel) as archive:
-            names = [n for n in archive.namelist() if n.endswith('.dist-info/METADATA')]
+            # Wheels como setuptools incluem cópias internas de bibliotecas
+            # com METADATA próprios. Só o dist-info da raiz identifica a wheel.
+            names = [n for n in archive.namelist()
+                     if n.count('/') == 1 and n.endswith('.dist-info/METADATA')]
             if len(names) != 1:
                 raise ValueError(f'Wheel sem metadados únicos: {wheel.name}')
             metadata = BytesParser().parsebytes(archive.read(names[0]))

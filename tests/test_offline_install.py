@@ -280,3 +280,13 @@ def test_preparation_launcher_handles_unc_and_target_version():
     for target in ('3.11', '3.12', '3.13'):
         prepared = text.replace('3.13', target)
         assert 'py -' + target + ' instalar_offline.py' in prepared
+
+
+def test_wheel_lock_uses_root_metadata_not_vendored_packages(tmp_path):
+    preparer = load_script('preparar_offline')
+    for name, version in [('crl-pdf-markdown', '0.3.0'), ('docling', '2.134.0'), ('setuptools', '84.0.0')]:
+        with zipfile.ZipFile(tmp_path / f'{name}-{version}.whl', 'w') as wheel:
+            wheel.writestr(f'{name}-{version}.dist-info/METADATA', f'Name: {name}\nVersion: {version}\n')
+            wheel.writestr(f'{name}/_vendor/internal-1.0.dist-info/METADATA', 'Name: internal\nVersion: 1.0\n')
+    versions = preparer.lock_wheels(tmp_path, tmp_path / 'requirements.install.txt')
+    assert versions == {'crl-pdf-markdown': '0.3.0', 'docling': '2.134.0', 'setuptools': '84.0.0'}
