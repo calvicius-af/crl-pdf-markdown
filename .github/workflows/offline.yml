@@ -33,8 +33,26 @@ jobs:
         run: |
           $package = "$env:RUNNER_TEMP\Pacote CRL com espaços"
           $destination = "$env:RUNNER_TEMP\Instalação CRL com espaços"
-          icacls $package /deny "$($env:USERNAME):(OI)(CI)(W)"
+          # W inclui SYNCHRONIZE, necessário também para abrir em leitura.
+          # Negar apenas escrita/apagamento conserva a leitura do instalador.
+          icacls $package /deny "$($env:USERNAME):(OI)(CI)(WD,AD,WEA,WA,DE,DC)"
           if ($LASTEXITCODE -ne 0) { throw "Não foi possível tornar o pacote só de leitura" }
+          $probe = @'
+          import sys
+          from pathlib import Path
+          package = Path(sys.argv[1])
+          (package / 'instalar_offline.py').read_bytes()
+          for name, mode in [('prova-escrita.tmp', 'xb'), ('pacote.json', 'ab')]:
+              try:
+                  with (package / name).open(mode):
+                      pass
+              except PermissionError:
+                  continue
+              raise RuntimeError('A pasta de ensaio permite escrita: ' + name)
+          print('Pacote legível; criação e alteração de ficheiros recusadas.')
+          '@
+          $probe | python - $package
+          if ($LASTEXITCODE -ne 0) { throw "A proteção de leitura do pacote não ficou demonstrada" }
           python "$package\instalar_offline.py" --destination $destination
           if ($LASTEXITCODE -ne 0) { throw "A instalação offline falhou" }
           $config = Get-Content "$destination\instalacao.json" -Raw | ConvertFrom-Json
