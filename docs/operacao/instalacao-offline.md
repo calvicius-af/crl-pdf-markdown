@@ -56,7 +56,17 @@ ambiente. Usa pip com `--no-index`, sem compilar bibliotecas na estação e sem 
 A preparação precisa de rede; **não foi executada nesta intervenção**.
 
 Se a preparação falhar, a pasta fica marcada `PACOTE_INCOMPLETO.txt` e não pode
-ser distribuída. Volte a preparar numa pasta nova após resolver a causa.
+ser distribuída. Volte a preparar numa pasta nova após resolver a causa. A saída do
+pip aparece no terminal e fica guardada em `preparacao.txt`; `falha.txt` guarda
+o traceback do preparador. Não é necessário repetir a preparação para consultar
+estes relatórios.
+
+O preparador preserva a unidade mapeada (por exemplo, `L:`) e aceita caminhos
+UNC. Ao passar uma origem `\\localhost\C$` ao pip, usa um URI com o servidor
+`127.0.0.1`, para evitar a interpretação de `localhost` como disco local.
+Se já descarregou e verificou os modelos, reutilize essa pasta; uma falha na
+preparação das wheels não exige descarregar novamente os modelos.
+
 
 ## Gate obrigatório antes de distribuir
 

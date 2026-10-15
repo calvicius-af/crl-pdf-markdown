@@ -4,6 +4,7 @@ import argparse
 import hashlib
 import importlib.util
 import json
+import os
 import platform
 import shutil
 import subprocess
@@ -12,7 +13,39 @@ import tomllib
 import traceback
 import zipfile
 from email.parser import BytesParser
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
+
+
+def project_reference(root):
+    """O pip trata file://localhost como disco local e perde a partilha UNC."""
+    text = str(root)
+    if not text.startswith("\\\\"):
+        return text
+    server, _, rest = text[2:].partition("\\")
+    if server.lower() == "localhost":
+        server = "127.0.0.1"
+    return PureWindowsPath(f"\\\\{server}\\{rest}").as_uri()
+
+
+def wheel_command(root, wheels):
+    return [sys.executable, '-m', 'pip', 'wheel', project_reference(root),
+            '-c', str(root / 'requirements/runtime.txt'),
+            '--only-binary=:all:', '--wheel-dir', str(wheels)]
+
+
+def run_logged(command, log, cwd):
+    """Mostra a saída original do pip e conserva-a no relatório do pacote."""
+    environment = {**os.environ, 'PYTHONIOENCODING': 'utf-8'}
+    with subprocess.Popen(command, cwd=cwd, stdout=subprocess.PIPE,
+                          stderr=subprocess.STDOUT, text=True, encoding='utf-8',
+                          errors='replace', env=environment) as process:
+        for line in process.stdout:
+            log.write(line)
+            log.flush()
+            print(line, end='', flush=True)
+        status = process.wait()
+    if status:
+        raise subprocess.CalledProcessError(status, command)
 
 
 def sha256(path):
@@ -82,7 +115,8 @@ def lock_wheels(wheels, target):
 
 
 def prepare(output, models):
-    root = Path(__file__).resolve().parents[1]
+    # Preservar a unidade mapeada; resolve() pode convertê-la em \\localhost\\C$…
+    root = Path(__file__).absolute().parents[1]
     output, models = output.resolve(), models.resolve()
     if output.exists():
         raise ValueError('Escolha uma pasta de pacote nova; não substituir um pacote já distribuído.')
@@ -98,13 +132,9 @@ def prepare(output, models):
     wheels.mkdir(parents=True)
     try:
         with (output / 'preparacao.txt').open('w', encoding='utf-8') as log:
-            subprocess.run([sys.executable, '-m', 'pip', 'wheel', str(root),
-                            '-c', str(root / 'requirements/runtime.txt'),
-                            '--only-binary=:all:', '--wheel-dir', str(wheels)], check=True,
-                           stdout=log, stderr=subprocess.STDOUT)
-            subprocess.run([sys.executable, '-m', 'pip', 'download', 'pip', 'setuptools',
-                            '--only-binary=:all:', '--dest', str(wheels)], check=True,
-                           stdout=log, stderr=subprocess.STDOUT)
+            run_logged(wheel_command(root, wheels), log, root)
+            run_logged([sys.executable, '-m', 'pip', 'download', 'pip', 'setuptools',
+                        '--only-binary=:all:', '--dest', str(wheels)], log, root)
         versions = lock_wheels(wheels, output / 'requirements.install.txt')
         project = tomllib.loads((root / 'pyproject.toml').read_text('utf-8'))
         if versions['crl-pdf-markdown'] != project['project']['version']:
@@ -142,6 +172,9 @@ def prepare(output, models):
 
 
 if __name__ == '__main__':
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, 'reconfigure'):
+            stream.reconfigure(encoding='utf-8', errors='replace')
     parser = argparse.ArgumentParser()
     parser.add_argument('--saida', type=Path, required=True)
     parser.add_argument('--modelos', type=Path, required=True)

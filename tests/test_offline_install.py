@@ -290,3 +290,74 @@ def test_wheel_lock_uses_root_metadata_not_vendored_packages(tmp_path):
             wheel.writestr(f'{name}/_vendor/internal-1.0.dist-info/METADATA', 'Name: internal\nVersion: 1.0\n')
     versions = preparer.lock_wheels(tmp_path, tmp_path / 'requirements.install.txt')
     assert versions == {'crl-pdf-markdown': '0.3.0', 'docling': '2.134.0', 'setuptools': '84.0.0'}
+
+
+@pytest.mark.parametrize('root, expected', [
+    (r'L:\projeto com espaços', r'L:\projeto com espaços'),
+    (r'C:\projeto', r'C:\projeto'),
+    (r'\\localhost\C$\profiles\CRL\pessoal\projeto',
+     'file://127.0.0.1/C%24/profiles/CRL/pessoal/projeto'),
+    (r'\\servidor\equipa\projeto com espaços',
+     'file://servidor/equipa/projeto%20com%20espa%C3%A7os'),
+])
+def test_preparer_passes_project_to_pip_without_losing_unc_share(root, expected):
+    from pathlib import PureWindowsPath
+
+    preparer = load_script('preparar_offline')
+    command = preparer.wheel_command(PureWindowsPath(root), PureWindowsPath(r'C:\pacote\wheelhouse'))
+    assert command[:4] == [sys.executable, '-m', 'pip', 'wheel']
+    assert command[4] == expected
+
+
+def test_preparer_unc_reference_roundtrips_through_windows_pip(monkeypatch):
+    import nturl2path
+    import urllib.request
+    from pathlib import PureWindowsPath
+
+    from pip._internal.utils import urls
+
+    preparer = load_script('preparar_offline')
+    monkeypatch.setattr(urls, 'WINDOWS', True)
+    monkeypatch.setattr(urllib.request, 'url2pathname', nturl2path.url2pathname)
+    root = PureWindowsPath(r'\\localhost\C$\profiles\CRL\pessoal\projeto')
+    assert PureWindowsPath(urls.url_to_path(preparer.project_reference(root))) == PureWindowsPath(
+        r'\\127.0.0.1\C$\profiles\CRL\pessoal\projeto'
+    )
+
+
+def test_preparer_shows_original_subprocess_error_and_preserves_exit_code(tmp_path, capsys):
+    preparer = load_script('preparar_offline')
+    command = [sys.executable, '-u', '-c',
+               "import sys; print('Preparação → início'); "
+               "print('ERRO ORIGINAL', file=sys.stderr); sys.exit(17)"]
+    report = tmp_path / 'preparacao.txt'
+    with report.open('w', encoding='utf-8') as log:
+        with pytest.raises(subprocess.CalledProcessError) as error:
+            preparer.run_logged(command, log, tmp_path)
+    assert error.value.returncode == 17
+    assert error.value.cmd == command
+    text = report.read_text('utf-8')
+    assert 'Preparação → início' in text and 'ERRO ORIGINAL' in text
+    assert capsys.readouterr().out == text
+
+
+def test_preparer_marks_failed_package_incomplete(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+
+    preparer = load_script('preparar_offline')
+    monkeypatch.setattr(preparer, 'model_api', lambda root: SimpleNamespace(
+        verify=lambda folder: [], has_ocr_models=lambda folder: False,
+        required_files_problems=lambda folder, **kw: []))
+
+    def fail(command, log, cwd):
+        log.write('erro original do pip\n')
+        raise subprocess.CalledProcessError(2, command)
+
+    monkeypatch.setattr(preparer, 'run_logged', fail)
+    output = tmp_path / 'pacote'
+    with pytest.raises(subprocess.CalledProcessError):
+        preparer.prepare(output, tmp_path / 'models')
+    assert (output / 'PACOTE_INCOMPLETO.txt').is_file()
+    assert 'erro original do pip' in (output / 'preparacao.txt').read_text('utf-8')
+    assert (output / 'falha.txt').is_file()
+    assert not (output / 'pacote.json').exists()
