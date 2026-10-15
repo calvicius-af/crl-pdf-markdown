@@ -361,3 +361,53 @@ def test_preparer_marks_failed_package_incomplete(tmp_path, monkeypatch):
     assert 'erro original do pip' in (output / 'preparacao.txt').read_text('utf-8')
     assert (output / 'falha.txt').is_file()
     assert not (output / 'pacote.json').exists()
+
+
+@pytest.mark.parametrize('folder, expected', [
+    (r'L:\CRL-pacote-02', r'L:\CRL-pacote-02\wheelhouse'),
+    (r'C:\pacote', r'C:\pacote\wheelhouse'),
+    (r'\\localhost\C$\profiles\CRL\pacote',
+     'file://127.0.0.1/C%24/profiles/CRL/pacote/wheelhouse'),
+    (r'\\servidor\equipa\pacote com espaços',
+     'file://servidor/equipa/pacote%20com%20espa%C3%A7os/wheelhouse'),
+])
+def test_installer_keeps_local_wheelhouse_on_mapped_or_unc_drive(installer, folder, expected):
+    from pathlib import PureWindowsPath
+
+    command = installer.install_command('python.exe', PureWindowsPath(folder))
+    assert command[command.index('--find-links') + 1] == expected
+    assert '--require-hashes' in command
+    assert '--no-index' in command
+    assert '--only-binary=:all:' in command
+
+
+def test_unc_wheel_file_is_found_at_its_original_share(installer, monkeypatch):
+    import nturl2path
+    import urllib.request
+    from pathlib import PureWindowsPath
+
+    from pip._internal.utils import urls
+
+    monkeypatch.setattr(urls, 'WINDOWS', True)
+    monkeypatch.setattr(urllib.request, 'url2pathname', nturl2path.url2pathname)
+    folder = PureWindowsPath(r'\\localhost\C$\profiles\CRL\pacote\wheelhouse')
+    directory = installer.wheelhouse_reference(folder)
+    wheel_url = directory + '/accelerate-1.15.0-py3-none-any.whl'
+    assert PureWindowsPath(urls.url_to_path(wheel_url)) == PureWindowsPath(
+        r'\\127.0.0.1\C$\profiles\CRL\pacote\wheelhouse\accelerate-1.15.0-py3-none-any.whl')
+
+
+def test_updated_installer_uses_existing_package_without_modifying_it(installer, tmp_path, monkeypatch):
+    package = make_package(tmp_path / 'original-package')
+    (package / 'instalar_offline.py').write_text('# instalador anterior inventariado\n')
+    refresh_manifest(package)
+    before = {p.relative_to(package): p.read_bytes() for p in package.rglob('*') if p.is_file()}
+    commands = []
+    fake_heavy_steps(installer, monkeypatch, commands)
+    destination = tmp_path / 'local-installation'
+    assert installer.main(['--package', str(package), '--destination', str(destination)]) == 0
+    assert (destination / 'instalacao.json').is_file()
+    assert before == {p.relative_to(package): p.read_bytes() for p in package.rglob('*') if p.is_file()}
+    assert installer.verify(package)['schema'] == 2
+    pip_command, _options = commands[0]
+    assert pip_command[pip_command.index('--find-links') + 1] == str(package / 'wheelhouse')

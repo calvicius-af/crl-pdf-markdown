@@ -38,6 +38,26 @@ ser escrita, é usada uma pasta temporária e o caminho é apresentado na janela
 Falhas anteriores ao arranque do Python só podem aparecer no lançador: conserve
 o texto da janela. Não é necessário contactar o autor; o apoio recebe a evidência.
 
+## Instalar um pacote existente com um instalador corrigido
+
+O pacote e a sua pasta `wheelhouse` podem permanecer em `L:` ou numa partilha UNC.
+Por omissão, as bibliotecas e os recursos de execução são instalados localmente
+em `%LOCALAPPDATA%\CRL-PDF-Markdown`. A origem das wheels e o destino da
+instalação são pastas independentes.
+
+Quando o apoio disponibilizar uma correção do instalador, é possível executá-la
+fora do pacote, conservando o pacote original e todos os seus hashes. Na pasta
+do projeto atualizado, com o pacote existente `CRL-pacote-02`:
+
+```powershell
+py -3.13 scripts\instalar_offline.py --package .\CRL-pacote-02
+```
+
+O instalador continua a verificar todos os ficheiros e hashes, a instalar sem
+rede e a executar o ensaio antes de publicar o lançador. Esta operação reutiliza
+as wheels e modelos existentes. Não substitua `instalar_offline.py` dentro do
+pacote já preparado: esse ficheiro também está inventariado no manifesto.
+
 ## Para o apoio: preparar o pacote uma vez
 
 Prepare num computador com rede, com **o mesmo sistema, arquitetura e versão menor

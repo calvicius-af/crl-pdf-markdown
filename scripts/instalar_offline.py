@@ -17,6 +17,23 @@ from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath, PureWindowsPath
 
 
+def wheelhouse_reference(folder):
+    """Preserva a partilha quando o pip converte --find-links em URLs."""
+    text = str(folder)
+    if not text.startswith("\\\\"):
+        return text
+    server, _, rest = text[2:].partition("\\")
+    if server.lower() == 'localhost':
+        server = '127.0.0.1'
+    return PureWindowsPath(f"\\\\{server}\\{rest}").as_uri()
+
+
+def install_command(python, package):
+    return [str(python), '-m', 'pip', 'install', '--no-index', '--only-binary=:all:',
+            '--require-hashes', '--find-links', wheelhouse_reference(package / 'wheelhouse'),
+            '-r', str(package / 'requirements.install.txt')]
+
+
 def sha256(path):
     digest = hashlib.sha256()
     with path.open('rb') as handle:
@@ -159,7 +176,8 @@ def publish(configuration, config, launcher, launch_text):
 
 
 def install(package, destination, log):
-    package, destination = package.resolve(), destination.resolve()
+    # Preservar L: para o pip; verify() faz a validação canónica separadamente.
+    package, destination = package.absolute(), destination.resolve()
     manifest = verify(package)
     destination.mkdir(parents=True, exist_ok=True)
     lock = destination / '.instalacao-em-curso'
@@ -194,9 +212,7 @@ def install(package, destination, log):
                 child_env.pop(key)
         child_env.update({'PIP_NO_INDEX': '1', 'PIP_DISABLE_PIP_VERSION_CHECK': '1',
                           'PIP_CONFIG_FILE': os.devnull})
-        command = [str(python), '-m', 'pip', 'install', '--no-index', '--only-binary=:all:',
-                   '--require-hashes', '--find-links', str(package / 'wheelhouse'),
-                   '-r', str(package / 'requirements.install.txt')]
+        command = install_command(python, package)
         with log.open('a', encoding='utf-8') as handle:
             for label, command, timeout in (
                 ('Instalar bibliotecas locais', command, 1800),
@@ -247,8 +263,10 @@ def install(package, destination, log):
 def main(argv=None):
     parser = argparse.ArgumentParser(description='Instalar o pacote CRL sem acesso à rede.')
     parser.add_argument('--destination', type=Path, help='Pasta local de instalação (apoio informático).')
+    parser.add_argument('--package', type=Path,
+                        help='Pacote existente, para instalar com uma versão atualizada deste script.')
     args = parser.parse_args(argv)
-    package = Path(__file__).resolve().parent
+    package = (args.package or Path(__file__).absolute().parent).absolute()
     destination = args.destination or (
         Path(os.environ.get('LOCALAPPDATA', str(Path.home() / '.local/share'))) / 'CRL-PDF-Markdown')
     log_folder = destination / 'assistencia'
