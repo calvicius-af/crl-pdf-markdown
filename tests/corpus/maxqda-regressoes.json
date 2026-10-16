@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "source": {
+    "file": "MAXQDA Segmentos codificados.xlsx",
+    "sha256": "60c76c05c07b78f50fe34208399936eae1363583e357eac6ec962ef54a842b92",
+    "sheet": "Sheet1",
+    "rows": [2, 3, 4, 5]
+  },
+  "scope": "Casos locais conferidos contra os PDFs; não são uma certificação de todo o corpus.",
+  "documents": [
+    {
+      "stem": "2026_BTE_27_PRI_322_AE_47246_AutoestradaAlgarve-CESP",
+      "source_rows": [2],
+      "headings": [
+        "## Âmbito e vigência",
+        "### Cláusula 3.ª - (Comissão paritária)",
+        "## CAPÍTULO II - Admissões e enquadramento profissional",
+        "### Cláusula 4.ª - (Condições de admissão)"
+      ],
+      "forbidden_headings": ["## CAPÍTULO I"],
+      "reason": "O PDF não contém o rótulo CAPÍTULO I. Preservar o título nativo e fechar a divisão anterior."
+    },
+    {
+      "stem": "2026_BTE_27_PRI_329_AE-ALT_46692_FundacaoINATEL-SITESE",
+      "source_rows": [3, 4, 5],
+      "headings": [
+        "### Cláusula 25.ª - Garantias do trabalhador",
+        "## CAPÍTULO VI - Prestação do trabalho",
+        "### SECÇÃO I - Princípios gerais",
+        "#### Cláusula 26.ª - Regulamentação do trabalho"
+      ],
+      "source_pages": [2, 35],
+      "salary_rows": [
+        {"category": "Técnico Superior de Grau V", "values": ["3068,64", "3155,84", "3330,23"], "minimum_occurrences": 2},
+        {"category": "Técnico Superior de Grau IV", "values": ["2632,69", "2719,88", "2850,67"], "minimum_occurrences": 2}
+      ],
+      "required_errors": ["TABLE_GRID_GAP"],
+      "reason": "Conferir duas versões da grelha categoria × nível × valor. O carácter sem célula inequívoca continua identificado e bloqueado."
+    }
+  ]
+}

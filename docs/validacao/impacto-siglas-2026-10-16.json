@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "documents": 411,
+  "fallback_differences": 0,
+  "canonical_names_with_old_token": 0,
+  "method": "Comparação da mesma função sigla(nome,{}) com a regex anterior e corrigida; a tabela de vocabulário pode ter evitado o defeito na nomeação real. Nomes existentes não foram alterados.",
+  "cases": [],
+  "positive_controls": [
+    {
+      "input": "Auto-Estradas de Portugal - BRISA, SA",
+      "before": "BRI",
+      "after": "BRISA"
+    },
+    {
+      "input": "Associação Nacional - ANESA, Lda",
+      "before": "ANE",
+      "after": "ANESA"
+    },
+    {
+      "input": "Companhia - LUSA, Lda",
+      "before": "LU",
+      "after": "LUSA"
+    },
+    {
+      "input": "Metro - STEM, Lda",
+      "before": "ST",
+      "after": "STEM"
+    }
+  ]
+}

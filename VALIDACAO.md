@@ -1,5 +1,9 @@
 # Validação de extração e Markdown — 1 de outubro de 2026
 
+Seguimento de 16/10: [correções e validação dos casos MAXQDA](docs/validacao/correcoes-maxqda-2026-10-16.md).
+A suíte desta implementação passou **584 testes**, com **23 omissões condicionais**.
+Os números do diagnóstico inicial abaixo descrevem a corrida anterior às correções.
+
 Atualização de 16/10: [diagnóstico do lote de 411 documentos e plano de melhoria](docs/validacao/diagnostico-lote-2026-10-16.md).
 Foram convertidos 411, sem falhas, com 76 sem alertas, 230 para revisão e 105
 bloqueados. A suíte atual passou 528 testes, com 22 omissões condicionais.

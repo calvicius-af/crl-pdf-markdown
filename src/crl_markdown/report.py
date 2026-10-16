@@ -44,6 +44,9 @@ def link(path, parent, label):
 
 
 def evidence(key, value):
+    if key == 'numeric_evidence':
+        return '\n'.join(f"**Página {item['page']} — referência PDF**\n\n"
+                          + block(item['source_text']) for item in value)
     if key == "perda_por_pagina":
         return "\n".join(f"- Página {page}: perda de {loss:.3%}." for page, loss in value) + "\n"
     if key in {"em_falta", "a_mais", "amounts_missing", "amounts_extra"}:
@@ -211,12 +214,26 @@ def diagnostic(manifest, parent, *, detailed=True):
         ]
         if report.get("findings"):
             for finding in report["findings"]:
-                where = f"linha {finding['line']}" if finding.get("line") else "documento"
+                locations = []
+                if finding.get('page'):
+                    locations.append(f"página {finding['page']}")
+                if finding.get('line'):
+                    locations.append(f"linha {finding['line']}")
+                where = ', '.join(locations) or 'documento'
+                if finding.get('id'):
+                    where += '; ID ' + finding['id']
                 severity = {"error": "ERRO", "warning": "AVISO", "info": "INFORMAÇÃO"}
                 lines += [
                     f"- **{severity.get(finding['severity'], escaped(finding['severity']))} "
                     f"— {escaped(finding['rule'])}** ({where}): " + escaped(finding["message"])
                 ]
+                if finding.get('resolution'):
+                    resolution = finding['resolution']
+                    lines.append('  Resolução ' + escaped(resolution['action']) + ': '
+                                 + escaped(resolution['notes']) + ' — ' + escaped(resolution['reviewer']))
+                if finding.get('evidence'):
+                    lines.append('  Fonte: ' + escaped(finding['evidence'].get('source_cell', ''))
+                                 + '; saída: ' + escaped(finding['evidence'].get('rendered_cell', '')))
         else:
             lines.append("Sem ocorrências automáticas.")
         lines += ["", "#### Completude e evidências", ""]
@@ -246,6 +263,7 @@ def diagnostic(manifest, parent, *, detailed=True):
                 "a_mais": "Palavras excedentes (contagens)",
                 "amounts_missing": "Montantes em falta (contagens)",
                 "amounts_extra": "Montantes excedentes (contagens)",
+                "numeric_evidence": "Passagens fonte dos desacordos numéricos",
                 "trechos_falta": "Trechos em falta (página, original, substituição)",
                 "trechos_mais": "Trechos excedentes",
                 "contexto_falta": "Contextos das palavras em falta",
@@ -276,6 +294,10 @@ def diagnostic(manifest, parent, *, detailed=True):
                             "docling_version",
                             "cached_extraction",
                             "options",
+                            "document_profile",
+                            "audit_policy_version",
+                            "pipeline_fingerprint",
+                            "revision",
                         )
                         if key in report
                     },
@@ -331,9 +353,27 @@ def write_reports(manifest, output: Path, write):
             )
     if manifest.get("error"):
         overview += ["\nFalha da corrida:", manifest["error"]]
+    # O índice guarda estado/proveniência; os artefactos extensos já existem
+    # no relatório individual, com hashes. Não duplicar todo o corpus a cada PDF.
+    compact = {**manifest, 'schema_version': 2, 'documents': []}
+    for record in records:
+        summary = {k: v for k, v in record.items() if k not in {
+            'structured_text', 'structure_nodes', 'transformations', 'rendering_diff'}}
+        if 'completeness' in summary:
+            summary['completeness'] = {k: v for k, v in summary['completeness'].items()
+                                       if k in {'veredicto', 'cobertura', 'ordem', 'excesso', 'erro',
+                                                'reference_independent', 'palavras_pdf', 'palavras_texto'}}
+        if record.get('relative_source'):
+            relative = Path(record['relative_source']).with_suffix('.qualidade.json')
+            summary['detail_report'] = (Path('_auditoria/documentos') / relative).as_posix()
+        compact['documents'].append(summary)
     for folder in (output / "_auditoria" / "corridas" / manifest["run_id"], output / "_auditoria"):
         write(folder / "diagnostico.md", diagnostic(manifest, folder, detailed=False))
-        write(folder / "detalhes.md", diagnostic(manifest, folder))
+        details = diagnostic(manifest, folder) if manifest['status'] != 'em_curso' else (
+            '# Evidências da corrida em curso\n\n'
+            'Consulte os relatórios individuais em `_auditoria/documentos`. '
+            'O relatório consolidado completo é produzido ao terminar ou interromper.\n')
+        write(folder / "detalhes.md", details)
         write(folder / "relatorio.txt", "\n".join(overview) + "\n")
-        write(folder / "manifest.json", json.dumps(manifest, ensure_ascii=False, indent=2) + "\n")
+        write(folder / "manifest.json", json.dumps(compact, ensure_ascii=False, indent=2) + "\n")
     return output / "_auditoria" / "diagnostico.md"

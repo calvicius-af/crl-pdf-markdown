@@ -4,6 +4,11 @@ Este é o repositório de desenvolvimento do percurso índice → PDF → Markdo
 validado para análise. `crl-app-cct` serve como contexto e origem de regras e
 vocabulários; pré-codificação, diacronia e QDPX não fazem parte deste produto.
 
+As [correções de 16/10 e casos MAXQDA](validacao/correcoes-maxqda-2026-10-16.md)
+registam a implementação e a validação posterior ao diagnóstico inicial.
+A [hierarquia Markdown](operacao/hierarquia-markdown.md) define os níveis das
+divisões, cláusulas e anexos.
+
 | Preciso de…                                                      | Documento                                                                                          |
 | ---------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
 | Saber o que falta desenvolver e quando fica concluído            | [Especificação de fecho](../specs/0001-fecho-documental.md)                                        |

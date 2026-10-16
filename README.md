@@ -47,8 +47,10 @@ Na interface, **Criar / usar pasta RNC…** prepara a árvore e preenche entrada
 **Recolher PDFs**, **Organizar PDFs (sem rede)**, **Conferir / aprovar…** e
 **Entregar aprovados…** cobrem preparação, conferência e entrega.
 As decisões são vinculadas aos hashes; a entrega inclui relatório metodológico.
-O ciclo de edição de correções e nova auditoria ainda está por implementar na GUI;
-documentos bloqueados não podem ser aprovados pelo botão de conferência.
+A janela de conferência inclui ocorrências, correções versionadas, nova auditoria
+e OCR dirigido. A aprovação exige uma versão sem erros por resolver e uma decisão
+humana atual. Ver o [percurso de correção](docs/operacao/guia-utilizacao.md#corrigir-reauditar-e-decidir-na-gui)
+e a [hierarquia Markdown](docs/operacao/hierarquia-markdown.md).
 O caminho antigo `data/`/`results/` continua disponível para compatibilidade;
 `--workspace` é o caminho recomendado para novos lotes.
 

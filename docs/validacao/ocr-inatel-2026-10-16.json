@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "document": "INATEL AE-ALT 329",
+  "source_pages": 52,
+  "selected_pages": [
+    2,
+    35
+  ],
+  "reused_page_count": 50,
+  "offline": true,
+  "force_full_page_ocr": true,
+  "docling_version": "2.128.0",
+  "quality_status": "blocked",
+  "findings": {
+    "TABLE_WIDE": 2,
+    "LIST_MARKER": 1,
+    "TABLE_RECONSTRUCTED": 2,
+    "TABLE_GRID_GAP": 2,
+    "IMAGE": 1,
+    "TABLE_SPAN": 11
+  },
+  "unchanged_source_sha256": true,
+  "limits": "Execução real concluída. O OCR não eliminou os bloqueios por rótulo sem transcrição e carácter sem célula inequívoca; requer conferência/correção. Não é aprovação da tabela."
+}

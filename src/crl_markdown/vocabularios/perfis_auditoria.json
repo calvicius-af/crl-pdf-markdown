@@ -1,0 +1,17 @@
+{
+  "versao": "2026-10-16.2",
+  "perfis": {
+    "desconhecido": {"deposito": true, "articulado": true},
+    "convencao_privada": {"deposito": true, "articulado": true},
+    "convencao_publica": {"deposito": false, "articulado": true},
+    "alteracao_privada": {"deposito": true, "articulado": false},
+    "alteracao_publica": {"deposito": false, "articulado": false},
+    "portaria": {"deposito": false, "articulado": false},
+    "adesao": {"deposito": false, "articulado": false},
+    "acordao": {"deposito": false, "articulado": false},
+    "aviso": {"deposito": false, "articulado": false},
+    "retificacao": {"deposito": false, "articulado": false},
+    "cessacao_vigencia": {"deposito": false, "articulado": false},
+    "deliberacao_comissao_paritaria": {"deposito": false, "articulado": false}
+  }
+}
