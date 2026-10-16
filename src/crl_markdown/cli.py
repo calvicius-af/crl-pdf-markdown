@@ -9,7 +9,7 @@ from .naming import name_records
 from .pipeline import Options, run
 from .quality import lint
 from .recolha import add_arguments, collect
-from .workspace import initialize
+from .workspace import DOCUMENT_FOLDERS, document_source, initialize
 
 
 def main(argv=None):
@@ -36,6 +36,8 @@ def main(argv=None):
     convert.add_argument("source", type=Path, nargs="?")
     convert.add_argument("--out", type=Path)
     convert.add_argument("--workspace", type=Path, help="Usar convencoes e 2_processamento/texto")
+    convert.add_argument("--familia", choices=list(DOCUMENT_FOLDERS), default="convencao",
+                         help="Família a converter na pasta RNC; todos inclui cessações e avisos")
     convert.add_argument("--ocr", action="store_true", help="Ativar OCR para PDFs digitalizados")
     convert.add_argument("--models", type=Path, help="Pasta de modelos Docling")
     convert.add_argument("--offline", action="store_true", help="Usar apenas modelos locais")
@@ -111,7 +113,7 @@ def main(argv=None):
         else:
             if args.workspace:
                 initialize(args.workspace)
-                args.source = args.source or args.workspace / "1_fontes/irct/convencoes"
+                args.source = args.source or document_source(args.workspace, args.familia)
                 args.out = args.out or args.workspace / "2_processamento/texto"
             if not args.source or not args.out:
                 raise ValueError("Selecione entrada e saída, ou indique --workspace RNC_Dados_AAAA.")

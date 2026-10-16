@@ -3,13 +3,14 @@
 import copy
 import csv
 import errno
+import json
 import os
 import shutil
 import tempfile
 from io import StringIO
 from pathlib import Path
 
-from . import ambito, nomeacao
+from . import ambito, nomeacao, tipologias
 from .pipeline import atomic_write
 from .recolha import Registo, sha256_ficheiro
 
@@ -22,10 +23,10 @@ def make_name(entry, table, scopes, *, scheme="adr0022"):
     """Nome sem efeitos laterais; siglas e relações incertas ficam pendentes."""
     name, warnings = nomeacao.nome_documento(entry, tabela=table,
                                            vocabulario_ambito=scopes, scheme=scheme)
-    if warnings:
-        raise ValueError("Sigla ou metadados por confirmar: " + "; ".join(warnings))
-    employer = nomeacao.separar_outorgantes(entry.get("outorgantes", ""))[0]
-    scope = ambito.classificar_com_ine(employer[0] if employer else "", entry.get("tipo", ""), scopes)[0]
+    blocking = nomeacao.avisos_bloqueantes(warnings)
+    if blocking:
+        raise ValueError("Sigla ou metadados por confirmar: " + "; ".join(blocking))
+    scope = nomeacao.ambito_documento(entry, scopes)[0]
     return name, scope
 
 
@@ -54,7 +55,8 @@ def _csv(rows, fields=None):
     text = StringIO(newline="")
     writer = csv.DictWriter(text, fieldnames=fields, delimiter=";", lineterminator="\n")
     writer.writeheader()
-    writer.writerows(rows)
+    writer.writerows({key: json.dumps(value, ensure_ascii=False) if isinstance(value, (list, dict)) else value
+                     for key, value in row.items()} for row in rows)
     return text.getvalue()
 
 
@@ -109,7 +111,10 @@ def execute_records(registry, root, table, scopes=None, *, apply=False, scheme="
         scopes = ambito.vocabulario_por_omissao()
     catalogs = _catalogs(registry, root) if workspace else {}
     entries = copy.deepcopy(list(registry.entradas.values()))
-    nomeacao.resolver_convencoes_base(entries)
+    rules_path = Path(root) / "0_gestao/vocabularios/tipologias_documentais.json"
+    rules = tipologias.carregar(rules_path) if workspace and rules_path.is_file() else None
+    nomeacao.resolver_convencoes_base(entries, rules)
+    prepared = {entry["chave"]: entry for entry in entries}
     results, plans = [], []
     for entry in entries:
         family = nomeacao._familia(entry)
@@ -127,16 +132,21 @@ def execute_records(registry, root, table, scopes=None, *, apply=False, scheme="
         try:
             name, warnings = nomeacao.nome_documento(entry, tabela=table,
                                                      vocabulario_ambito=scopes, scheme=scheme)
-            employers = nomeacao.separar_outorgantes(entry.get("outorgantes", ""))[0]
-            scope, origin, _ = ambito.classificar_com_ine(employers[0] if employers else "",
-                                                         entry.get("tipo", ""), scopes)
+            scope, origin, _ = nomeacao.ambito_documento(entry, scopes)
             result.update(nome=name, ambito_origem=origin, avisos=warnings)
             old_name = previous.get("nome") or previous.get("doc_id")
             assigned = previous.get("estado") in ASSIGNED and old_name
             if assigned and old_name != name:
-                if not workspace:
-                    result["estado"] = "conflito"
-                raise ValueError(f"Nome já atribuído {old_name} difere da proposta; preserve o nome e reveja o conflito.")
+                if old_name.rsplit("_", 1)[0] == name.rsplit("_", 1)[0]:
+                    result["nome_proposto"] = name
+                    warnings.append(nomeacao.informacao(f"rótulos atualizados propõem {name}; "
+                                                        f"nome atribuído {old_name} conservado"))
+                    name = old_name
+                    result["nome"] = name
+                else:
+                    if not workspace:
+                        result["estado"] = "conflito"
+                    raise ValueError(f"Nome já atribuído {old_name} difere da proposta; preserve o nome e reveja o conflito.")
             source = Path((entry.get("descarga") or {}).get("caminho") or "")
             digest = (entry.get("descarga") or {}).get("sha256")
             if not source.is_file() and assigned:
@@ -160,8 +170,9 @@ def execute_records(registry, root, table, scopes=None, *, apply=False, scheme="
             if destination.exists() and (not destination.is_file() or sha256_ficheiro(destination) != digest):
                 raise ValueError("Já existe outro PDF com este nome; não substituir.")
             result["sha256"] = digest
-            if warnings and not accept_warnings and not assigned:
-                result["motivo"] = "; ".join(warnings)
+            blocking = nomeacao.avisos_bloqueantes(warnings)
+            if blocking and not accept_warnings and not assigned:
+                result["motivo"] = "; ".join(blocking)
                 continue
             result["estado"] = "nomeado" if assigned else "proposto"
             plans.append((entry, result, source, destination, digest, scope))
@@ -191,16 +202,28 @@ def execute_records(registry, root, table, scopes=None, *, apply=False, scheme="
                      "esquema": scheme}
             original = registry.entradas[entry["chave"]]
             original["nomeacao"] = named
-            for field in ("cod_irct_base", "cod_irct_base_origem", "cod_irct_base_por_resolver"):
+            for field in ("cod_irct_base", "cod_irct_base_origem", "cod_irct_base_por_resolver",
+                          "outorgantes", "outorgantes_origem", "portaria_dr", "portaria_dr_origem",
+                          "data_publicacao_dr"):
+                if field in entry:
+                    original[field] = entry[field]
+            for field in tipologias.CAMPOS:
                 if field in entry:
                     original[field] = entry[field]
         except (ValueError, OSError) as error:
             result.update(estado="por_confirmar", motivo=str(error))
     if apply:
         registry.guardar()
+        if workspace:
+            atomic_write(Path(root) / "0_gestao/catalogo/relacoes_documentais.json", json.dumps(
+                {"versao_tipologias": (rules or tipologias.carregar())["versao"],
+                 "documentos": [{"chave": e["chave"], "processo_irct": e.get("processo_irct", ""),
+                                  "relacoes": e.get("relacoes_documentais", [])} for e in entries
+                                 if e.get("relacoes_documentais")]}, ensure_ascii=False, indent=2) + "\n")
     if workspace:
         atomic_write(Path(root) / "0_gestao/catalogo/nomeacao.csv", _csv([
-            {field: value for field, value in result.items() if field != "avisos"} for result in results]))
+            {**{field: value for field, value in result.items() if field != "avisos"},
+             "informacoes": "; ".join(result["avisos"])} for result in results]))
         by_key = {result["chave"]: result for result in results}
         for year, (catalog, fields, old) in catalogs.items():
             rows = []
@@ -208,9 +231,13 @@ def execute_records(registry, root, table, scopes=None, *, apply=False, scheme="
                 if entry["ano"] != year or entry["chave"] not in by_key:
                     continue
                 result = by_key[entry["chave"]]
+                view = prepared[entry["chave"]]
                 row = {**old.pop(entry["chave"], {}), **{field: entry.get(field, "") for field in (
                     "chave", "ano", "num_bte", "id_dgert", "tipo", "familia", "titulo",
-                    "cod_irct", "cod_irct_base", "outorgantes", "url", "indice", "folha", "posicao")}}
+                    "cod_irct", "cod_irct_base", "cod_irct_base_origem", "outorgantes", "outorgantes_origem",
+                    "portaria_dr", "portaria_dr_origem", "data_publicacao_dr", "em_vigor", "altera",
+                    "alterado_por", "url", "indice", "folha", "posicao")}}
+                row.update({field: view.get(field, "") for field in tipologias.CAMPOS})
                 assigned = entry.get("nomeacao") or {}
                 stable = assigned.get("estado") in ASSIGNED
                 row.update(nome_canonico=(assigned.get("nome") or assigned.get("doc_id")) if stable else result["nome"],
@@ -234,5 +261,6 @@ def name_records(registry, root, siglas, scopes_path=None, *, apply=False, schem
     if scopes_path is not None:
         with Path(scopes_path).open(encoding="utf-8-sig", newline="") as handle:
             scopes = {key(row["nome"]): row["ambito"] for row in csv.DictReader(handle, delimiter=";")}
-    return execute_records(records, root, load_siglas(siglas), scopes, apply=apply,
+    table = nomeacao.tabela_de_siglas(equipa=siglas)
+    return execute_records(records, root, table, scopes, apply=apply,
                            scheme=scheme, families=families)

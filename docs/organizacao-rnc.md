@@ -20,7 +20,9 @@ RNC_Dados_2026/
 │       ├── convencoes/PRI/, SPE/, APU/
 │       ├── portarias_extensao/
 │       ├── acordos_adesao/
-│       └── acordaos/
+│       ├── acordaos/
+│       ├── cessacoes_vigencia/
+│       └── avisos/
 ├── 2_processamento/
 │   ├── recolha_original/  PDF com nome de origem, por ano e BTE
 │   ├── texto/            Markdown por documento, com _auditoria separada
@@ -59,33 +61,51 @@ portaria: ANO_BTE_NN_TIPO_SEQ_NNNN-AAAA_CODIRCT_SIGLA1-SIGLA2[+N]
 2026_BTE_31_PE_401_0452-2025_27251_ACRAL-CESP.pdf
 adesão: ANO_BTE_NN_AA_SEQ_CODIRCT_SIGLA1-SIGLA2[+N]
 acórdão: ANO_BTE_NN_JUR_SEQ_CODIRCT_SIGLA1-SIGLA2[+N]
+cessação: ANO_BTE_NN_CES-VIG_SEQ_CODIRCT_SIGLA1-SIGLA2[+N]
 ```
 
 O motor de nomes é único. O esquema anterior do README fornecido, `v4`,
 continua disponível por seleção explícita, para compatibilidade:
 `ANO_AMBITO_SEQ_TIPO_CODIRCT_BTE_NN_SIGLA1-SIGLA2-SIGLA3[+N]`.
-Um nome já atribuído, o seu caminho e o estado de atribuição são preservados.
-Trocar de esquema, alterar siglas ou corrigir metadados não renomeia uma fonte
-canónica: a proposta fica em conflito para revisão.
+Um nome já atribuído e o seu caminho são preservados. Uma alteração apenas dos
+rótulos da cauda fica registada como proposta informativa, sem renomear o PDF.
+Mudanças de esquema ou de campos estruturais continuam em conflito para revisão.
 
 Ano e BTE vêm do índice; SEQ vem obrigatoriamente de IDDocumento e tem de ter
 o mesmo ano. Nunca se usa um ordinal interno como substituto. O código IRCT
 é conservado sem retirar caracteres inválidos. Cada convenção exige uma única
-identidade; nas outras famílias é necessário confirmar a convenção de base.
-Portarias exigem também a referência completa no Diário da República.
+identidade; nas outras famílias conserva-se o código associado explicitamente
+em `CodigoGEPDGERT`, cruzando-o com referências exatas disponíveis. Códigos
+contraditórios continuam pendentes. Um acordo de empregador público sem código
+DGERT usa a referência publicada no título, como `ACEP12-2026`, sem inventar um
+código DGERT. O título explícito determina APU mesmo quando o tipo é ACT.
+Portarias usam número, ano e sufixo de série da referência completa em
+`DocumentosEmVigor`: `457/2025/1` entra no nome como `0457-2025-1`. A data do DR
+é conservada no catálogo. O tipo original PE-ALT/PCT-ALT continua no catálogo;
+o quarto campo do nome usa a família PE/PCT.
 
 As duas siglas do ADR-0022 representam a primeira entidade patronal e a primeira
 sindical; `+N` conta as restantes partes. Identificação incompleta de um lado,
-partes retiradas do título, siglas derivadas, relações lidas da cadeia e nomes
-encurtados produzem aviso e aguardam confirmação. O limite de 63 caracteres
-continua uma restrição do projeto; só as siglas podem ser encurtadas.
+partes retiradas dos dois lados explícitos do título, relações exatas e nomes
+encurtados geram informação de proveniência, sem pedir confirmação. O limite
+de 63 caracteres continua uma restrição do projeto; só os rótulos são encurtados.
 Todas as partes e todas as relações continuam no catálogo.
 
-Âmbito: o vocabulário tem prioridade, seguido da lista INE com aviso e das
-regras; PRI por omissão fica identificado no catálogo. A lista INE sinaliza o
-sector institucional, sem confirmar regime laboral. Classificações SPE/APU por
-regra e propostas do INE aguardam revisão. A aplicação de preparação documental
-não deduz aprovação de um corpus a partir desse campo.
+Uma sigla documentada tem prioridade. Quando só existe uma proposta gerada pelo
+programa, usa-se um rótulo documental derivado da denominação, assinalado como
+tal; não se altera o vocabulário nem se promove a proposta a sigla oficial.
+O IDDocumento conserva a identidade mesmo que organizações diferentes usem a
+mesma sigla. Uma recusa humana explícita ou duas siglas contraditórias para a
+mesma denominação continuam a bloquear a nomeação. As retificações herdam os
+outorgantes da publicação referida pelo tipo e ID exatos, com indicação da origem.
+PCT/PRT sem outorgantes convencionais usam um marcador do tipo na cauda.
+
+Âmbito: o regime ACEP explícito no título determina APU; o vocabulário e formas
+jurídicas empresariais explícitas determinam os restantes casos conhecidos.
+PRI por omissão fica identificado no catálogo. A lista INE conserva um sinal
+institucional informativo; não transforma por si só um AE em APU. Uma inferência
+APU baseada apenas no nome do empregador continua pendente. A classificação
+documental não equivale a aprovação do texto convertido.
 
 Os recursos consolidados são incluídos no pacote. `init` copia-os da instalação
 para `0_gestao/vocabularios`, independentemente da pasta de execução, e conserva
@@ -95,16 +115,16 @@ equipa e regista separadamente o estado da nova proposta.
 
 ## Salvaguardas e pendências
 
-- Siglas propostas/ambíguas não entram automaticamente no nome.
-- Sem ID, código, outorgantes ou PDF com hash confirmado, fica `por_confirmar`.
+- Propostas automáticas só entram como rótulos documentais identificados.
+- Sem identidade publicada ou com códigos contraditórios ou PDF de hash
+  divergente, fica `por_confirmar`.
 - Não há renumeração interna nem substituição de outro PDF com o mesmo nome.
-- PE, PCT, PRT, AA e acórdãos podem receber nomes quando os metadados e relações
-  de base estão confirmados. Dados em falta ou derivados da cadeia ficam pendentes.
-  Avisos têm estado de metadado e não originam ficheiros canónicos.
-- No índice 01–10 há referências como `Portaria n.º 457/2025/1` em
-  `DocumentosEmVigor`. Este formato não deve ser truncado pelo padrão antigo
-  sem uma decisão de representação. Nem a igualdade aparente do código da PE
-  com um código de convenção demonstra por si só a relação correta.
+- PE, PCT, PRT, AA e acórdãos usam os metadados explícitos do índice. Relações
+  exatas e metadados completos não exigem uma segunda confirmação humana.
+  Avisos são documentos autónomos. Os avisos de alterações e deliberações
+  públicas são classificados em APU; cessações têm família própria. Ver
+  [critérios e contexto](../src/crl_markdown/vocabularios/tipologias_documentais.md).
+- A referência de Portaria conserva o sufixo `/1` ou `/2`, sem truncagem.
 - Recortes de boletins completos devem conservar PDF integral e páginas de origem;
   a automatização desse recorte não foi acrescentada nesta intervenção.
 - `passed` significa ausência de alertas automáticos; só a revisão documentada

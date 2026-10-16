@@ -17,13 +17,11 @@ Como se decide, por ordem de fiabilidade:
 
 1. **Vocabulário** — `vocabularios/empregadores_ambito.csv`, lista editável de
    empregadores com âmbito conhecido. Tem prioridade sobre tudo o resto.
-2. **Lista do INE** — `vocabularios/entidades_administracao_publica.csv`, as
-   entidades do sector institucional S.13. Ver o aviso abaixo: dá um sinal, não
-   uma decisão.
-3. **Regra** — o tipo `ACEP` é sempre APU; a forma jurídica («, EPE», «, EM»,
+2. **Regra explícita** — o tipo `ACEP` é APU; a forma jurídica («, EPE», «, EM»,
    «Empresa Municipal») indica SPE; município, câmara, freguesia, universidade,
    politécnico ou direção-geral indicam APU.
-4. **Omissão** — PRI, marcado como não verificado.
+3. **Omissão** — PRI, marcado como não verificado. A lista do INE é conservada
+   como informação institucional; não substitui a classificação do instrumento.
 
 **Sobre a lista do INE.** Responde a uma pergunta que não é esta. O INE
 classifica por contas nacionais (SEC 2010): uma entidade está em S.13 se for
@@ -31,12 +29,11 @@ produtor não mercantil. O RNC classifica por regime laboral: APU são as
 entidades cujos trabalhadores estão sob a LTFP e cujos IRCT vão para a DGAEP.
 Os critérios divergem nos dois sentidos — o Metropolitano de Lisboa, E.P.E.
 está em S.13 mas é SPE para o RNC; a CP e a Carris não estão em S.13 e são SPE
-na mesma. Por isso uma entrada da lista com forma jurídica empresarial propõe
-**SPE**, nunca APU, e qualquer proposta vinda da lista sai marcada para revisão.
+na mesma. Por isso a forma jurídica empresarial determina **SPE**, e a simples
+presença no INE não determina APU nem exige uma decisão sobre a cópia do PDF.
 
-Tudo o que a *regra* classifique como SPE ou APU sai com aviso e fica por rever.
-O módulo nunca decide um APU em silêncio: um falso APU retira um documento do
-pipeline sem ninguém dar por isso.
+Uma inferência APU baseada apenas no nome do empregador continua a pedir revisão.
+O regime ACEP explícito no título é tratado em `nomeacao.ambito_documento`.
 
 Ver docs/rnc/README.md §5.2 e ADR-0016 do crl-app-cct, de onde este módulo foi
 portado (commit 5fd8ae8).
@@ -144,9 +141,8 @@ def classificar(empregador: str, tipo: str = "",
                 ) -> tuple[str, str, str | None]:
     """Devolve `(ambito, origem, aviso)`.
 
-    `origem` é `vocabulario`, `regra` ou `omissao`. `aviso` vem preenchido
-    sempre que a decisão precisa de confirmação humana — ou seja, sempre que o
-    resultado não vem do vocabulário e não é o PRI por omissão.
+    `origem` distingue vocabulário, tipo ACEP, forma jurídica, regra ou omissão.
+    Inferências APU pelo nome do empregador exigem confirmação.
     """
     tipo_norm = re.sub(r"[^A-Z]", "", (tipo or "").upper())
     nome = _normalizar(empregador)
@@ -161,13 +157,12 @@ def classificar(empregador: str, tipo: str = "",
                     return valor, "vocabulario", None
 
     if tipo_norm.startswith(TIPOS_APU):
-        return "APU", "regra", f"tipo {tipo} → APU por regra — confirmar"
+        return "APU", "tipo_acep", None
     if RE_APU.search(nome):
         return "APU", "regra", (f"«{empregador[:60]}» classificado APU por regra "
                                 "— confirmar antes de excluir do pipeline")
     if RE_SPE.search(nome):
-        return "SPE", "regra", (f"«{empregador[:60]}» classificado SPE por regra "
-                                "— confirmar")
+        return "SPE", "forma_juridica", None
     return OMISSAO, "omissao", None
 
 
@@ -226,14 +221,17 @@ def classificar_com_ine(empregador: str, tipo: str = "",
                         ) -> tuple[str, str, str | None]:
     """Como `classificar()`, mas consultando também a lista do INE.
 
-    A ordem é a da fiabilidade: o vocabulário da equipa primeiro, a lista do INE
-    a seguir, a regra por último. A lista **nunca decide em silêncio** — mesmo
-    quando acerta, sai com aviso, porque o critério dela não é o do RNC.
+    O vocabulário e o regime explícito decidem a classificação. A lista do INE
+    acrescenta informação de contexto, sem inferir um regime laboral diferente.
     """
     if vocabulario:
         amb, origem, aviso = classificar(empregador, tipo, vocabulario)
         if origem == "vocabulario":
             return amb, origem, aviso
+
+    amb, origem, aviso = classificar(empregador, tipo, vocabulario)
+    if origem in {"tipo_acep", "forma_juridica"}:
+        return amb, origem, aviso
 
     if entidades_publicas is None:
         entidades_publicas = entidades_publicas_por_omissao()
@@ -243,8 +241,11 @@ def classificar_com_ine(empregador: str, tipo: str = "",
                     key=len, default=None)
         if chave:
             amb, subsetor = entidades_publicas[chave]
-            return amb, "ine", (
-                f"«{empregador[:50]}» consta da lista do INE ({subsetor}) — "
-                f"proposto {amb}; o critério do INE é de contas nacionais, não "
-                "de regime laboral, pelo que tem de ser confirmado")
+            # O sector institucional não determina o regime do instrumento.
+            # Conservar o sinal no catálogo sem transformar um AE em ACEP.
+            amb, origem, aviso = classificar(empregador, tipo, vocabulario)
+            if aviso:
+                return amb, origem, aviso
+            return amb, origem, (f"INFORMAÇÃO: «{empregador[:50]}» consta da lista do INE "
+                                 f"({subsetor}); sinal institucional conservado sem inferir regime APU")
     return classificar(empregador, tipo, vocabulario)

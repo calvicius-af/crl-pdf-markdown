@@ -15,7 +15,14 @@ from .report import escaped
 
 
 def _load(output: Path):
-    manifest = json.loads((output / '_auditoria/manifest.json').read_text(encoding='utf-8'))
+    try:
+        manifest = json.loads((output / '_auditoria/manifest.json').read_text(encoding='utf-8'))
+    except FileNotFoundError as error:
+        raise ValueError('Ainda não há um lote convertido nesta pasta de saída. '
+                         'Execute Construir Markdown ou selecione a saída de uma conversão existente. '
+                         'A organização e nomeação dos PDFs faz-se em Organizar PDFs (sem rede).') from error
+    except json.JSONDecodeError as error:
+        raise ValueError('Relatório de execução ilegível. Repita a conversão numa pasta nova.') from error
     if not isinstance(manifest, dict) or not isinstance(manifest.get('documents'), list):
         raise ValueError('Relatório de execução inválido. Repita a conversão numa pasta nova.')
     return manifest

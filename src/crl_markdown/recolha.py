@@ -73,10 +73,12 @@ TENTATIVAS = 3
 # mais longos vêm antes dos que os contêm (ACTV antes de ACT, AVISO antes de AV).
 PREFIXOS_FAMILIA = [
     ("ACORDAO", "acordao"),
+    ("AVCESVIG", "cessacao"),
     ("ADESAO", "adesao"),
     ("CCT", "convencao"),
     ("ACTV", "convencao"),
     ("ACEP", "convencao"),
+    ("ACCE", "convencao"),
     ("ACT", "convencao"),
     ("AE", "convencao"),
     ("DA", "convencao"),
@@ -92,7 +94,7 @@ PREFIXOS_FAMILIA = [
 # Os acordos de adesão passam a ser recolhidos por omissão. Estavam de fora, e
 # isso significava que uma adesão publicada no BTE não deixava rasto nenhum —
 # nem sequer uma linha no catálogo a dizer que existia.
-FAMILIAS_POR_OMISSAO = ("convencao", "extensao", "adesao", "acordao", "aviso")
+FAMILIAS_POR_OMISSAO = ("convencao", "extensao", "adesao", "acordao", "cessacao", "aviso")
 
 REGISTO_OMISSAO = Path("data") / "registo" / "registo_bte.jsonl"
 DESTINO_OMISSAO = Path("data") / "interim" / "recolha"
@@ -248,6 +250,8 @@ def ler_indice(xlsx: Path, *, problemas: list[str] | None = None) -> list[dict]:
                 item["folha"] = ws.title
                 item["posicao"] = posicao
                 item["familia"] = familia(item["tipo"])
+                from .tipologias import classificar
+                item.update(classificar(item))
                 try:
                     _completar(item)
                 except ValueError as e:
@@ -376,6 +380,7 @@ class Registo:
         return self.entradas.get(chave_)
 
     def actualizar(self, item: dict, **campos) -> dict:
+        from .tipologias import CAMPOS
         entrada = self.entradas.setdefault(item["chave"], {"chave": item["chave"]})
         for c in (
             "ano",
@@ -407,6 +412,9 @@ class Registo:
             if item.get(c) not in (None, ""):
                 entrada[c] = item[c]
         entrada.update(campos)
+        for campo in CAMPOS:
+            if campo in item:
+                entrada[campo] = item[campo]
         return entrada
 
     def por_familia(self, ano: int, fam: str) -> list[dict]:

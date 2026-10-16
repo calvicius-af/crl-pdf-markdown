@@ -29,6 +29,14 @@ def main():
         models.set(str(args.models))
     offline.set(args.offline)
     events = queue.Queue()
+    family_labels = {"Convenções (inclui ACEP/ACCE)": "convencao", "Portarias": "extensao",
+                     "Adesões": "adesao", "Acórdãos": "acordao", "Cessações de vigência": "cessacao",
+                     "Outros avisos": "aviso", "Todos os documentos IRCT": "todos"}
+    selected_family = tk.StringVar(value=next(iter(family_labels)))
+    def choose_family(_event=None):
+        from .workspace import document_source
+        if workspace_path.get():
+            source.set(str(document_source(workspace_path.get(), family_labels[selected_family.get()])))
     ttk.Label(frame, text="Preparar documentos Markdown para importação no MAXQDA").pack(anchor="w")
     def use_workspace():
         from .workspace import initialize
@@ -36,11 +44,15 @@ def main():
         if folder:
             workspace = initialize(Path(folder))
             workspace_path.set(str(workspace))
-            source.set(str(workspace / "1_fontes/irct/convencoes"))
+            choose_family()
             output.set(str(workspace / "2_processamento/texto"))
             messagebox.showinfo("Pastas prontas", "A árvore RNC está pronta. Os ficheiros existentes "
                                 "foram conservados. Coloque os índices em 1_fontes/indices_bte.")
     ttk.Button(frame, text="Criar / usar pasta RNC…", command=use_workspace).pack(anchor="w", pady=4)
+    ttk.Label(frame, text="Documentos a converter na pasta RNC").pack(anchor="w")
+    family_box = ttk.Combobox(frame, textvariable=selected_family, values=list(family_labels), state="readonly")
+    family_box.pack(fill="x")
+    family_box.bind("<<ComboboxSelected>>", choose_family)
     for label, variable in (
         ("PDF ou pasta de PDFs", source),
         ("Pasta de saída", output),
@@ -210,16 +222,54 @@ def main():
                 events.put(("done", ""))
         threading.Thread(target=work, daemon=True).start()
 
+    def organize_workspace():
+        if running.is_set():
+            return
+        if not workspace_path.get():
+            use_workspace()
+        if not workspace_path.get():
+            return
+        from collections import Counter
+
+        from .naming import name_records
+
+        workspace = Path(workspace_path.get())
+        running.set()
+        def work():
+            try:
+                results = name_records(workspace / "0_gestao/catalogo/registo_bte.jsonl", workspace,
+                                       workspace / "0_gestao/vocabularios/siglas.csv",
+                                       workspace / "0_gestao/vocabularios/empregadores_ambito.csv",
+                                       apply=True)
+                counts = Counter(row["estado"] for row in results)
+                events.put(("log", "Organização local terminada: " + ", ".join(
+                    f"{n} {state}" for state, n in sorted(counts.items()))))
+                for row in results:
+                    if row["estado"] == "por_confirmar":
+                        events.put(("log", f"Pendente {row['chave']}: {row['motivo']}"))
+                events.put(("log", f"Catálogo: {workspace / '0_gestao/catalogo/nomeacao.csv'}"))
+            except (ValueError, OSError) as error:
+                events.put(("log", f"A organização não terminou: {error}"))
+            finally:
+                events.put(("done", ""))
+        threading.Thread(target=work, daemon=True).start()
+
     def review_document():
         if running.is_set():
             return
-        import json
-
         from .models import _sha256
-        from .validation import decide
+        from .validation import _load, decide
         folder = Path(output.get())
-        manifest = json.loads((folder / "_auditoria/manifest.json").read_text(encoding="utf-8"))
+        try:
+            manifest = _load(folder)
+        except ValueError as error:
+            messagebox.showinfo("Ainda não é possível conferir o texto", str(error))
+            return
         documents = manifest["documents"]
+        if not documents:
+            messagebox.showinfo("Sem documentos para conferir", "O lote não contém documentos. "
+                                "Execute Construir Markdown e consulte o relatório da conversão.")
+            return
         expected = {}
         for document in documents:
             relative = Path(document["relative_source"])
@@ -289,6 +339,7 @@ def main():
     workflow = ttk.Frame(frame)
     workflow.pack(pady=8)
     ttk.Button(workflow, text="Recolher PDFs (usa internet)", command=collect_workspace).pack(side="left")
+    ttk.Button(workflow, text="Organizar PDFs (sem rede)", command=organize_workspace).pack(side="left")
     ttk.Button(workflow, text="Conferir / aprovar…", command=review_document).pack(side="left")
     ttk.Button(workflow, text="Entregar aprovados…", command=deliver_approved).pack(side="left")
 

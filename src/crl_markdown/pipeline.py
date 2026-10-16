@@ -20,6 +20,7 @@ from .isolamento import ConversorIsolado, FalhaArranque
 from .legacy import completude
 from .quality import lint, parser
 from .report import new_manifest, write_reports
+from .tipologias import perfil_documental
 
 
 @dataclass(frozen=True)
@@ -226,7 +227,7 @@ def convert_pdf(
     if status != "success":
         raise RuntimeError(f"Conversão incompleta ({status}): {pdf.name}")
     raw = result.document.export_to_markdown(image_placeholder="<!-- image -->")
-    subtype = "retificacao" if "-RECT_" in pdf.stem.upper() else "desconhecido"
+    subtype = perfil_documental(pdf.stem)
     reference = None
     reference_words = []
     try:
@@ -265,6 +266,7 @@ def convert_pdf(
     document_json = json.dumps(result.document.export_to_dict(), ensure_ascii=False) + "\n"
     report = {
         "source": str(pdf.resolve()),
+        "document_profile": subtype,
         "output": str(target.resolve()),
         "source_sha256": hashlib.sha256(pdf.read_bytes()).hexdigest(),
         "markdown_sha256": hashlib.sha256(markdown.encode("utf-8")).hexdigest(),

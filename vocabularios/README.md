@@ -1,5 +1,10 @@
 # Siglas e vocabulários consolidados
 
+As regras sobre avisos públicos (ACEP/ACCE), deliberações e cessações estão no
+[contexto de tipologias](../src/crl_markdown/vocabularios/tipologias_documentais.md),
+com um [vocabulário JSON executável](../src/crl_markdown/vocabularios/tipologias_documentais.json).
+Ambos são instalados em `0_gestao/vocabularios` da pasta RNC.
+
 O ficheiro de trabalho deste fork é `../siglas.csv`, em UTF-8, separado por `;`.
 O manifesto `../siglas.manifest.json` identifica fontes e hashes. A consolidação
 de 13/10/2026 leu os três XLSX e a lista CSV fornecidos, complementados pelo
@@ -16,14 +21,19 @@ vocabulário AppCCT do commit `53fd77c1f18bf41d35e988ad36e49c855ed209b5`.
 | fonte              | Ficheiro, folha e linha quando disponíveis                                       |
 | responsavel / data | Autor e data de uma decisão humana confirmada                                    |
 
-`documentada` é evidência nas fontes, não uma validação humana nova. Apenas
-`documentada`/`confirmada`, com uma correspondência de nome única, entram na
-nomeação. Siglas em colisão entre linhagens ficam `ambigua`. Gerações da mesma
-organização podem conservar sigla, com os códigos e nomes históricos.
+`documentada` é evidência nas fontes, não uma validação humana nova. A nomeação
+usa a correspondência da denominação completa; uma sigla partilhada entre
+linhagens não impede identificar o documento pelo ID e restantes campos.
+Estados `ambigua` gerados pela consolidação por colisão de sigla não equivalem
+a uma recusa humana. Duas siglas contraditórias para a mesma denominação e
+decisões humanas pendentes continuam a bloquear a nomeação.
 
 Não se associou cada empregador ao sindicato na mesma linha do CSV LISTAS:
 são listas independentes de opções. Não se inventaram siglas oficiais para
-empresas que usam nomes comerciais. Propostas CamelCase são `por_confirmar`.
+empresas que usam nomes comerciais. Propostas CamelCase mantêm o seu estado
+no vocabulário; podem servir como rótulos documentais automáticos, com informação
+explícita de que não são siglas oficiais confirmadas. Não exigem confirmação
+apenas para copiar e identificar um PDF.
 Uma normalização retira acentos/pontuação para procurar nomes; não faz junções
 aproximadas de entidades com palavras semelhantes. Um acrónimo num fragmento de
 um nome diferente não liga esse nome ao código de outra entidade. Um acrónimo

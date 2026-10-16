@@ -12,8 +12,9 @@ registo da recolha, deriva as siglas dos outorgantes e copia cada PDF para
 
 Esquema: cabeça comum `{ANO}_BTE_{NN}_{X}_{SEQ}`, miolo próprio de cada família
 e cauda comum `{CODIRCT}_{SIGLA1}-{SIGLA2}[+N]`, até 63 caracteres (limite do
-MAXQDA). Um nome atribuído não muda: um documento sem os dados de que o nome
-precisa, ou com siglas adivinhadas, fica `por_confirmar` e não é escrito.
+MAXQDA). Um nome atribuído não muda. Relações exatas e rótulos documentais
+derivados não exigem confirmação; identidades ausentes, contraditórias ou
+explicitamente recusadas continuam `por_confirmar`.
 """
 
 import csv
@@ -21,6 +22,7 @@ import re
 from pathlib import Path
 
 from . import ambito as mod_ambito
+from . import tipologias
 from .recolha import Registo, familia, sem_acentos
 
 # O siglas.csv da equipa, na pasta de trabalho (não vem no repositório). Uma
@@ -44,14 +46,10 @@ QUARTO_CAMPO_TIPO = {
     "adesao": ("AA",),
     "acordao": ("JUR",),
     "aviso": ("AVISO", "AV"),
+    "cessacao": ("CES-VIG",),
 }
 # Tipos que o índice escreve por extenso → código do quarto campo.
 TIPO_POR_EXTENSO = {"ADESAO": "AA", "ACORDAO": "JUR"}
-
-AVISO_BASE_PELA_CADEIA = (
-    "código da convenção de base lido da cadeia de alterações do índice — "
-    "confirmar (SPEC-0004, passo 0)"
-)
 
 # Cada família tem a sua pasta; o âmbito só subdivide as convenções, que são o
 # que o pipeline temático lê. Portarias, adesões e acórdãos referem-se a uma
@@ -61,12 +59,13 @@ PASTA_FAMILIA = {
     "extensao": "portarias_extensao",
     "adesao": "acordos_adesao",
     "acordao": "acordaos",
+    "cessacao": "cessacoes_vigencia",
+    "aviso": "avisos",
 }
 PASTA_FAMILIA_DESCONHECIDA = "por_classificar"
 FAMILIAS_COM_AMBITO = frozenset({"convencao"})
-# O aviso existe só como metadado de outro documento: tem linha no catálogo,
-# não tem ficheiro.
-FAMILIAS_SO_METADADO = frozenset({"aviso"})
+# O rótulo editorial AVISO não elimina o documento nem o seu conteúdo.
+FAMILIAS_SO_METADADO = frozenset()
 
 ESTADOS_COM_FICHEIRO = {"descarregado", "ja_existente", "inalterado"}
 
@@ -82,13 +81,14 @@ class NomeRNCInvalido(ValueError):
 
 # `CCT-ALT.20250708.321/2025` → tipo, data, sequencial/ano do documento referido.
 RE_ALTERA = re.compile(
-    r"^\s*(?P<tipo>[A-Z][A-Z-]*)\.(?P<data>\d{8})\.(?P<seq>\d+)/(?P<ano>\d{4})\s*$"
+    r"^\s*(?P<tipo>[A-Z][A-Z-]*)\.\s*(?P<data>\d{8})\.(?P<seq>\d+)/(?P<ano>\d{4})\s*$"
 )
 
 # «Portaria n.º 452/2025», «Portaria n.º 50-A/2025», «Portaria nº 7/2026».
 RE_PORTARIA = re.compile(
     r"\bPortaria\s+n\.?\s*[º°o]?\s*(?P<num>\d{1,4})"
-    r"(?:\s*-\s*(?P<suf>[A-Za-z]))?\s*/\s*(?P<ano>\d{4})\b",
+    r"(?:\s*-\s*(?P<suf>[A-Za-z]))?\s*/\s*(?P<ano>\d{4})\b"
+    r"(?:/(?P<serie>[12]))?(?![\d/])",
     re.IGNORECASE,
 )
 
@@ -113,7 +113,7 @@ RE_FIM_APOS_TRACO = re.compile(r"[-–—]\s*([^-–—,;()]{2,30})\s*$")
 RE_INICIO_ANTES_TRACO = re.compile(r"^\s*([^-–—,;()]{2,30}?)\s*[-–—]\s")
 RE_ENTRE_TRACOS = re.compile(r"[-–—]\s*([^-–—,;()]{2,30}?)\s*(?=[-–—]|$)")
 RE_PARTES_TITULO = re.compile(
-    r"\bentre\s+(?:a|o|as|os)?\s*(?P<a>.+?)\s+e\s+(?:a|o|as|os)\s+(?P<b>.+?)\s*$",
+    r"\bentre\s+(?:(?:as|os|a|o)\s+)?(?P<a>.+?)\s+e\s+(?:as|os|a|o)\s+(?P<b>.+?)\s*$",
     re.IGNORECASE | re.DOTALL,
 )
 
@@ -151,6 +151,18 @@ class TabelaSiglas(dict):
         super().__init__()
         self.nomes_pendentes = set()
         self.siglas_pendentes = set()
+        self.rotulos = {}
+        self.permitir_rotulos = False
+        self.siglas_recusadas = set()
+
+
+def informacao(texto):
+    return "INFORMAÇÃO: " + texto
+
+
+def avisos_bloqueantes(avisos):
+    """Uma observação de proveniência não é um pedido de decisão humana."""
+    return [aviso for aviso in avisos if not aviso.startswith("INFORMAÇÃO: ")]
 
 
 def _camel(nome: str, max_chars: int = MAX_SIGLA) -> str:
@@ -175,14 +187,18 @@ def _camel(nome: str, max_chars: int = MAX_SIGLA) -> str:
 def sigla(nome: str, tabela: dict[str, str] | None = None) -> tuple[str, str | None]:
     """Sigla de um outorgante. Devolve (sigla, aviso); há aviso quando é derivada."""
     nome = (nome or "").strip(" .;,")
+    nome = re.sub(r"\s+e\s+outr[ao]s?\s*$", "", nome, flags=re.IGNORECASE)
     if not nome:
         return "", "outorgante vazio"
     if tabela is not None:
         chave = chave_entidade(nome)
-        if chave in getattr(tabela, "nomes_pendentes", set()):
-            return _camel(nome), f"sigla de «{nome[:60]}» pendente ou ambígua no vocabulário — confirmar"
         if chave in tabela:
             return tabela[chave], None
+        if chave in getattr(tabela, "rotulos", {}):
+            return tabela.rotulos[chave], informacao(
+                f"rótulo documental derivado de «{nome}»; não é uma sigla oficial confirmada")
+        if chave in getattr(tabela, "nomes_pendentes", set()):
+            return _camel(nome), f"sigla de «{nome[:60]}» pendente ou ambígua no vocabulário — confirmar"
     # A forma jurídica no fim esconde a sigla que vem antes dela:
     # «Imprensa Nacional - Casa da Moeda, SA - INCM, SA» tem a sigla INCM.
     sem_forma = RE_FORMA_NO_FIM.sub("", nome)
@@ -191,20 +207,29 @@ def sigla(nome: str, tabela: dict[str, str] | None = None) -> tuple[str, str | N
             for m in regex.finditer(texto):
                 if _e_sigla(m.group(1)):
                     literal = _limpar_sigla(m.group(1))
-                    if literal.casefold() in getattr(tabela, "siglas_pendentes", set()):
+                    if literal.casefold() in getattr(tabela, "siglas_recusadas", set()):
                         return literal, f"sigla literal {literal} pendente ou ambígua no vocabulário — confirmar"
                     return literal, None
+    if getattr(tabela, "permitir_rotulos", False):
+        return _camel(nome), informacao(
+            f"rótulo documental derivado de «{nome}»; não é uma sigla oficial confirmada")
     return _camel(nome), f"sigla derivada de «{nome[:60]}» — confirmar"
 
 
 def e_sindical(nome: str) -> bool:
-    """Sindical é quem tem 'sindic' no nome."""
-    return "sindic" in sem_acentos(nome).lower()
+    """Designações sindicais expressas; uma federação patronal não é sindicato."""
+    nome = sem_acentos(nome).lower()
+    return "sindic" in nome or any(designacao in nome for designacao in (
+        "federacao dos engenheiros", "federacao nacional da educacao",
+        "federacao nacional dos professores"))
 
 
 def _partes_do_titulo(titulo: str) -> list[str]:
     """'Contrato coletivo entre a X e o Y' → ['X', 'Y'] (para as retificações)."""
-    m = RE_PARTES_TITULO.search(re.sub(r"\s+", " ", titulo or ""))
+    texto = re.sub(r"\s+", " ", titulo or "")
+    texto = re.split(r"\s[-–—]\s(?:Retifica|Altera|Aviso|Texto consolidado)", texto,
+                     maxsplit=1, flags=re.IGNORECASE)[0]
+    m = RE_PARTES_TITULO.search(texto)
     if not m:
         return []
     partes = []
@@ -229,7 +254,7 @@ def _outorgantes_escolhidos(entrada: dict, maximo: int = MAX_SIGLAS):
     if not nomes:
         nomes = _partes_do_titulo(entrada.get("titulo", ""))
         if nomes:
-            avisos.append("outorgantes lidos do título — confirmar")
+            avisos.append(informacao("outorgantes lidos dos dois lados explícitos do título"))
     if not nomes:
         return [], [], avisos + ["sem outorgantes no índice nem no título"]
     patronais = [n for n in nomes if not e_sindical(n)]
@@ -239,10 +264,10 @@ def _outorgantes_escolhidos(entrada: dict, maximo: int = MAX_SIGLAS):
     else:
         escolhidos = nomes[:maximo]
         lado = "patronal" if patronais else "sindical"
-        avisos.append(
+        avisos.append(informacao(
             f"só há partes do lado {lado} — o nome usa as {len(escolhidos)} "
-            "primeira(s) pela ordem do índice; confirmar"
-        )
+            "primeira(s) pela ordem do índice"
+        ))
     return escolhidos, nomes, avisos
 
 
@@ -264,8 +289,6 @@ def siglas_outorgantes(entrada: dict, tabela: dict[str, str] | None = None):
 COLUNAS_NOME = ("nome", "nome_completo", "denominacao", "denominacao_da_organizacao", "organizacao")
 COLUNAS_SIGLA = ("sigla", "acronimo", "sigla_canonica")
 COLUNA_ORIGEM = "origem_sigla"
-# Uma sigla inventada por _camel() não é uma sigla confirmada; não se carrega.
-ORIGENS_IGNORADAS = frozenset({"recurso"})
 
 
 def carregar_siglas(caminho: Path) -> dict[str, str]:
@@ -301,44 +324,53 @@ def carregar_siglas(caminho: Path) -> dict[str, str]:
         i_sigla = candidatos[0]
         linhas = linhas[1:]
     i_estado = cabecalho.index("estado") if tem_cabecalho and "estado" in cabecalho else None
-    i_codigo = cabecalho.index("codigo_dgert") if tem_cabecalho and "codigo_dgert" in cabecalho else None
     claims = {}
-    linhagens = {}
     i_origem = (
         cabecalho.index(COLUNA_ORIGEM) if tem_cabecalho and COLUNA_ORIGEM in cabecalho else None
     )
+    i_responsavel = cabecalho.index("responsavel") if tem_cabecalho and "responsavel" in cabecalho else None
+    tabela.permitir_rotulos = i_origem is not None
+    automaticas = {}
+    recusados = set()
     for linha in linhas:
         if max(i_nome, i_sigla) >= len(linha):
             continue
         nome = chave_entidade(linha[i_nome])
         valor = normalizar_sigla(linha[i_sigla])
+        origem = linha[i_origem].strip().lower().split("+")[0] if i_origem is not None and i_origem < len(linha) else ""
+        automatica = i_responsavel is None or i_responsavel >= len(linha) or not linha[i_responsavel].strip()
+        estado = linha[i_estado].strip().lower() if i_estado is not None and i_estado < len(linha) else ""
+        # As propostas geradas pelo programa não são recusas humanas. Podem
+        # servir como rótulos legíveis, sem as promover a siglas oficiais.
+        if origem in {"indice", "lista_equipa", "recurso"} and automatica and estado != "confirmada":
+            automaticas[nome] = _camel(linha[i_nome])
+            continue
+        # Uma sigla literal pertence à denominação completa, mesmo que outra
+        # entidade use a mesma sigla. O IDDocumento distingue os ficheiros.
+        if (origem in {"indice_literal", "registo", "derivada", "correspondencia_exata", "nome_completo_exato"}
+                and estado in {"documentada", "ambigua"} and valor and automatica):
+            claims.setdefault(nome, set()).add(valor)
+            continue
         if i_estado is not None and (i_estado >= len(linha) or linha[i_estado].strip().lower() not in {"confirmada", "documentada"}):
             tabela.nomes_pendentes.add(nome)
+            recusados.add(nome)
             if valor:
                 tabela.siglas_pendentes.add(valor.casefold())
-            continue
-        # A origem pode vir composta (`recurso+desambiguada`): conta a primeira parte.
-        if (
-            i_origem is not None
-            and i_origem < len(linha)
-            and linha[i_origem].strip().lower().split("+")[0] in ORIGENS_IGNORADAS
-        ):
-            tabela.nomes_pendentes.add(nome)
-            if valor:
-                tabela.siglas_pendentes.add(valor.casefold())
+                if not origem or not automatica:
+                    tabela.siglas_recusadas.add(valor.casefold())
             continue
         if nome and valor:
             claims.setdefault(nome, set()).add(valor)
-            if i_codigo is not None:
-                codigo = linha[i_codigo].strip() if i_codigo < len(linha) else ""
-                linhagem = ".".join(codigo.split(".")[:2]) or nome
-                linhagens.setdefault(valor.casefold(), set()).add(linhagem)
     for nome, valores in claims.items():
-        if len(valores) != 1 or any(len(linhagens.get(valor.casefold(), {nome})) > 1 for valor in valores):
+        if len(valores) != 1:
             tabela.nomes_pendentes.add(nome)
             tabela.siglas_pendentes.update(valor.casefold() for valor in valores)
         elif nome not in tabela.nomes_pendentes:
             tabela[nome] = next(iter(valores))
+    for nome, valor in automaticas.items():
+        if nome not in claims and nome not in recusados:
+            tabela.nomes_pendentes.discard(nome)
+            tabela.rotulos[nome] = valor
     return tabela
 
 
@@ -354,6 +386,10 @@ def tabela_de_siglas(caminhos=(), *, equipa: Path = SIGLAS_EQUIPA, dgert: bool =
         carregada = carregar_siglas(caminho)
         tabela.nomes_pendentes.update(nome for nome in carregada.nomes_pendentes if nome not in tabela)
         tabela.siglas_pendentes.update(carregada.siglas_pendentes)
+        tabela.siglas_recusadas.update(carregada.siglas_recusadas)
+        tabela.permitir_rotulos |= carregada.permitir_rotulos
+        tabela.rotulos.update({nome: valor for nome, valor in carregada.rotulos.items()
+                              if nome not in tabela.nomes_pendentes and nome not in tabela})
         for nome, valor in carregada.items():
             if nome not in tabela.nomes_pendentes:
                 tabela.setdefault(nome, valor)
@@ -368,7 +404,7 @@ def siglas_derivadas(entrada: dict, tabela: dict[str, str] | None = None, *, sch
     derivadas = []
     for nome in escolhidos:
         valor, aviso = sigla(nome, tabela)
-        if aviso and valor:
+        if aviso and valor and avisos_bloqueantes([aviso]):
             derivadas.append((nome.strip(" .;,"), valor))
     return derivadas
 
@@ -423,7 +459,7 @@ def tipo_normalizado(tipo: str | None) -> str:
 def referencia_portaria(entrada: dict) -> tuple[int, str, int] | None:
     """`(número, sufixo, ano do DR)` da portaria, ou `None` se não for certo."""
     ano_bte = int(entrada.get("ano") or 0)
-    for fonte in (entrada.get("portaria_dr"), entrada.get("titulo")):
+    for fonte in (entrada.get("portaria_dr"), entrada.get("em_vigor"), entrada.get("titulo")):
         texto = str(fonte or "").strip()
         if not texto:
             continue
@@ -438,6 +474,26 @@ def referencia_portaria(entrada: dict) -> tuple[int, str, int] | None:
             return None
         return numero, (m.group("suf") or "").upper(), ano_dr
     return None
+
+
+def serie_portaria(entrada):
+    for fonte in (entrada.get("portaria_dr"), entrada.get("em_vigor"), entrada.get("titulo")):
+        match = RE_PORTARIA.search(str(fonte or ""))
+        if match:
+            return match.group("serie") or ""
+    return ""
+
+
+def ambito_documento(entrada, vocabulario=None):
+    """O regime explícito do documento prevalece sobre a forma do empregador."""
+    if entrada.get("ambito_documental"):
+        return entrada["ambito_documental"], "metadados:" + entrada["regra_tipologia"], None
+    titulo = sem_acentos(entrada.get("titulo", "")).lower()
+    if re.search(r"acordo coletivo de [ec]mpregador publico", titulo):
+        return "APU", "titulo_acep", None
+    patronais = separar_outorgantes(entrada.get("outorgantes", ""), entrada.get("titulo", ""))[0]
+    return mod_ambito.classificar_com_ine(patronais[0] if patronais else "",
+                                        entrada.get("tipo", ""), vocabulario)
 
 
 def _codigos(valor) -> list[str]:
@@ -464,15 +520,15 @@ def cod_irct_base(entrada: dict) -> str | None:
     return codigos[0] if codigos else None
 
 
-def resolver_convencoes_base(entradas) -> None:
+def resolver_convencoes_base(entradas, regras=None) -> None:
     """Liga cada documento que não é convenção ao código da convenção de base.
 
-    A cadeia de alterações do índice (`CCT.20260822.377/2026`) aponta para o
-    documento de base. Se ele estiver entre as `entradas`, com o mesmo tipo e o
-    mesmo `IDDocumento`, o seu código IRCT é o da base. Sem correspondência
-    exata, o código fica por resolver e o nome por confirmar.
+    Usa o código associado no índice e cruza-o com referências por tipo e ID
+    quando disponíveis. Códigos contraditórios ficam pendentes. Retificações
+    herdam os outorgantes da publicação concreta referida, com proveniência.
     """
     entradas = list(entradas)
+    tipologias.enriquecer(entradas, regras)
     convencoes: dict[tuple[str, str], list[dict]] = {}
     for e in entradas:
         if _familia(e) != "convencao":
@@ -508,9 +564,75 @@ def resolver_convencoes_base(entradas) -> None:
             else:
                 por_resolver.append(ref.strip())
         codigos = list(dict.fromkeys(codigos))
+        # CodigoGEPDGERT é a identidade da convenção associada no índice,
+        # também nas PE/AA/acórdãos. Não exigir que uma base de outro ano
+        # esteja repetida no ficheiro anual para conservar esse dado explícito.
+        try:
+            diretos = _codigos(e.get("cod_irct"))
+        except NomeRNCInvalido as error:
+            e["relacao_conflito"] = str(error)
+            continue
+        if diretos and codigos and set(diretos) != set(codigos):
+            e["relacao_conflito"] = "Código IRCT do índice difere do código da convenção referida."
+            continue
+        if diretos:
+            codigos = diretos
+            por_resolver = []
         e["cod_irct_base"] = "; ".join(codigos)
-        e["cod_irct_base_origem"] = "cadeia_do_indice" if codigos else ""
+        e["cod_irct_base_origem"] = "CodigoGEPDGERT" if diretos else "cadeia_do_indice" if codigos else ""
         e["cod_irct_base_por_resolver"] = "; ".join(por_resolver)
+
+    # As retificações referem a publicação concreta. Herdar desse documento,
+    # nunca de outra convenção escolhida apenas pela semelhança do título.
+    for _ in range(len(entradas)):
+        mudou = False
+        for e in entradas:
+            if "RECT" not in tipo_normalizado(e.get("tipo")) or e.get("outorgantes"):
+                continue
+            refs = [RE_ALTERA.fullmatch(ref.strip()) for ref in (e.get("altera") or "").split(";") if ref.strip()]
+            alvos = []
+            for ref in refs:
+                if ref:
+                    alvos.extend(c for c in convencoes.get((str(int(ref["seq"])), ref["ano"]), [])
+                                 if tipo_normalizado(c.get("tipo")) == ref["tipo"])
+            if len(alvos) > 1:
+                e["relacao_conflito"] = "Retificação com mais de uma convenção retificada candidata."
+                continue
+            if len(alvos) != 1 or alvos[0] is e or not alvos[0].get("outorgantes"):
+                continue
+            base = alvos[0]
+            if e.get("cod_irct") and base.get("cod_irct") and e["cod_irct"] != base["cod_irct"]:
+                e["relacao_conflito"] = "Retificação e convenção retificada têm códigos IRCT diferentes."
+                continue
+            e["outorgantes"] = base["outorgantes"]
+            e["outorgantes_origem"] = "convencao_retificada:" + base["chave"]
+            mudou = True
+        if not mudou:
+            break
+    for e in entradas:
+        if (e["familia"] == "cessacao" or e["regra_tipologia"].startswith("aviso_")) and not e.get("outorgantes"):
+            nomes = _partes_do_titulo(e.get("titulo", ""))
+            if nomes:
+                e["outorgantes"] = "; ".join(nomes)
+                e["outorgantes_origem"] = "titulo_partes_explicitas"
+        if _familia(e) == "acordao" and not e.get("outorgantes"):
+            # Papéis processuais expressos no título, sem inferir outorgantes
+            # pela mera presença de uma sigla no texto do acórdão.
+            match = re.search(r"\bAutor\s+(.+?)\s+e\s+a\s+R[ée]\s+(.+?),\s+no\s+dia\b",
+                              e.get("titulo", ""), re.IGNORECASE)
+            if match:
+                e["outorgantes"] = match[2] + "; " + match[1]
+                e["outorgantes_origem"] = "titulo_papeis_processuais"
+        reference = referencia_portaria(e) if _familia(e) == "extensao" else None
+        if reference:
+            match = RE_PORTARIA.search(str(e.get("em_vigor") or ""))
+            if match:
+                e["portaria_dr"] = match[0]
+                e["portaria_dr_origem"] = "DocumentosEmVigor"
+                date = re.search(r"Diario da Republica.+?\bde\s+(\d{4}-\d{2}-\d{2})",
+                                 sem_acentos(e.get("em_vigor", "")), re.IGNORECASE)
+                if date:
+                    e["data_publicacao_dr"] = date[1]
 
 
 # --------------------------------------------------------------------- nome
@@ -536,9 +658,13 @@ def nome_documento(
     if vocabulario_ambito is None:
         vocabulario_ambito = mod_ambito.vocabulario_por_omissao()
     avisos: list[str] = []
+    if "tipo_documental" not in entrada:
+        entrada = {**entrada, **tipologias.classificar(entrada)}
+    if entrada.get("relacao_conflito"):
+        raise NomeRNCInvalido(entrada["relacao_conflito"])
     ano = int(entrada.get("ano") or 0)
     num_bte = int(entrada.get("num_bte") or 0)
-    tipo_bruto = sem_acentos(str(entrada.get("tipo") or "")).strip().upper()
+    tipo_bruto = sem_acentos(str(entrada.get("tipo_documental") or entrada.get("tipo") or "")).strip().upper()
     if not re.fullmatch(r"[A-Z]+(?:-[A-Z]+)*", tipo_bruto):
         raise NomeRNCInvalido("Tipo de documento inválido; confirme o índice.")
     tipo = tipo_normalizado(tipo_bruto)
@@ -552,23 +678,18 @@ def nome_documento(
     seq = int(identificador[1])
     if fam not in {*PASTA_FAMILIA, "aviso"}:
         raise NomeRNCInvalido("Família documental desconhecida; confirme o índice.")
-    if fam == "convencao" and not re.fullmatch(r"(?:CCT|ACT|ACTV|AE|ACEP|DA)(?:-[A-Z]+)*", tipo):
+    if fam == "convencao" and not re.fullmatch(r"(?:CCT|ACT|ACTV|AE|ACEP|ACCE|DA)(?:-[A-Z]+)*", tipo):
         raise NomeRNCInvalido("Tipo de convenção inválido; confirme o índice.")
 
-    patronais, _sindicais = separar_outorgantes(
-        entrada.get("outorgantes", ""), entrada.get("titulo", "")
-    )
-    amb, origem, aviso_amb = mod_ambito.classificar_com_ine(
-        patronais[0] if patronais else entrada.get("titulo", ""),
-        entrada.get("tipo", ""),
-        vocabulario_ambito,
-    )
+    amb, origem, aviso_amb = ambito_documento(entrada, vocabulario_ambito)
     if amb not in mod_ambito.VALORES:
         raise NomeRNCInvalido("Âmbito inválido no vocabulário; use PRI, SPE ou APU.")
 
     if fam in QUARTO_CAMPO_TIPO:
         # O âmbito não entra no nome destas famílias; fica no catálogo.
         quarto = TIPO_POR_EXTENSO.get(tipo.split("-")[0], tipo)
+        if fam == "extensao" and tipo.split("-")[0] in QUARTO_CAMPO_TIPO[fam]:
+            quarto = tipo.split("-")[0]
         if quarto not in QUARTO_CAMPO_TIPO[fam]:
             raise NomeRNCInvalido(
                 f"tipo {tipo} fora do vocabulário do quarto campo "
@@ -584,24 +705,28 @@ def nome_documento(
                 )
             numero, sufixo, ano_dr = ref
             miolo = f"_{numero:04d}{sufixo}-{ano_dr:04d}"
+            serie = serie_portaria(entrada)
+            if serie:
+                miolo += "-" + serie
 
         cod = cod_irct_base(entrada)
         if cod is None:
-            if fam == "aviso":  # sem ficheiro: o nome é só chave de catálogo
-                cod = (_codigos(entrada.get("cod_irct")) or ["0"])[0]
+            if fam in {"aviso", "cessacao"}:
+                cod = (_codigos(entrada.get("cod_irct")) or [f"DOC{seq}-{ano}"])[0]
+                avisos.append(informacao("publicação autónoma; a ausência de uma base no lote não elimina o PDF"))
             else:
                 raise NomeRNCInvalido(
                     "sem código IRCT da convenção de base confirmado (SPEC-0004, passo 0)"
                 )
         elif fam != "aviso":
             if entrada.get("cod_irct_base_origem") == "cadeia_do_indice":
-                avisos.append(AVISO_BASE_PELA_CADEIA)
+                avisos.append(informacao("convenção de base identificada pela referência exata do índice"))
             todos = _codigos(entrada.get("cod_irct_base"))
             if len(todos) > 1:
-                avisos.append(
+                avisos.append(informacao(
                     f"refere {len(todos)} convenções ({', '.join(todos)}) — o nome "
                     "leva a primeira; as restantes estão no catálogo"
-                )
+                ))
     else:
         if aviso_amb:
             avisos.append(aviso_amb)
@@ -609,6 +734,14 @@ def nome_documento(
             avisos.append("tipo de documento vazio no índice — confirmar")
         quarto, miolo = amb, f"_{tipo}"
         cod = cod_irct_base(entrada)
+        if cod is None and entrada.get("referencia_acordo_base"):
+            numero, ano_base = entrada["referencia_acordo_base"].split("/")
+            cod = f"{entrada['tipo_acordo_base']}{numero}-{ano_base}"
+        if cod is None and origem == "titulo_acep":
+            ref_apu = re.search(r"acordo coletivo de trabalho n\.?\s*[º°o]?\s*(\d+)/(\d{4})",
+                                sem_acentos(entrada.get("titulo", "")), re.IGNORECASE)
+            if ref_apu:
+                cod = f"ACEP{int(ref_apu[1])}-{ref_apu[2]}"
         if cod is None:
             raise NomeRNCInvalido("Código IRCT ausente; confirme o índice.")
 
@@ -627,6 +760,10 @@ def nome_documento(
         prefixo = f"{ano:04d}_{amb}_{seq:03d}_{token_tipo}_{cod}_BTE_{num_bte:02d}_"
     else:
         siglas, restantes, avisos_siglas = siglas_outorgantes(entrada, tabela)
+        if not siglas and (fam in {"aviso", "cessacao"} or fam == "extensao" and quarto in {"PCT", "PRT"}):
+            siglas, restantes = [quarto], 0
+            avisos_siglas = [informacao("instrumento governamental sem outorgantes convencionais; "
+                                        f"marcador de tipo {quarto} na cauda do nome")]
         if not siglas:
             raise NomeRNCInvalido("Outorgantes ausentes; confirme o índice.")
         prefixo = f"{ano:04d}_BTE_{num_bte:02d}_{quarto}_{seq:03d}{miolo}_{cod}_"
@@ -642,7 +779,7 @@ def nome_documento(
             )
         por_sigla = folga // len(siglas)
         nome = prefixo + "-".join(s[:por_sigla] for s in siglas) + cauda
-        avisos.append(f"nome encurtado para caber em {MAX_NOME} caracteres")
+        avisos.append(informacao(f"rótulos encurtados para caber em {MAX_NOME} caracteres"))
     return nome, avisos
 
 
@@ -651,7 +788,7 @@ def nome_documento(
 
 def nomear(
     registo: Registo, destino: Path, *, aplicar=False, tabela=None,
-    familias=("convencao", "extensao", "adesao", "acordao"),
+    familias=("convencao", "extensao", "adesao", "acordao", "cessacao", "aviso"),
     aceitar_heuristicas=False, vocabulario_ambito=None, scheme="adr0022", workspace=False,
 ) -> dict:
     """Adaptador de compatibilidade; execução e verificações partilhadas com naming."""
@@ -663,7 +800,7 @@ def nomear(
                               vocabulario_ambito, apply=aplicar, scheme=scheme,
                               families=familias, workspace=workspace,
                               accept_warnings=aceitar_heuristicas)
-    resumo = {"ordinais_novos": 0, "por_estado": {}, "avisos": [], "problemas": [],
+    resumo = {"ordinais_novos": 0, "por_estado": {}, "avisos": [], "informacoes": [], "problemas": [],
               "nomes": [], "siglas_pendentes": {}}
     for result in results:
         state = result["estado"]
@@ -674,7 +811,9 @@ def nomear(
             resumo["nomes"].append((result["chave"], result["nome"]))
         if result["motivo"] and result["motivo"] != "; ".join(result.get("avisos", [])):
             resumo["problemas"].append(f"{result['chave']}: {result['motivo']}")
-        resumo["avisos"].extend(result.get("avisos", []))
+        blocking = avisos_bloqueantes(result.get("avisos", []))
+        resumo["avisos"].extend(blocking)
+        resumo["informacoes"].extend(a for a in result.get("avisos", []) if a not in blocking)
         e = registo.entradas[result["chave"]]
         if state == "por_confirmar":
             for entidade, valor in siglas_derivadas(e, tabela, scheme=scheme):
@@ -698,6 +837,8 @@ def texto_resumo(resumo: dict) -> str:
             f"  siglas adivinhadas para rever: {len(resumo['siglas_pendentes'])} em "
             f"{resumo['ficheiro_siglas_pendentes']}"
         )
+    if resumo.get("informacoes"):
+        linhas.append(f"  observações automáticas: {len(resumo['informacoes'])} (proveniência conservada no catálogo)")
     if resumo["avisos"]:
         linhas.append(f"  a confirmar ({len(resumo['avisos'])}):")
         linhas.extend(f"    {a}" for a in resumo["avisos"])

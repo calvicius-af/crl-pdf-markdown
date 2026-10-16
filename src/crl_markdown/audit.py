@@ -185,6 +185,7 @@ def audit_pdf(
             if message.startswith(
                 (
                     sanidade.AVISO_RETIFICACAO_SEM_ARTICULADO,
+                    sanidade.AVISO_DECLARATIVO_SEM_ARTICULADO,
                     sanidade.AVISO_ALTERACAO_SALARIAL_SEM_ARTICULADO,
                 )
             ):

@@ -24,7 +24,7 @@ where = ["src"]
 
 [tool.setuptools.package-data]
 # Vocabulários da nomeação (siglas da DGERT, âmbitos, lista do INE).
-crl_markdown = ["vocabularios/*.csv", "vocabularios/*.json"]
+crl_markdown = ["vocabularios/*.csv", "vocabularios/*.json", "vocabularios/*.md"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

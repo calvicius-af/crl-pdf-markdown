@@ -128,13 +128,14 @@ def test_preview_preserves_assigned_identity_registry_and_catalog_notes(tmp_path
     assert result[0]["estado"] == "nomeado"
     assert records.caminho.read_bytes() == before
     result = execute_records(records, root, {**table, key("ACRAL"): "NOVO"}, {}, apply=False)
-    assert result[0]["estado"] == "por_confirmar"
+    assert result[0]["estado"] == "nomeado"
+    assert result[0]["nome_proposto"].endswith("NOVO-CESP+3")
     assert records.caminho.read_bytes() == before
     catalog = root / "0_gestao/catalogo/catalogo_irct_2026.csv"
     row = next(csv.DictReader(catalog.open(encoding="utf-8"), delimiter=";"))
     assert row["nome_canonico"].endswith("ACRAL-CESP+3")
     assert row["estado_nomeacao"] == "nomeado"
-    assert row["estado_proposta"] == "por_confirmar"
+    assert row["estado_proposta"] == "nomeado"
 
 
 def test_invalid_catalog_rejected_before_copy_or_registry_write(tmp_path):

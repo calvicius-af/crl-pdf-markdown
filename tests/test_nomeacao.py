@@ -107,7 +107,7 @@ def test_acordao_tem_familia_e_quarto_campo_proprios(itens):
 
 @pytest.mark.parametrize("id_dgert", ["402/2026", "404/2026"])
 def test_sem_convencao_de_base_nao_ha_nome(itens, id_dgert):
-    item = dict(itens[id_dgert], altera="", cod_irct_base="", cod_irct_base_origem="")
+    item = dict(itens[id_dgert], altera="", cod_irct="", cod_irct_base="", cod_irct_base_origem="")
     resolver_convencoes_base([item])
     with pytest.raises(NomeRNCInvalido, match="convenção de base"):
         nome_documento(item, 1, TABELA)
@@ -166,12 +166,9 @@ def test_sem_confirmacao_so_escreve_os_nomes_seguros(tmp_path):
     registo = _recolhido(tmp_path)
     destino = tmp_path / "bte"
     resumo = nomear(registo, destino, aplicar=True, tabela=TABELA)
-    # A convenção tem siglas confirmadas e âmbito por omissão: é escrita. As
-    # outras dependem da cadeia de alterações ou de regras e esperam confirmação.
-    assert [p.name for p in destino.rglob("*.pdf")] == [
-        "2026_BTE_31_PRI_377_CCT_27251_ACRAL-CESP+1.pdf"
-    ]
-    assert resumo["por_estado"] == {"nomeado": 1, "por_confirmar": 5}
+    # Relações exatas e partes explícitas no título já não pedem confirmação.
+    assert len(list(destino.rglob("*.pdf"))) == 4
+    assert resumo["por_estado"] == {"nomeado": 4, "por_confirmar": 2}
 
 
 def test_nome_atribuido_nao_muda(tmp_path):
@@ -180,8 +177,10 @@ def test_nome_atribuido_nao_muda(tmp_path):
     nomear(registo, destino, aplicar=True, tabela=TABELA)
     outra = {nomeacao.chave_entidade(ACRAL): "OUTRA", nomeacao.chave_entidade(CESP): "CESP"}
     resumo = nomear(registo, destino, aplicar=True, tabela=outra)
-    assert resumo["por_estado"] == {"conflito": 1}
+    assert resumo["por_estado"] == {"ja_existente": 1}
     assert len(list(destino.rglob("*.pdf"))) == 1
+    assert next(destino.rglob("*.pdf")).name.endswith("ACRAL-CESP+1.pdf")
+    assert resumo["informacoes"]
 
 
 def test_collect_nomeia_automaticamente(tmp_path, monkeypatch, capsys):
@@ -278,19 +277,17 @@ def test_siglas_adivinhadas_ficam_num_ficheiro_para_rever(tmp_path, monkeypatch,
     argumentos = ["collect", "--indices", str(indice), "--pausa", "0", "--confirmar-rede"]
     assert main(argumentos) == 0
     pendentes = tmp_path / "data" / "registo" / "siglas_pendentes.csv"
-    assert "siglas adivinhadas para rever: 1" in capsys.readouterr().out
-    linhas = pendentes.read_text("utf-8-sig").splitlines()
-    assert linhas == [
-        "nome;sigla;documentos;atencao",
-        "Petrogal, SA;Petrogal;2026_BTE_31_PRI_386_AE-ALT_46748_Petrogal-SITESE;",
+    assert "observações automáticas" in capsys.readouterr().out
+    assert not pendentes.exists()
+    assert [p.name for p in tmp_path.rglob("data/raw/bte/**/*.pdf")] == [
+        "2026_BTE_31_PRI_386_AE-ALT_46748_Petrogal-SITESE.pdf"
     ]
-    assert not list(tmp_path.rglob("data/raw/bte/**/*.pdf"))
 
-    # Revisto no Excel e guardado em cp1252, passa a siglas.csv da equipa.
+    # A sigla revista fica disponível, mas não renomeia uma identidade atribuída.
     (tmp_path / "siglas.csv").write_bytes("nome;sigla\nPetrogal, SA;GALP\n".encode("cp1252"))
     assert main(argumentos) == 0
     assert [p.name for p in tmp_path.rglob("data/raw/bte/**/*.pdf")] == [
-        "2026_BTE_31_PRI_386_AE-ALT_46748_GALP-SITESE.pdf"
+        "2026_BTE_31_PRI_386_AE-ALT_46748_Petrogal-SITESE.pdf"
     ]
     assert not pendentes.exists()
 
