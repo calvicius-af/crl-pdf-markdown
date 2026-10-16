@@ -8,48 +8,71 @@ from pathlib import Path
 from .legacy import auditoria, completude, sanidade
 from .quality import Finding
 
-AMOUNT = re.compile(r"(?<![\d.,])(?:\d{1,3}(?:[ .\u00a0]\d{3})+|\d+)[,.]\d{2}(?!\d)")
+AMOUNT = re.compile(r"(?<![\d.,])[-−–—+]?(?:\d{1,3}(?:[ .\u00a0]\d{3})+|\d+)[,.]\d{2}(?!\d)")
+SIGNED = re.compile(
+    r"(?<![\w.,])[-−–—+][ \t\u00a0]*(?:\d{1,3}(?:[ .\u00a0]\d{3})+|\d+)(?:[.,]\d+)?"
+)
+
+
+def canonical_number(value: str) -> str:
+    value = re.sub(r"[ \t\u00a0]", "", value).replace("−", "-").replace("–", "-").replace("—", "-")
+    return value.replace(".", "") if "," in value else value.replace(".", ",")
+
+
+def signed_values(text: str) -> Counter:
+    return Counter(canonical_number(v) for v in SIGNED.findall(text))
 
 
 def amounts(text: str) -> Counter:
-    def canonical(value):
-        value = re.sub(r"[ \u00a0]", "", value)
-        return value.replace(".", "") if "," in value else value.replace(".", ",")
-
-    return Counter(canonical(match) for match in AMOUNT.findall(text))
+    return Counter(canonical_number(v) for v in AMOUNT.findall(text))
 
 
-def pdf_amounts(pdf: Path) -> Counter:
-    """Auditor monetário com geometria: «nível 2 | 920,00» não é «2 920,00»."""
+def _pdf_numeric_tokens(pdf: Path):
+    """Agrupa sinais/milhares contíguos; não concatena colunas afastadas."""
     import pdfplumber
 
-    result = Counter()
     with pdfplumber.open(pdf) as document:
         for page in document.pages:
             words = page.dedupe_chars().extract_words(
                 line_dir_rotated="ltr", char_dir_rotated="btt"
             )
+            tokens = []
             for index, word in enumerate(words):
-                value = word["text"]
-                if index and re.fullmatch(r"\d{3}[,.]\d{2}", value):
-                    prev = words[index - 1]
-                    direction = word.get("direction", "ltr")
-                    if direction == "ltr":
-                        gap = word["x0"] - prev["x1"]
-                        aligned = abs(word["top"] - prev["top"]) < 2
-                    elif direction == "btt":
-                        gap = prev["top"] - word["bottom"]
-                        aligned = abs(word["x0"] - prev["x0"]) < 2
+                value = word['text']
+                if index:
+                    previous = words[index - 1]
+                    direction = word.get('direction', 'ltr')
+                    if direction == 'ltr':
+                        gap = word['x0'] - previous['x1']
+                        aligned = abs(word['top'] - previous['top']) < 2
+                    elif direction == 'btt':
+                        gap = previous['top'] - word['bottom']
+                        aligned = abs(word['x0'] - previous['x0']) < 2
                     else:
                         gap, aligned = 100, False
-                    if (
-                        re.fullmatch(r"\d{1,3}", prev["text"])
-                        and aligned
-                        and 0 <= gap <= 4
-                        and prev.get("direction", "ltr") == direction
-                    ):
-                        value = prev["text"] + value
-                result.update(amounts(value))
+                    close = aligned and 0 <= gap <= 4 and previous.get('direction', 'ltr') == direction
+                    sign = tokens[-1] in {'-', '−', '–', '—', '+'} and re.match(r"^\d", value)
+                    thousands = (re.fullmatch(r"[-−–—+]?\d+", tokens[-1])
+                                 and re.fullmatch(r"\d{3}(?:[,.]\d{2})?", value))
+                    if close and (sign or thousands):
+                        tokens[-1] += value
+                        continue
+                tokens.append(value)
+            yield from tokens
+
+
+def pdf_signed_values(pdf: Path) -> Counter:
+    result = Counter()
+    for value in _pdf_numeric_tokens(pdf):
+        result.update(signed_values(value))
+    return result
+
+
+def pdf_amounts(pdf: Path) -> Counter:
+    """Auditor monetário com geometria e sinais, incluindo milhares agrupados."""
+    result = Counter()
+    for value in _pdf_numeric_tokens(pdf):
+        result.update(amounts(value))
     return result
 
 
@@ -95,6 +118,32 @@ def audit_pdf(
                 "error",
             )
         )
+    critical_missing, critical_extra = Counter(), Counter()
+    if not measure.erro:
+        # Palavras não detetam 25% -> 25. Conferir sinais do texto da referência,
+        # removendo só mobiliário; não confundir escapes/tabelas Markdown com conteúdo.
+        reference_text = "\n".join(completude.sem_mobiliario(completude._normalizar(p))[0]
+                                   for p in pages)
+        def symbols(text):
+            return Counter(ch for ch in text if ch in "%‰€$£§<>≤≥≠±")
+        def critical_values(value):
+            tokens = re.findall(r"\d+(?:[.,]\d+)?\s*[%‰]", value)
+            return Counter(re.sub(r"\s+", "", v).replace("−", "-").replace("–", "-").replace("—", "-") for v in tokens)
+
+        expected_symbols = symbols(reference_text) + critical_values(reference_text)
+        actual_symbols = symbols(plain) + critical_values(plain)
+        try:
+            expected_symbols += pdf_signed_values(pdf)
+            actual_symbols += signed_values(plain)
+        except Exception as exc:
+            findings.append(Finding("SIGNED_VALUES_UNAVAILABLE", 0,
+                                    f"Não foi possível conferir sinais numéricos: {exc}", "error"))
+        critical_missing = expected_symbols - actual_symbols
+        critical_extra = actual_symbols - expected_symbols
+        if critical_missing or critical_extra:
+            findings.append(Finding("CRITICAL_SYMBOLS", 0,
+                f"Símbolos críticos em falta: {dict(critical_missing)}; "
+                f"adicionais: {dict(critical_extra)}. Conferir no PDF.", "error"))
     reference = " ".join(measure.palavras_referencia)
     # A comparação monetária não pode usar palavras tokenizadas, que perdem vírgulas.
     missing_amounts, extra_amounts = Counter(), Counter()
@@ -136,6 +185,7 @@ def audit_pdf(
             if message.startswith(
                 (
                     sanidade.AVISO_RETIFICACAO_SEM_ARTICULADO,
+                    sanidade.AVISO_DECLARATIVO_SEM_ARTICULADO,
                     sanidade.AVISO_ALTERACAO_SALARIAL_SEM_ARTICULADO,
                 )
             ):
@@ -153,6 +203,8 @@ def audit_pdf(
         fallback_pages=measure.paginas_cegas,
         reference_independent=not bool(measure.paginas_cegas),
         audited_content="final_markdown_visible_text",
+        critical_symbols_missing=dict(critical_missing),
+        critical_symbols_extra=dict(critical_extra),
         amounts_missing=dict(missing_amounts),
         amounts_extra=dict(extra_amounts),
         amounts_engine="pdfplumber_words_geometric",

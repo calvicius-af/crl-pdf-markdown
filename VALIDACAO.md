@@ -1,5 +1,10 @@
 # Validação de extração e Markdown — 1 de outubro de 2026
 
+Atualização de 16/10: [diagnóstico do lote de 411 documentos e plano de melhoria](docs/validacao/diagnostico-lote-2026-10-16.md).
+Foram convertidos 411, sem falhas, com 76 sem alertas, 230 para revisão e 105
+bloqueados. A suíte atual passou 528 testes, com 22 omissões condicionais.
+Os registos abaixo são evidência histórica; não substituem a avaliação deste lote.
+
 A versão 0.2 corrige a limitação da primeira validação, que cobria a sintaxe
 Markdown e dois documentos curtos, sem medir a completude do conteúdo.
 

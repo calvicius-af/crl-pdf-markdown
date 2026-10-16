@@ -209,3 +209,13 @@ def test_overlapping_spans_never_hide_values_issue18_metropolitana():
         prepared.markdown.count(value) == 1 for value in ("Categoria", "2.841,09", "2.896,39")
     )
     assert any(f.rule == "TABLE_OVERLAP" and f.severity == "error" for f in prepared.findings)
+
+
+def test_number_ranges_and_unknown_markers_never_receive_invented_bullets():
+    doc = convention()
+    doc.add_list_item(text='2 a 4- Mantêm a redação em vigor.', marker='')
+    doc.add_list_item(text='Texto sem marcador no original.', marker='•')
+    prepared = prepare(doc, 'exemplo')
+    assert '\n\n2 a 4- Mantêm' in prepared.markdown
+    assert '\n\nTexto sem marcador no original.' in prepared.markdown
+    assert not any(t.type == 'bullet_list_open' for t in parser().parse(prepared.markdown))

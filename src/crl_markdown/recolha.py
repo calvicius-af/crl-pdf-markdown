@@ -24,6 +24,7 @@ import unicodedata
 import urllib.error
 import urllib.request
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
@@ -61,14 +62,23 @@ TENTATIVAS = 3
 #               que substituem a convenção e têm cláusulas como ela
 #   extensao    PE, PCT, PRT — actos do Governo que alargam o âmbito de outro
 #   adesao      AA — uma parte adere a uma convenção existente
+#   acordao     acórdãos dos tribunais superiores publicados no BTE: decidem
+#               sobre uma convenção, mas não têm o articulado dela
 #   aviso       avisos de projeto de portaria, denúncias, caducidades
+#
+# Os índices trazem também o tipo por extenso («ADESÃO», «ACORDÃO», visto no
+# índice de 2026 dos BTE 1 a 10); depois de `_norm()` fica sem acentos.
 #
 # A ordem importa: o primeiro prefixo que encaixar ganha, pelo que os prefixos
 # mais longos vêm antes dos que os contêm (ACTV antes de ACT, AVISO antes de AV).
 PREFIXOS_FAMILIA = [
+    ("ACORDAO", "acordao"),
+    ("AVCESVIG", "cessacao"),
+    ("ADESAO", "adesao"),
     ("CCT", "convencao"),
     ("ACTV", "convencao"),
     ("ACEP", "convencao"),
+    ("ACCE", "convencao"),
     ("ACT", "convencao"),
     ("AE", "convencao"),
     ("DA", "convencao"),
@@ -78,19 +88,28 @@ PREFIXOS_FAMILIA = [
     ("AVISO", "aviso"),
     ("AV", "aviso"),
     ("AA", "adesao"),
+    ("ADESAO", "adesao"),  # grafia por extenso observada no índice fornecido em 13/10
 ]
 
 # Os acordos de adesão passam a ser recolhidos por omissão. Estavam de fora, e
 # isso significava que uma adesão publicada no BTE não deixava rasto nenhum —
 # nem sequer uma linha no catálogo a dizer que existia.
-FAMILIAS_POR_OMISSAO = ("convencao", "extensao", "adesao", "aviso")
+FAMILIAS_POR_OMISSAO = ("convencao", "extensao", "adesao", "acordao", "cessacao", "aviso")
 
 REGISTO_OMISSAO = Path("data") / "registo" / "registo_bte.jsonl"
 DESTINO_OMISSAO = Path("data") / "interim" / "recolha"
 INDICES_OMISSAO = Path("data") / "raw" / "indices"
+NOMES_OMISSAO = Path("data") / "raw" / "bte"
 
 
 # ---------------------------------------------------------------- utilitários
+
+
+def sem_acentos(s) -> str:
+    """Remove as marcas de acentuação (NFD, descartando a categoria «Mn»)."""
+    return "".join(
+        c for c in unicodedata.normalize("NFD", str(s or "")) if unicodedata.category(c) != "Mn"
+    )
 
 
 def _norm(s) -> str:
@@ -231,6 +250,8 @@ def ler_indice(xlsx: Path, *, problemas: list[str] | None = None) -> list[dict]:
                 item["folha"] = ws.title
                 item["posicao"] = posicao
                 item["familia"] = familia(item["tipo"])
+                from .tipologias import classificar
+                item.update(classificar(item))
                 try:
                     _completar(item)
                 except ValueError as e:
@@ -324,14 +345,7 @@ class Registo:
 
     @classmethod
     def carregar(cls, caminho: Path) -> "Registo":
-        """Carrega o registo, validando cada entrada contra REGISTO_SCHEMA.
-
-        Uma linha inválida (JSON malformado, sem "chave", ou com "ano"/
-        "num_bte"/ordinal do tipo errado) é ignorada com um aviso — em vez de
-        entrar sem verificação e produzir mais tarde um nome de ficheiro como
-        "00_PR_000_BTE_00_…" (ver PR #35, achado nº10) — mas não interrompe a
-        leitura do resto do ficheiro.
-        """
+        """Recusa corrupção antes de reescrever: nenhuma linha recebida é apagada."""
         import jsonschema
 
         caminho = Path(caminho)
@@ -345,26 +359,28 @@ class Registo:
                     e = json.loads(linha)
                     validar_registo(e)
                 except (json.JSONDecodeError, jsonschema.ValidationError, KeyError) as exc:
-                    print(
-                        f"AVISO — {caminho.name}, linha {n}: entrada de registo "
-                        f"inválida, ignorada: {exc}"
-                    )
-                    continue
-                entradas[e["chave"]] = e  # última linha ganha
+                    raise ValueError(
+                        f"Registo {caminho}, linha {n}: entrada inválida. "
+                        "Conserve o ficheiro e peça ao apoio que repare esta linha antes de repetir. "
+                        f"Detalhe: {exc}"
+                    ) from exc
+                if e["chave"] in entradas and entradas[e["chave"]] != e:
+                    raise ValueError(f"Registo {caminho}, linha {n}: chave repetida com conteúdo diferente. "
+                                     "Conserve as duas versões e peça revisão ao apoio.")
+                entradas[e["chave"]] = e
         return cls(caminho, entradas)
 
     def guardar(self) -> None:
-        self.caminho.parent.mkdir(parents=True, exist_ok=True)
-        temp = self.caminho.with_suffix(self.caminho.suffix + ".part")
-        with open(temp, "w", encoding="utf-8", newline="\n") as f:
-            for chave_ in sorted(self.entradas):
-                f.write(json.dumps(self.entradas[chave_], ensure_ascii=False) + "\n")
-        os.replace(temp, self.caminho)
+        from .pipeline import atomic_write
+        content = "".join(json.dumps(self.entradas[key], ensure_ascii=False) + "\n"
+                          for key in sorted(self.entradas))
+        atomic_write(self.caminho, content)
 
     def get(self, chave_: str) -> dict | None:
         return self.entradas.get(chave_)
 
     def actualizar(self, item: dict, **campos) -> dict:
+        from .tipologias import CAMPOS
         entrada = self.entradas.setdefault(item["chave"], {"chave": item["chave"]})
         for c in (
             "ano",
@@ -396,6 +412,9 @@ class Registo:
             if item.get(c) not in (None, ""):
                 entrada[c] = item[c]
         entrada.update(campos)
+        for campo in CAMPOS:
+            if campo in item:
+                entrada[campo] = item[campo]
         return entrada
 
     def por_familia(self, ano: int, fam: str) -> list[dict]:
@@ -726,10 +745,12 @@ def add_arguments(p):
     )
     p.add_argument("--destino", default=str(DESTINO_OMISSAO))
     p.add_argument("--registo", default=str(REGISTO_OMISSAO))
+    p.add_argument("--workspace", type=Path, help="Raiz RNC_Dados_AAAA")
+    p.add_argument("--esquema", choices=["adr0022", "v4"], default="adr0022")
     p.add_argument(
         "--familias",
         default=",".join(FAMILIAS_POR_OMISSAO),
-        help="famílias a descarregar (convencao,extensao,aviso,adesao)",
+        help="famílias a descarregar (convencao,extensao,adesao,acordao,aviso)",
     )
     p.add_argument(
         "--confirmar-rede", action="store_true", help="autoriza os pedidos de rede nesta corrida"
@@ -741,10 +762,44 @@ def add_arguments(p):
         help="segundos entre pedidos (por civilidade com o servidor)",
     )
     p.add_argument("--limite", type=int, help="máximo de descargas nesta corrida")
+    p.add_argument(
+        "--nomes",
+        default=str(NOMES_OMISSAO),
+        help="pasta onde ficam os PDF com o nome do RNC (bte_ANO/convencoes/PRI/...)",
+    )
+    p.add_argument(
+        "--siglas",
+        action="append",
+        default=[],
+        help="CSV de siglas adicional ('nome;sigla'); o siglas.csv da pasta de trabalho "
+        "e o registo de organizações da DGERT são sempre usados",
+    )
+    p.add_argument(
+        "--aceitar-heuristicas",
+        action="store_true",
+        help="nomeia também os documentos com siglas adivinhadas ou outros avisos, "
+        "sem confirmação; usar só numa corrida já revista",
+    )
+    p.add_argument(
+        "--sem-nomear", action="store_true", help="só recolhe; não atribui os nomes do RNC"
+    )
 
 
 def collect(args):
     """Executa a recolha com os argumentos já validados pelo parser."""
+    workspace = getattr(args, "workspace", None)
+    if workspace:
+        from .workspace import initialize
+        initialize(workspace)
+        for key, default, relative in (
+            ("indices", INDICES_OMISSAO, "1_fontes/indices_bte"),
+            ("destino", DESTINO_OMISSAO, "2_processamento/recolha_original"),
+            ("registo", REGISTO_OMISSAO, "0_gestao/catalogo/registo_bte.jsonl"),
+        ):
+            if Path(getattr(args, key)) == default:
+                setattr(args, key, str(workspace / relative))
+        args.siglas = list(args.siglas) or [str(workspace / "0_gestao/vocabularios/siglas.csv")]
+
     caminho_indices = Path(args.indices)
     if caminho_indices.is_dir():
         indices = sorted(caminho_indices.glob("*.xlsx"))
@@ -756,7 +811,9 @@ def collect(args):
 
     familias = tuple(f.strip() for f in args.familias.split(",") if f.strip())
     if not familias or set(familias) - set(FAMILIAS_POR_OMISSAO):
-        raise ValueError("Famílias inválidas: usar convencao, extensao, adesao ou aviso.")
+        raise ValueError(
+            "Famílias inválidas: usar convencao, extensao, adesao, acordao ou aviso."
+        )
     rede = args.confirmar_rede or os.environ.get("CRL_RECOLHA_REDE") == "1"
     registo = Registo.carregar(Path(args.registo))
     resumo = recolher(
@@ -769,9 +826,45 @@ def collect(args):
         limite=args.limite,
     )
     print(texto_resumo(resumo, rede=rede))
+    from .pipeline import atomic_write
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
+    report_folder = Path(args.registo).parent / "relatorios_recolha" / stamp
+    atomic_write(report_folder / "recolha.json", json.dumps(resumo, ensure_ascii=False, indent=2))
+    atomic_write(report_folder / "recolha.md", "# Recolha do BTE\n\n```text\n" + texto_resumo(
+        resumo, rede=rede) + "\n```\n\n"
+        "Se faltar uma ligação ou um campo, confirme a linha indicada no índice Excel. "
+        "Se a ligação falhar, abra-a no navegador para confirmar o acesso ao BTE. "
+        "Repita a recolha; os PDFs já verificados não são descarregados novamente. "
+        "Entregue este relatório e o registo JSONL ao apoio informático se continuar.\n")
+    print(f"Relatório de recolha: {report_folder / 'recolha.md'}")
     if not rede and resumo["por_estado"].get("por_descarregar"):
         print("\nPara descarregar mesmo: repetir com --confirmar-rede")
-    return 1 if resumo["problemas"] else 0
+    if args.sem_nomear:
+        return 1 if resumo["problemas"] else 0
+
+    # A nomeação corre sempre a seguir à recolha, com ou sem rede: é local e
+    # repetível, e só escreve o que não precisa de confirmação.
+    from . import nomeacao
+
+    for caminho in args.siglas:
+        if not Path(caminho).is_file():
+            raise ValueError(f"Ficheiro de siglas inexistente: {caminho}")
+    nomes = nomeacao.nomear(
+        registo,
+        workspace if workspace and Path(args.nomes) == NOMES_OMISSAO else Path(args.nomes),
+        aplicar=True,
+        scheme=getattr(args, "esquema", "adr0022"),
+        workspace=bool(workspace and Path(args.nomes) == NOMES_OMISSAO),
+        tabela=nomeacao.tabela_de_siglas(args.siglas),
+        familias=familias,
+        aceitar_heuristicas=args.aceitar_heuristicas,
+    )
+    pendentes = Path(args.registo).parent / "siglas_pendentes.csv"
+    if nomeacao.escrever_siglas_pendentes(nomes["siglas_pendentes"], pendentes):
+        nomes["ficheiro_siglas_pendentes"] = str(pendentes)
+    print()
+    print(nomeacao.texto_resumo(nomes))
+    return 1 if resumo["problemas"] or nomes["problemas"] else 0
 
 
 if __name__ == "__main__":
