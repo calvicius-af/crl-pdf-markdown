@@ -90,6 +90,7 @@ def main():
 
     report_path = None
     running = threading.Event()
+    reaudit_cancel = threading.Event()
 
     def close():
         # A conversão corre numa thread que morre com a janela. Os documentos
@@ -102,6 +103,7 @@ def main():
             "com a mesma pasta de saída continua a partir deles. Fechar?",
         ):
             return
+        reaudit_cancel.set()
         root.destroy()
 
     root.protocol("WM_DELETE_WINDOW", close)
@@ -271,10 +273,12 @@ def main():
             messagebox.showinfo("Pasta de saída", "Selecione a saída de uma conversão existente.")
             return
         current_output = Path(output.get())
+        reaudit_cancel.clear()
         running.set()
         def worker():
             try:
-                destination, reports = reaudit(current_output, progress=lambda line: events.put(("log", line)))
+                destination, reports = reaudit(current_output, progress=lambda line: events.put(("log", line)),
+                                               cancel_event=reaudit_cancel)
                 events.put(("output", str(destination)))
                 events.put(("report", destination / "_auditoria/diagnostico.md"))
                 events.put(("log", f"Reauditoria terminada: {len(reports)} documentos. Nova saída: {destination}"))

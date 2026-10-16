@@ -1,4 +1,5 @@
 import json
+import threading
 
 import pytest
 
@@ -49,3 +50,22 @@ def test_parallel_reaudit_uses_manifest_paths_and_does_not_adopt_inflight_report
     assert len(reports) == 4
     assert all(r.get('cached_extraction') and r['state'] != 'falhou' for r in reports)
     assert len({r['source_sha256'] for r in reports}) == 4
+
+
+@pytest.mark.parametrize('jobs', [1, 2])
+def test_cancelled_reaudit_records_interruption_without_changing_original(tmp_path, converter, jobs):  # noqa: F811
+    source = tmp_path / 'source'
+    source.mkdir()
+    for name in ['a.pdf', 'b.pdf']:
+        (source / name).write_bytes(b'fixture')
+    output = tmp_path / 'out'
+    run(source, output, Options(), converter=converter, progress=lambda _: None)
+    original = (output / '_auditoria/manifest.json').read_bytes()
+    cancel = threading.Event()
+    cancel.set()
+    destination = tmp_path / 'cancelled'
+    with pytest.raises(RuntimeError, match='cancelada'):
+        reaudit(output, destination, jobs=jobs, cancel_event=cancel, progress=lambda _: None)
+    partial = json.loads((destination / '_auditoria/manifest.json').read_text())
+    assert partial['status'] == 'interrompida'
+    assert (output / '_auditoria/manifest.json').read_bytes() == original

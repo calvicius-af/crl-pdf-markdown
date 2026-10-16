@@ -92,13 +92,18 @@ class PageOCRConverter:
             raise ValueError('As páginas não selecionadas mudaram durante a composição do OCR.')
         self.extraction_options = {**asdict(self.options), 'models': str(self.options.models),
             'operation': 'ocr_paginas', 'selected_pages': sorted(selected),
+            'force_full_page_ocr': True,
             'reused_pages': sorted(set(pages) - selected), 'parent_options': base.extraction_options}
         return SimpleNamespace(status='success', document=combined)
 
 
 def make_page_ocr_converter(options):
+    from docling.datamodel.base_models import InputFormat
     native = make_converter(Options(ocr=True, models=options.models, offline=options.offline,
                                     timeout=options.timeout))
+    # A seleção é explícita: também os pequenos rótulos rasterizados dentro
+    # de uma página com camada textual precisam de reconhecimento.
+    native.format_to_options[InputFormat.PDF].pipeline_options.ocr_options.force_full_page_ocr = True
     return PageOCRConverter(options, native)
 
 

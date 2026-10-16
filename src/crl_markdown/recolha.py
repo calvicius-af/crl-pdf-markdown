@@ -772,7 +772,7 @@ def add_arguments(p):
         action="append",
         default=[],
         help="CSV de siglas prioritário ('nome;sigla'); o siglas.csv da pasta de trabalho "
-        "e o registo de organizações da DGERT são sempre usados",
+        "é usado apenas quando não há --siglas; os recursos da DGERT são complementares",
     )
     p.add_argument(
         "--aceitar-heuristicas",

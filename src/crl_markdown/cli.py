@@ -84,8 +84,19 @@ def main(argv=None):
     ocr_pages.add_argument('--reviewer', required=True)
     ocr_pages.add_argument('--models', type=Path, required=True)
     ocr_pages.add_argument('--pages', required=True)
+    evaluation = commands.add_parser('evaluate', help='Comparar auditorias e casos de referência anotados')
+    evaluation.add_argument('--baseline', type=Path, required=True)
+    evaluation.add_argument('--candidate', type=Path, required=True)
+    evaluation.add_argument('--out', type=Path, required=True)
+    evaluation.add_argument('--reference', type=Path)
     args = parser.parse_args(argv)
     try:
+        if args.command == 'evaluate':
+            from .evaluation import evaluate
+            data = evaluate(args.baseline, args.candidate, args.out, reference=args.reference)
+            print(f'Comparação: {args.out / "comparacao.md"}')
+            return int(not data['comparable_complete_corpus'] or any(d['status'] != 'passed'
+                       for d in data.get('reference_checks', {}).get('documents', [])))
         if args.command == 'ocr-pages':
             from .page_ocr import parse_pages, reextract_pages
             from .revisions import _record
