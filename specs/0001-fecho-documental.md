@@ -6,6 +6,11 @@
 - Origem: nota ditada e seis orientações adicionais de António Fula.
 - Contexto: fork do `crl-app-cct`, que fornece regras e vocabulários.
 
+Atualização de 16/10: o [diagnóstico do lote e roteiro de issues](../docs/validacao/diagnostico-lote-2026-10-16.md)
+concretiza as lacunas de auditoria por tipologia, correção e nova auditoria.
+O [inventário do repositório](../docs/desenvolvimento/repositorio-2026-10-16.md)
+identifica a linha de consolidação. O estado desta especificação continua parcial.
+
 ## Objetivo e fronteira do produto
 
 Preparar um corpus de documentos publicados no BTE, a partir dos índices recebidos,
@@ -78,16 +83,21 @@ da análise. Siglas incertas, campos em falta e conflitos ficam explicitamente p
 
 Aceitação: hash antes/depois igual; catálogo permite regressar ao PDF e ao índice;
 nome já atribuído não muda automaticamente; revisões humanas não são sobrescritas.
-As convenções podem ser nomeadas agora; PE/AA aguardam confirmação dos metadados
-de base e representação final. A escrita inicial não usa adivinhação para resolver isso.
+Em 16/10, as 411 entradas do lote foram organizadas, incluindo PE/PCT, AA, JUR,
+alterações/deliberações ACEP/ACCE e cessações. Metadados explícitos do índice e
+relações exatas alimentam a nomeação; conflitos ficam pendentes. Organização
+validada não equivale a qualidade de conversão aprovada.
 
 ### RF-03 — Vocabulário de siglas
 
 Conservar denominação, variantes históricas, código, lado, sigla, origem, estado
 e fonte. Preservar desambiguações já fixadas quando sustentadas pelo registo.
 As listas de empregadores/sindicatos são independentes, não pares por linha.
-Correspondências aproximadas não confirmam identidade. Propostas e colisões
-não podem entrar automaticamente nos nomes. Uma decisão humana tem responsável,
+Correspondências aproximadas não confirmam identidade. Propostas não são
+promovidas a siglas oficiais. Por decisão de automatização, rótulos derivados
+podem identificar ficheiros com proveniência explícita, sem alterar esse estado
+no vocabulário. Colisões e recusas humanas continuam pendentes.
+Uma decisão humana tem responsável,
 data e fonte; nova consolidação não pode apagar essas decisões.
 
 Aceitação: CSV legível por Excel/aplicação, proveniência verificável e construção

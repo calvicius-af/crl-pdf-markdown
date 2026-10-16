@@ -7,7 +7,16 @@
 2. Coloque os índices recebidos em `1_fontes/indices_bte` e clique em
    **Recolher PDFs (usa internet)**. As pastas ficam preenchidas; os originais vão
    para `1_fontes/irct/convencoes/PRI`, `SPE` ou `APU`.
+   Portarias, adesões e acórdãos são organizados nas respetivas pastas de IRCT.
+   Se os PDFs já foram recolhidos, clique em **Organizar PDFs (sem rede)** para
+   repetir a nomeação com as regras atuais, conservando originais e nomes já
+   atribuídos. O resultado e eventuais conflitos constam de
+   `0_gestao/catalogo/nomeacao.csv`; o catálogo anual conserva as fontes dos dados.
 3. Mantenha os modelos locais/offline. Ative OCR apenas para digitalizações.
+   Em **Documentos a converter na pasta RNC**, escolha a família ou **Todos os
+   documentos IRCT**. As alterações/deliberações ACEP e ACCE fazem parte das
+   convenções APU; as cessações têm seleção própria. O catálogo de relações
+   indica se as publicações de base foram encontradas ou estão fora do lote.
 4. Clique em **Construir Markdown** e aguarde. Docling pode demorar; não feche
    a janela durante a extração.
 5. Clique em **Abrir relatório do lote**. Comece pelos documentos «Bloqueado»
@@ -15,6 +24,7 @@
 6. Clique em **Conferir / aprovar…**. Abra PDF, Markdown e evidências. Registe
    o seu nome, o âmbito efetivamente conferido e a resolução dos avisos.
    Documentos bloqueados não podem ser aprovados.
+   Este botão só funciona depois da conversão; não revê a nomeação dos PDFs.
 7. Clique em **Entregar aprovados…** e escolha `3_analise/corpus_aprovado`.
    É criada uma nova entrega com `documentos/`, `conformidade.md` e
    `conformidade.json`. Só entram aprovações integrais com hashes atuais.
@@ -25,6 +35,15 @@ Se o texto mudar durante ou depois da conferência, a aprovação é recusada ou
 invalida-se. Correções manuais devem ser guardadas separadamente em
 `3_analise/revisao_textual`; o ciclo de nova auditoria dessas correções ainda está
 em desenvolvimento. Não altere o JSON da auditoria para desbloquear um documento.
+
+A mensagem «resolva os erros e volte a converter» não significa que exista já
+um editor de correções na GUI. Se o documento estiver bloqueado, conserve a
+extração, abra o relatório individual em `_auditoria/documentos` e registe a
+regra e a passagem que precisam de correção técnica. Repetir a conversão com as
+mesmas opções pode reproduzir o mesmo erro. O apoio deve distinguir perda real
+de conteúdo de regra inadequada à família documental antes de escolher a ação.
+O [diagnóstico e plano de melhoria de 16/10](../validacao/diagnostico-lote-2026-10-16.md)
+explica os casos conhecidos e os issues para completar este percurso.
 
 Não selecione «Substituir saídas existentes» se houver correções humanas nessa
 pasta. Prefira uma saída nova por lote. Uma cache Docling verificada permite
@@ -65,7 +84,7 @@ Pode também indicar `--ambitos` para o vocabulário confirmado da equipa.
 | Rever                                  | Confira as páginas e os avisos. Registe o resultado mesmo quando o aviso for falso positivo.  |
 | Sem alertas automáticos                | Aplique a amostragem/revisão definida no método; não equivale a aprovação humana.             |
 | Sigla por confirmar                    | O apoio verifica o nome no CSV, confirma a fonte e regista a decisão antes de repetir `name`. |
-| Outra família documental               | A entrada continua no registo; a nomeação PE/AA exige os metadados de base ainda pendentes.   |
+| Outra família documental               | Escolha a família na GUI; consulte o catálogo para a classificação e as relações com a base.  |
 | PDF antigo aparece depois de uma falha | Consulte o manifesto da tentativa atual; não use o resultado antigo como se fosse novo.       |
 
 Se o problema continuar, entregue ao apoio informático o relatório resumido,

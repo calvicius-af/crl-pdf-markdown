@@ -18,6 +18,9 @@ O desenvolvimento deste percurso pertence a este fork; o AppCCT é contexto e fo
 de regras/vocabulários. A [especificação de fecho](specs/0001-fecho-documental.md)
 reúne a nota sobre fidelidade documental e as seis orientações adicionais.
 O [índice de documentação](docs/README.md) identifica guias, fontes e pendências.
+O [diagnóstico de 16/10 e os issues](docs/validacao/diagnostico-lote-2026-10-16.md)
+definem as próximas melhorias; o [inventário Git](docs/desenvolvimento/repositorio-2026-10-16.md)
+identifica a linha de consolidação e os branches a preservar.
 
 A árvore segue as fases do README RNC fornecido. Por decisão de 13/10/2026,
 a nomeação final é a mais recente do PR #3 (ADR-0022):
@@ -34,13 +37,18 @@ Ver [árvore e nomes](docs/organizacao-rnc.md).
 
 Após criar a árvore, copie os índices para `1_fontes/indices_bte`. A recolha acima
 simula; autorize descargas com `--confirmar-rede` apenas quando pretende ligar ao BTE.
-Documentos sem campos/siglas confirmados ficam pendentes no catálogo.
-O [siglas.csv](siglas.csv) consolidado tem fontes e estados; propostas não são usadas
-automaticamente. Consulte o [guia de utilização](docs/operacao/guia-utilizacao.md).
+Campos essenciais em falta, colisões e recusas humanas ficam pendentes no catálogo.
+O [siglas.csv](siglas.csv) consolidado tem fontes e estados. Rótulos derivados para
+identificação dos ficheiros têm proveniência e não se tornam siglas oficiais;
+ver [organização e regras](docs/organizacao-rnc.md) e o
+[guia de utilização](docs/operacao/guia-utilizacao.md).
 
 Na interface, **Criar / usar pasta RNC…** prepara a árvore e preenche entrada/saída.
-**Recolher PDFs**, **Conferir / aprovar…** e **Entregar aprovados…** completam o percurso.
+**Recolher PDFs**, **Organizar PDFs (sem rede)**, **Conferir / aprovar…** e
+**Entregar aprovados…** cobrem preparação, conferência e entrega.
 As decisões são vinculadas aos hashes; a entrega inclui relatório metodológico.
+O ciclo de edição de correções e nova auditoria ainda está por implementar na GUI;
+documentos bloqueados não podem ser aprovados pelo botão de conferência.
 O caminho antigo `data/`/`results/` continua disponível para compatibilidade;
 `--workspace` é o caminho recomendado para novos lotes.
 

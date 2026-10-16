@@ -87,7 +87,6 @@ UNC. Ao passar uma origem `\\localhost\C$` ao pip, usa um URI com o servidor
 Se já descarregou e verificou os modelos, reutilize essa pasta; uma falha na
 preparação das wheels não exige descarregar novamente os modelos.
 
-
 ## Gate obrigatório antes de distribuir
 
 - Instalar a partir de uma cópia do pacote com rede desligada, sem privilégios admin.
