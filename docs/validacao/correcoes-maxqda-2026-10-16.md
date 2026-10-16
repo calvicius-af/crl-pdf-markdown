@@ -92,7 +92,11 @@ original foram verificados por hash depois do ensaio; não foram substituídos.
 As amostras de teste ficam em `results/maxqda-amostras-20261016` e o relatório
 local completo em `results/avaliacao-final-20261016/comparacao.md`.
 
-- Suíte completa: **583 aprovados, 23 omitidos**, 27 avisos de depreciação Docling.
+- Suíte completa: **584 aprovados, 23 omitidos**, 27 avisos de depreciação Docling.
+- Seguimento do CI: fixtures independentes de Docling instalado, UTF-8 explícito
+  e regressão LF/CRLF. A reauditoria usa o hash dos bytes exatos do rascunho;
+  quebras de linha Windows não simulam uma edição concorrente. A publicação
+  continua normalizada para LF.
 - Janela Tk nativa em macOS: seleção, editor, bloqueio e disposição dos controlos.
 - OCR nativo offline de uma página num PDF de três páginas: apenas a página 2
   foi reextraída; páginas 1 e 3, PDF e Markdown original foram conservados.
