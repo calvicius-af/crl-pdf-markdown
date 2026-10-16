@@ -35,9 +35,24 @@ def _pdf_numeric_tokens(pdf: Path, document=None):
     with (nullcontext(document) if document is not None else pdfplumber.open(pdf)) as document:
         for page in document.pages:
             words = page.dedupe_chars().extract_words(
-                line_dir_rotated="ltr", char_dir_rotated="btt"
+                x_tolerance=1, y_tolerance=1, line_dir_rotated="ltr", char_dir_rotated="btt"
             )
-            tokens = []
+            tokens, grouped = [], []
+            numeric_tables = None
+
+            def same_cell(left, right):
+                nonlocal numeric_tables
+                if numeric_tables is None:
+                    numeric_tables = page.find_tables()
+                for table in numeric_tables:
+                    for box in table.cells:
+                        def contained(word):
+                            x = (word['x0'] + word['x1']) / 2
+                            y = (word['top'] + word['bottom']) / 2
+                            return box[0] <= x < box[2] and box[1] <= y < box[3]
+                        if contained(left) and contained(right):
+                            return True
+                return False
             for index, word in enumerate(words):
                 value = word['text']
                 if index:
@@ -58,12 +73,25 @@ def _pdf_numeric_tokens(pdf: Path, document=None):
                                and word['x0'] < page.width * .3
                                and 0 <= word['top'] - previous['bottom'] <= previous['height'])
                     sign = bool(re.search(r'[-−–—+]$', tokens[-1])) and re.match(r"^\d", value)
-                    thousands = (re.fullmatch(r"[-−–—+]?\d+", tokens[-1])
+                    numeric_tail = re.search(r'(?<![\w.,])[-−–—+]?\d+$', tokens[-1])
+                    leading_group = numeric_tail and len(re.sub(r'\D', '', numeric_tail.group())) <= 3
+                    thousands = (numeric_tail and (grouped[-1] or leading_group)
                                  and re.fullmatch(r"\d{3}(?:[,.]\d{2})?", value))
+                    if close and direction == 'ltr':
+                        # Uma fronteira de célula não é espaço de milhares
+                        # nem liga um travessão isolado ao valor da outra coluna.
+                        if any(previous['x1'] <= edge['x0'] <= word['x0']
+                               and edge['top'] <= word['top'] < edge['bottom']
+                               for edge in page.vertical_edges):
+                            close = False
+                    if sign and aligned and direction == 'ltr' and 4 < gap <= previous['height'] * 2:
+                        close = same_cell(previous, word)
                     if (close and (sign or thousands)) or (wrapped and sign):
                         tokens[-1] += value
+                        grouped[-1] = grouped[-1] or bool(thousands)
                         continue
                 tokens.append(value)
+                grouped.append(False)
             yield from tokens
 
 

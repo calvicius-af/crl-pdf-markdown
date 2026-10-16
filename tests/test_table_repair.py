@@ -58,3 +58,11 @@ def test_swapped_grid_positions_are_detected_even_with_all_values_preserved(tmp_
         findings = verify_cell_positions(source, document)
         assert len(findings) == 2
         assert all(f.rule == 'TABLE_CELL_POSITION' and f.severity == 'error' for f in findings)
+        assert {f.evidence['rendered_cell'] for f in findings} == {'1250,00', '1100,00'}
+        # Uma caixa imprecisa, com o valor na linha certa, não é perda de conteúdo.
+        cells[4].start_row_offset_idx, cells[4].end_row_offset_idx = 1, 2
+        cells[7].start_row_offset_idx, cells[7].end_row_offset_idx = 2, 3
+        cells[4].bbox = cells[7].bbox.model_copy()
+        findings = verify_cell_positions(source, document)
+        assert len(findings) == 1 and findings[0].severity == 'info'
+        assert findings[0].rule == 'TABLE_CELL_GEOMETRY'

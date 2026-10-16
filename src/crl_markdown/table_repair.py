@@ -1,6 +1,7 @@
 """Reparação auxiliar de grelhas desenhadas no PDF, com prova de conservação."""
 
 import re
+import unicodedata
 from collections import Counter
 
 from .quality import Finding
@@ -102,6 +103,7 @@ def recover_tables(pdf, document):
 def verify_cell_positions(pdf_document, document):
     """Verificar a associação geométrica quando as duas grelhas são comparáveis."""
     findings = []
+    extracted = {}
     for table in document.tables:
         if len(table.prov) != 1:
             continue
@@ -131,8 +133,18 @@ def verify_cell_positions(pdf_document, document):
                 0, min(expected[3], actual.b) - max(expected[1], actual.t))
             area = (actual.r-actual.l)*(actual.b-actual.t)
             if area > 0 and overlap / area < .2:
-                findings.append(Finding('TABLE_CELL_POSITION', 0,
+                if id(grid) not in extracted:
+                    extracted[id(grid)] = grid.extract(x_tolerance=1, y_tolerance=1,
+                                                       line_dir_rotated='ltr', char_dir_rotated='btt')
+                expected_text = extracted[id(grid)][row][col] or ''
+                def clean(value):
+                    return re.sub(r'\s+', '', unicodedata.normalize('NFKC', value)).casefold()
+                equal = clean(expected_text) == clean(cell.text)
+                rule = 'TABLE_CELL_GEOMETRY' if equal else 'TABLE_CELL_POSITION'
+                findings.append(Finding(rule, 0,
                     f'Página {prov.page_no}: célula na linha {row+1}, coluna {col+1} '
-                    'não corresponde à região da grelha desenhada no PDF. Conferir categoria/nível/valor.',
-                    'error', page=prov.page_no, node=table.self_ref, bbox=tuple(actual.as_tuple())))
+                    + ('conserva o conteúdo da grelha fonte, mas a caixa Docling diverge.' if equal else
+                       'não corresponde à região da grelha desenhada no PDF. Conferir categoria/nível/valor.'),
+                    'info' if equal else 'error', page=prov.page_no, node=table.self_ref,
+                    bbox=tuple(actual.as_tuple()), evidence={'source_cell': expected_text, 'rendered_cell': cell.text}))
     return findings

@@ -2,7 +2,7 @@ from collections import Counter
 
 from crl_markdown.audit import amounts, audit_pdf, pdf_amounts
 from crl_markdown.legacy.extractor import estruturar
-from tests.pdf_sintetico import escrever_pdf, pagina_bte
+from tests.pdf_sintetico import escrever_pdf, grelha, pagina_bte
 
 
 def test_amount_normalization():
@@ -128,3 +128,29 @@ def test_independent_checks_share_one_pdfplumber_read(tmp_path, monkeypatch):
     doc, text = estruturar('O saldo é -125,00 euros.', 'shared')
     audit_pdf(pdf, text, doc, text, 0, reference=(['O saldo é -125,00 euros.'], []))
     assert calls == [pdf]
+
+
+def test_small_salary_rows_and_parenthesized_thousands_are_not_truncated(tmp_path):
+    pdf = escrever_pdf(tmp_path / 'small.pdf', [[
+        (72, 700, '2 240,31', 'small'), (72, 694, '1 935,14', 'small'),
+        (72, 650, 'Valor (1 604,41 EUR) e (1 130,72 EUR).'),
+        (72, 620, 'Total 1 000 000,00 EUR.'),
+        (72, 600, 'Valores 1 000,00 500,00 EUR.'),
+    ]])
+    assert pdf_amounts(pdf) == Counter({'2240,31': 1, '1935,14': 1, '1604,41': 1,
+                                       '1130,72': 1, '1000000,00': 1, '1000,00': 1, '500,00': 1})
+
+
+def test_cell_border_separates_dash_from_positive_amount(tmp_path):
+    pdf = escrever_pdf(tmp_path / 'border.pdf', [
+        grelha(50, 650, [20, 70], [25, 25]) + [
+            (52, 685, 'X'), (75, 685, 'Valor'), (66, 660, '-'), (72, 660, '1,00')]])
+    assert pdf_amounts(pdf) == Counter({'1,00': 1})
+
+
+def test_wider_sign_gap_inside_same_drawn_cell_is_preserved(tmp_path):
+    from crl_markdown.audit import pdf_signed_values
+    pdf = escrever_pdf(tmp_path / 'percent.pdf', [
+        grelha(50, 650, [120, 70], [25, 25]) + [
+            (55, 685, 'Valor'), (180, 685, 'Nota'), (70, 660, '-'), (85, 660, '70 %')]])
+    assert pdf_signed_values(pdf) == Counter({'-70': 1})

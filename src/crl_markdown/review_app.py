@@ -193,6 +193,9 @@ class ReviewWindow:
         details = [finding.get('message', ''), f"ID: {finding.get('id', 'requer reauditoria')} · Linha: {finding.get('line', 0)}"]
         if finding.get('bbox'):
             details.append('Região PDF: ' + str(finding['bbox']))
+        if finding.get('evidence'):
+            details.append('Célula na fonte: ' + finding['evidence'].get('source_cell', ''))
+            details.append('Célula na saída: ' + finding['evidence'].get('rendered_cell', ''))
         if finding['rule'] in {'AMOUNTS', 'CRITICAL_SYMBOLS'}:
             for e in self.current[2].get('completeness', {}).get('numeric_evidence', []):
                 details.append(f"Página {e['page']}: {e['source_text']}")

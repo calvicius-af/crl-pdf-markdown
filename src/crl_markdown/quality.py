@@ -17,6 +17,7 @@ class Finding:
     page: int | None = None
     node: str | None = None
     bbox: tuple | None = None
+    evidence: dict | None = None
 
     def to_dict(self):
         value = {k: v for k, v in asdict(self).items() if v is not None}
