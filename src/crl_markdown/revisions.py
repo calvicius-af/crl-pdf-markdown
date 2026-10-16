@@ -170,11 +170,12 @@ def audit_revision(revision, *, resolutions=()):
         # Reauditar o próprio rascunho é permitido, mas uma revisão diferente
         # entretanto publicada exige nova base para não perder trabalho.
         pointer = current_pointer(output, relative)
-        same_revision = pointer.exists() and json.loads(pointer.read_text()).get('revision_id') == meta['revision_id']
+        same_revision = pointer.exists() and json.loads(pointer.read_text(encoding='utf-8')).get('revision_id') == meta['revision_id']
         if not same_revision and _identity(target, report_path, report) != meta['parent']:
             raise ValueError('Outra revisão mudou a base. Crie uma correção a partir da versão atual.')
-        draft = (revision / 'correcao.md').read_text(encoding='utf-8')
-        draft_digest = hashlib.sha256(draft.encode('utf-8')).hexdigest()
+        draft_bytes = (revision / 'correcao.md').read_bytes()
+        draft = draft_bytes.decode('utf-8')
+        draft_digest = hashlib.sha256(draft_bytes).hexdigest()
         if not draft.strip():
             raise ValueError('A correção está vazia.')
         publication = revision / 'publicacoes' / uuid4().hex

@@ -1,3 +1,4 @@
+import hashlib
 import json
 from types import SimpleNamespace
 
@@ -27,14 +28,17 @@ def damaged_output(tmp_path):
     return output
 
 
-def test_correction_reaudits_without_overwriting_original_and_requires_new_approval(damaged_output, tmp_path):
+@pytest.mark.parametrize('newline', ['\n', '\r\n'])
+def test_correction_reaudits_without_overwriting_original_and_requires_new_approval(damaged_output, tmp_path, newline):
     output = damaged_output
     original = (output / 'source.md').read_bytes()
     revision = create_revision(output, 'source.pdf', 'Revisor de ensaio')
     draft = revision / 'correcao.md'
-    draft.write_text(draft.read_text(encoding='utf-8').replace('125,00', '-125,00'), encoding='utf-8')
+    draft.write_bytes(draft.read_text(encoding='utf-8').replace('125,00', '-125,00').replace('\n', newline).encode('utf-8'))
     publication, report = audit_revision(revision)
     assert report['quality_status'] != 'blocked'
+    assert report['draft_sha256'] == hashlib.sha256(draft.read_bytes()).hexdigest()
+    assert b'\r\n' not in (publication / 'source.md').read_bytes()
     assert (output / 'source.md').read_bytes() == original
     with pytest.raises(ValueError, match='Não há documentos'):
         deliver(output, tmp_path / 'unapproved')
