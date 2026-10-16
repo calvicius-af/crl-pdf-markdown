@@ -48,11 +48,12 @@ def _sha256(path: Path) -> str:
 
 
 def _files(folder: Path) -> list[Path]:
-    """Ficheiros dos modelos, sem o manifesto nem as caches de descarga."""
+    """Ficheiros dos modelos, sem manifesto, caches ou metadados do Finder."""
     return sorted(
         p
         for p in folder.rglob("*")
-        if p.is_file() and p.name != MANIFEST and ".cache" not in p.relative_to(folder).parts
+        if p.is_file() and p.name not in {MANIFEST, ".DS_Store"}
+        and ".cache" not in p.relative_to(folder).parts
     )
 
 
@@ -114,6 +115,10 @@ def verify(folder: Path) -> list[str]:
             problems.append(f"SHA-256 inválido: {name}")
         if not isinstance(entry.get("bytes"), int) or entry["bytes"] < 0:
             problems.append(f"tamanho inválido: {name}")
+        # Manifestos antigos podiam incluir metadados que o Finder altera ao
+        # abrir a pasta. Não são modelos; tolerar também a sua remoção.
+        if PurePosixPath(name).name == ".DS_Store":
+            continue
         expected[name] = entry
     present = {p.relative_to(folder).as_posix(): p for p in _files(folder)}
     for name, entry in expected.items():

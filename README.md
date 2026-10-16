@@ -74,7 +74,7 @@ py -3.13 -m venv .venv
 No macOS e no Linux:
 
 ```bash
-python3 -m venv .venv
+python3.13 -m venv .venv
 .venv/bin/python -m pip install -e . -c requirements/runtime.txt
 .venv/bin/python -m crl_markdown convert documento.pdf --out results
 .venv/bin/python -m crl_markdown convert data/pdfs --out results
@@ -115,6 +115,11 @@ alterado ou a mais interrompe a corrida com uma mensagem, em vez de falhar em
 cada documento. Descarregar com a mesma versão do Docling que as estações usam
 (`requirements/runtime.txt`). `models inventory --folder` reescreve o manifesto
 de uma pasta preparada de outra forma.
+
+No macOS, os ficheiros `.DS_Store` criados pelo Finder são ignorados, incluindo
+quando constam de manifestos antigos. Não fazem parte dos modelos e podem mudar
+ao abrir a pasta. Os restantes ficheiros continuam sujeitos à verificação de
+integridade; não reescrever o manifesto para ocultar alterações nos modelos.
 
 O OCR usa sempre o RapidOCR com o modelo de português. Não se usa a escolha
 automática do Docling, que depende do que está instalado e não do que está na

@@ -47,6 +47,36 @@ def test_verify_without_manifest_says_what_to_do(tmp_path):
     assert len(problems) == 1 and "inventory" in problems[0]
 
 
+def test_finder_metadata_excluded_from_inventory_and_verification(tmp_path):
+    folder = _model_folder(tmp_path)
+    for parent in (folder, folder / "docling-project--docling-layout-heron"):
+        (parent / ".DS_Store").write_bytes(b"Finder metadata")
+    manifest = models.write_inventory(folder)
+    assert all(Path(f["path"]).name != ".DS_Store" for f in manifest["files"])
+    (folder / models.OCR_FOLDER / ".DS_Store").write_bytes(b"new metadata")
+    assert models.verify(folder) == []
+    check_models(Options(models=folder, offline=True))
+
+
+@pytest.mark.parametrize("removed", [False, True])
+def test_legacy_manifest_tolerates_changed_or_removed_finder_metadata(tmp_path, removed):
+    folder = _model_folder(tmp_path)
+    manifest = models.write_inventory(folder)
+    for parent in (folder, folder / "docling-project--docling-layout-heron"):
+        metadata = parent / ".DS_Store"
+        metadata.write_bytes(b"original")
+        manifest["files"].append({"path": metadata.relative_to(folder).as_posix(),
+                                  "bytes": metadata.stat().st_size,
+                                  "sha256": models._sha256(metadata)})
+        if removed:
+            metadata.unlink()
+        else:
+            metadata.write_bytes(b"changed by Finder")
+    (folder / models.MANIFEST).write_text(json.dumps(manifest), encoding="utf-8")
+    assert models.verify(folder) == []
+    check_models(Options(models=folder, offline=True))
+
+
 def test_models_cli(tmp_path, monkeypatch, capsys):
     folder = _model_folder(tmp_path)
     assert main(["models", "verify", "--folder", str(folder)]) == 1
