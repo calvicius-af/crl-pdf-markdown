@@ -63,12 +63,45 @@ O INATEL não é apresentado como documento aprovado.
 
 ## Ensaios e limites
 
+A [comparação integral](comparacao-auditoria-2026-10-16.json) usa os mesmos
+**411 documentos**, sem falhas e com hashes da origem coincidentes. A reauditoria
+terminou em **14 min 13 s**, reutilizando as extrações; a duração anterior de
+1 h 43 min incluía a extração e não constitui uma comparação de motores.
+
+| Estado automático | Antes | Depois |
+| ----------------- | ----: | -----: |
+| Sem alertas       | 76    | 199    |
+| Para revisão      | 230   | 122    |
+| Bloqueado         | 105   | 90     |
+
+Os 76 documentos anteriormente sem alertas conservaram esse estado. As 9 adesões
+e 107 das 110 portarias deixam de ter os avisos estruturais inadequados. O acórdão
+348 passa a sem alertas. Há quatro novos bloqueios por desacordo na posição de
+células (APEC 124/125, TINITA 198 e ACA 261): o auditor passou a detetar relações
+da grelha que a mera contagem de valores não verificava. Não se dispensam essas
+divergências sem conferência.
+
+AMOUNTS afeta 18 documentos, contra 57; STRUCTURE afeta 51, contra 173.
+Estas diferenças de estado/ocorrências não são uma taxa de falsos positivos
+medida. Os critérios definidos para os quatro segmentos MAXQDA passaram nos
+dois documentos, incluindo a manutenção do bloqueio legítimo do INATEL.
+
+O manifesto passou de **62 934 340 para 2 448 136 bytes**, mantendo o detalhe
+completo em relatórios individuais. Os 411 Markdown originais e o manifesto
+original foram verificados por hash depois do ensaio; não foram substituídos.
+As amostras de teste ficam em `results/maxqda-amostras-20261016` e o relatório
+local completo em `results/avaliacao-final-20261016/comparacao.md`.
+
 - Suíte completa: **583 aprovados, 23 omitidos**, 27 avisos de depreciação Docling.
 - Janela Tk nativa em macOS: seleção, editor, bloqueio e disposição dos controlos.
 - OCR nativo offline de uma página num PDF de três páginas: apenas a página 2
   foi reextraída; páginas 1 e 3, PDF e Markdown original foram conservados.
   O [registo](ocr-dirigido-2026-10-16.json) distingue este ensaio de uma medição
   da qualidade do reconhecimento de digitalizações.
+- OCR real do INATEL: páginas 2 e 35 reextraídas offline, outras 50 reutilizadas.
+  O [ensaio](ocr-inatel-2026-10-16.json) concluiu a execução, mas não resolveu
+  os rótulos sem transcrição nem o carácter sem célula inequívoca. O bloqueio
+  foi mantido. Não se recomenda repetir OCR esperando aprovação automática.
 - Wheel construído sem dependências; os perfis JSON/MD fazem parte dos recursos.
 - Os [controlos de siglas](impacto-siglas-2026-10-16.json) reproduzem o defeito
   e conferem o catálogo de 411 entradas, sem renomear ficheiros existentes.
@@ -79,11 +112,21 @@ A reauditoria reutiliza os JSON originais Docling 2.134.0. O ambiente de ensaio
 tem Docling 2.128.0; não se apresenta essa reutilização como uma nova extração
 dos 411 PDFs na versão instalada. O ensaio OCR usa efetivamente 2.128.0.
 
-Continua pendente o ensaio de importação na versão concreta do MAXQDA e o ensaio
+Continua pendente o novo ensaio das hierarquias e tabelas complexas no MAXQDA
+27.0.0 (a importação básica anterior não valida estas correções) e o ensaio
 de distribuição/estação Windows. As amostras são para um projeto de teste; um
 documento já codificado não deve ser substituído sem reconciliação das codificações.
 Os dois documentos de referência não permitem estimar a taxa de falsos negativos
 de todo o corpus nem demonstrar uma confirmação por dez milhões.
+
+Os issues continuam em acompanhamento até revisão e aceitação. Em particular,
+o issue #6 precisa da classificação documental dos desacordos remanescentes e de ampliar
+o alinhamento contextual para além das comparações atuais; #9 precisa de conferência
+de outros padrões de listas e tabelas e de importação; #10 precisa da avaliação
+do reconhecimento em digitalizações representativas; #12 precisa de um conjunto
+anotado mais amplo, amostragem e medição do esforço humano; #13 conserva pendente
+o ensaio numa partilha. A reauditoria atual oferece lote ou documento na CLI;
+filtros por família/regra estão na conferência e não num seletor de reauditoria.
 
 Na GUI: escolher a saída antiga, **Reauditar lote**, abrir **Conferir / aprovar…**,
 selecionar o documento, **Criar / editar correção**, guardar, **Reauditar correção**
