@@ -66,8 +66,50 @@ def main(argv=None):
     delivery = commands.add_parser("deliver", help="Entregar Markdown aprovado e relatório metodológico")
     delivery.add_argument("--out", type=Path, required=True, help="Pasta da conversão")
     delivery.add_argument("--destination", type=Path, required=True, help="Nova pasta de entrega")
+    audit_again = commands.add_parser('reaudit', help='Reauditar uma extração verificada numa pasta nova')
+    audit_again.add_argument('--out', type=Path, required=True)
+    audit_again.add_argument('--destination', type=Path)
+    audit_again.add_argument('--document')
+    audit_again.add_argument('--jobs', type=int, choices=[1, 2], default=2)
+    revision = commands.add_parser('revise', help='Criar uma correção separada do original')
+    revision.add_argument('--out', type=Path, required=True)
+    revision.add_argument('--document', required=True)
+    revision.add_argument('--reviewer', required=True)
+    revision_audit = commands.add_parser('audit-revision', help='Auditar e publicar uma correção guardada')
+    revision_audit.add_argument('revision', type=Path)
+    revision_audit.add_argument('--resolutions', type=Path)
+    ocr_pages = commands.add_parser('ocr-pages', help='Reextrair só as páginas indicadas com OCR local')
+    ocr_pages.add_argument('--out', type=Path, required=True)
+    ocr_pages.add_argument('--document', required=True)
+    ocr_pages.add_argument('--reviewer', required=True)
+    ocr_pages.add_argument('--models', type=Path, required=True)
+    ocr_pages.add_argument('--pages', required=True)
     args = parser.parse_args(argv)
     try:
+        if args.command == 'ocr-pages':
+            from .page_ocr import parse_pages, reextract_pages
+            from .revisions import _record
+            from .validation import _verified
+            _, _, report = _verified(args.out, _record(args.out, args.document))
+            selected = parse_pages(args.pages, report['pages'])
+            destination, report = reextract_pages(args.out, args.document, args.reviewer, args.models, selected)
+            print(f'OCR dirigido: {destination} ({report["quality_status"]})')
+            return int(report['quality_status'] == 'blocked')
+        if args.command == 'revise':
+            from .revisions import create_revision
+            print(create_revision(args.out, args.document, args.reviewer))
+            return 0
+        if args.command == 'audit-revision':
+            from .revisions import audit_revision
+            resolutions = json.loads(args.resolutions.read_text(encoding='utf-8')) if args.resolutions else []
+            publication, report = audit_revision(args.revision, resolutions=resolutions)
+            print(f'Correção auditada: {publication} ({report["quality_status"]})')
+            return int(report['quality_status'] == 'blocked')
+        if args.command == 'reaudit':
+            from .reaudit import reaudit
+            destination, reports = reaudit(args.out, args.destination, relative_source=args.document, jobs=args.jobs)
+            print(f'Reauditoria: {destination}')
+            return int(any(r.get('quality_status') == 'blocked' or r.get('state') == 'falhou' for r in reports))
         if args.command == "review":
             from .validation import decide
             print(decide(args.out, args.document, reviewer=args.reviewer,
@@ -122,7 +164,7 @@ def main(argv=None):
                 args.out,
                 Options(args.ocr, args.models, args.offline, args.timeout),
                 overwrite=args.overwrite,
-                converter=CachedConverter(args.docling_cache) if args.docling_cache else None,
+                converter=CachedConverter(args.docling_cache, Options(args.ocr, args.models, args.offline, args.timeout)) if args.docling_cache else None,
             )
         if any(
             r.get("state") == "falhou"

@@ -1,5 +1,7 @@
 """Correções conservadoras e verificações de Markdown, sem reescrever o conteúdo."""
 
+import hashlib
+import json
 import re
 from dataclasses import asdict, dataclass
 
@@ -12,9 +14,14 @@ class Finding:
     line: int
     message: str
     severity: str = "warning"
+    page: int | None = None
+    node: str | None = None
+    bbox: tuple | None = None
 
     def to_dict(self):
-        return asdict(self)
+        value = {k: v for k, v in asdict(self).items() if v is not None}
+        value['id'] = hashlib.sha256(json.dumps(value, sort_keys=True, ensure_ascii=False).encode()).hexdigest()[:16]
+        return value
 
 
 def parser():

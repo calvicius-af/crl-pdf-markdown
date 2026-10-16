@@ -99,3 +99,32 @@ def test_negative_amount_spacing_normalization_remains_faithful(tmp_path):
         assert not any(f.rule in {'AMOUNTS', 'CRITICAL_SYMBOLS'} for f in findings)
         _, findings, _ = audit_pdf(pdf, f'O saldo é {normalized[1:]} euros.', doc, text, 0)
         assert any(f.rule in {'AMOUNTS', 'CRITICAL_SYMBOLS'} for f in findings)
+
+
+def test_formula_operators_preserved_across_spaces_and_pdf_line_wrap(tmp_path):
+    pdf = escrever_pdf(tmp_path / 'formula.pdf', [[
+        (72, 700, '2000,00 EUR - 1330,00 EUR = 670,00 EUR'),
+        (510, 680, '+'), (72, 666, '1330,00 EUR'),
+        (72, 640, '2000,00 EUR- 1640,00 EUR = 360,00 EUR'),
+    ]])
+    original = '2000,00 EUR -1330,00 EUR = 670,00 EUR +1330,00 EUR\n2000,00 EUR-1640,00 EUR = 360,00 EUR'
+    doc, text = estruturar(original, 'formula')
+    _, findings, _ = audit_pdf(pdf, text, doc, text, 0)
+    assert not any(f.rule in {'AMOUNTS', 'CRITICAL_SYMBOLS'} for f in findings)
+    damaged = text.replace('-1330,00', '1330,00')
+    _, findings, _ = audit_pdf(pdf, damaged, doc, text, 0)
+    assert any(f.rule in {'AMOUNTS', 'CRITICAL_SYMBOLS'} for f in findings)
+
+
+def test_independent_checks_share_one_pdfplumber_read(tmp_path, monkeypatch):
+    import pdfplumber
+    pdf = escrever_pdf(tmp_path / 'shared.pdf', [pagina_bte(1, ['O saldo é -125,00 euros.'])])
+    original_open = pdfplumber.open
+    calls = []
+    def counted(*args, **kwargs):
+        calls.append(args[0])
+        return original_open(*args, **kwargs)
+    monkeypatch.setattr(pdfplumber, 'open', counted)
+    doc, text = estruturar('O saldo é -125,00 euros.', 'shared')
+    audit_pdf(pdf, text, doc, text, 0, reference=(['O saldo é -125,00 euros.'], []))
+    assert calls == [pdf]
