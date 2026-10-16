@@ -19,7 +19,8 @@ def damaged_output(tmp_path):
     document.add_page(page_no=1, size=Size(width=595, height=842))
     for value in original:
         document.add_text(label=DocItemLabel.TEXT, text=value.replace('-125,00', '125,00'))
-    converter = SimpleNamespace(convert=lambda _pdf: SimpleNamespace(status='success', document=document))
+    converter = SimpleNamespace(docling_version='fixture',
+                                convert=lambda _pdf: SimpleNamespace(status='success', document=document))
     output = tmp_path / 'output'
     reports = run(pdf, output, Options(), converter=converter, progress=lambda _: None)
     assert reports[0]['quality_status'] == 'blocked'
