@@ -32,7 +32,7 @@ def test_correction_reaudits_without_overwriting_original_and_requires_new_appro
     original = (output / 'source.md').read_bytes()
     revision = create_revision(output, 'source.pdf', 'Revisor de ensaio')
     draft = revision / 'correcao.md'
-    draft.write_text(draft.read_text().replace('125,00', '-125,00'))
+    draft.write_text(draft.read_text(encoding='utf-8').replace('125,00', '-125,00'), encoding='utf-8')
     publication, report = audit_revision(revision)
     assert report['quality_status'] != 'blocked'
     assert (output / 'source.md').read_bytes() == original
@@ -41,8 +41,8 @@ def test_correction_reaudits_without_overwriting_original_and_requires_new_appro
     decide(output, 'source.pdf', reviewer='Revisor de ensaio', decision='aprovado',
            scope='integral', notes='Sinal negativo e documento integral conferidos no PDF.')
     result = deliver(output, tmp_path / 'approved')
-    assert '-125,00' in (result.parent / 'documentos/source.md').read_text()
-    (publication / 'source.md').write_text('alterado após aprovação')
+    assert '-125,00' in (result.parent / 'documentos/source.md').read_text(encoding='utf-8')
+    (publication / 'source.md').write_text('alterado após aprovação', encoding='utf-8')
     with pytest.raises(ValueError, match='Não há documentos'):
         deliver(output, tmp_path / 'tampered')
 
@@ -58,13 +58,13 @@ def test_competing_revision_cannot_overwrite_new_base(damaged_output):
 def test_reaudit_invalidates_previous_decision_even_for_same_text(damaged_output):
     revision = create_revision(damaged_output, 'source.pdf', 'Revisor A')
     draft = revision / 'correcao.md'
-    draft.write_text(draft.read_text().replace('125,00', '-125,00'))
+    draft.write_text(draft.read_text(encoding='utf-8').replace('125,00', '-125,00'), encoding='utf-8')
     audit_revision(revision)
     decision = decide(damaged_output, 'source.pdf', reviewer='Revisor A', decision='aprovado',
                       scope='integral', notes='Conferido.')
-    before = json.loads(decision.read_text())
+    before = json.loads(decision.read_text(encoding='utf-8'))
     audit_revision(revision)
-    doc = json.loads((damaged_output / '_auditoria/manifest.json').read_text())['documents'][0]
+    doc = json.loads((damaged_output / '_auditoria/manifest.json').read_text(encoding='utf-8'))['documents'][0]
     _, report_path, _ = _verified(damaged_output, doc)
     from crl_markdown.models import _sha256
     assert before['report_sha256'] != _sha256(report_path)

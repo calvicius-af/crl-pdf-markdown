@@ -21,12 +21,12 @@ def cache_fixture(tmp_path, *, crossing=False):
     cache = tmp_path / 'cache'
     cache.mkdir()
     path = cache / 'source.docling.json'
-    path.write_text(json.dumps(document.export_to_dict()))
+    path.write_text(json.dumps(document.export_to_dict()), encoding='utf-8')
     (cache / 'source.qualidade.json').write_text(json.dumps({
         'source_sha256': hashlib.sha256(pdf.read_bytes()).hexdigest(),
         'docling_document_sha256': hashlib.sha256(path.read_bytes()).hexdigest(),
         'docling_version': 'test', 'options': {'ocr': False},
-    }))
+    }), encoding='utf-8')
     return pdf, cache, document
 
 

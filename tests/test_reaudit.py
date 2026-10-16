@@ -31,11 +31,11 @@ def test_compact_manifest_keeps_detail_hashes_but_not_corpus_copies(tmp_path, co
     pdf.write_bytes(b'fixture')
     output = tmp_path / 'out'
     reports = run(pdf, output, Options(), converter=converter, progress=lambda _: None)
-    data = json.loads((output / '_auditoria/manifest.json').read_text())
+    data = json.loads((output / '_auditoria/manifest.json').read_text(encoding='utf-8'))
     assert data['schema_version'] == 2
     assert 'structured_text' not in data['documents'][0]
     assert data['documents'][0]['markdown_sha256'] == reports[0]['markdown_sha256']
-    detail = json.loads((output / data['documents'][0]['detail_report']).read_text())
+    detail = json.loads((output / data['documents'][0]['detail_report']).read_text(encoding='utf-8'))
     assert detail['structured_text'] == reports[0]['structured_text']
 
 
@@ -66,6 +66,6 @@ def test_cancelled_reaudit_records_interruption_without_changing_original(tmp_pa
     destination = tmp_path / 'cancelled'
     with pytest.raises(RuntimeError, match='cancelada'):
         reaudit(output, destination, jobs=jobs, cancel_event=cancel, progress=lambda _: None)
-    partial = json.loads((destination / '_auditoria/manifest.json').read_text())
+    partial = json.loads((destination / '_auditoria/manifest.json').read_text(encoding='utf-8'))
     assert partial['status'] == 'interrompida'
     assert (output / '_auditoria/manifest.json').read_bytes() == original

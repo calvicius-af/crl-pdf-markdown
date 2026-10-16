@@ -20,11 +20,11 @@ def test_legal_form_never_eats_the_literal_acronym(name, expected):
 
 def test_legacy_cli_uses_explicit_vocabulary_instead_of_current_directory(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
-    (tmp_path / 'siglas.csv').write_text('nome;sigla;estado\nSindicato Exemplo;ANTIGA;confirmada\n')
+    (tmp_path / 'siglas.csv').write_text('nome;sigla;estado\nSindicato Exemplo;ANTIGA;confirmada\n', encoding='utf-8')
     chosen = tmp_path / 'selecionado.csv'
-    chosen.write_text('nome;sigla;estado\nSindicato Exemplo;NOVA;confirmada\n')
+    chosen.write_text('nome;sigla;estado\nSindicato Exemplo;NOVA;confirmada\n', encoding='utf-8')
     registry = tmp_path / 'registo.jsonl'
-    registry.write_text('')
+    registry.write_text('', encoding='utf-8')
     # O adaptador público fornece a tabela ao motor partilhado de nomeação.
     captured = {}
     def naming(*args, **kwargs):
