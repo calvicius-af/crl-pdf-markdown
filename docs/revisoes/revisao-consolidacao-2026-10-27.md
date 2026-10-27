@@ -101,3 +101,20 @@ Próximo incremento funcional: tornar explícitas e tratar as fórmulas sem text
 já identificadas no corpus, com prova da sua estrutura. Não iniciar outro motor
 de OCR nem reconstrução matemática especulativa. MAXQDA, Windows/offline e
 partilha continuam critérios de aceitação distintos dos testes e do CI.
+
+## Dependências de desenvolvimento
+
+O push revelou cinco alertas Dependabot no `package-lock.json`. A atualização
+normal de `markdownlint-cli2` de 0.23.3 para **0.24.0**, fixada com lockfile,
+fornece `markdown-it` 15.0.3 e `smol-toml` 1.9.1 e corrige os quatro alertas
+associados (dois altos, um médio e um baixo). O CI já usa Node 22, compatível com
+a versão atualizada. `npm ci --offline` e o lint dos 29 documentos passaram.
+
+A auditoria do lockfile atualizado reporta **zero alertas altos/médios/críticos**
+e um advisory baixo KaTeX, propagado por quatro pacotes da cadeia de ferramentas:
+[GHSA-238p-pmpm-9mq7](https://github.com/advisories/GHSA-238p-pmpm-9mq7),
+Dependabot #2. `micromark-extension-math` 3.1.0 ainda requer KaTeX 0.16.x; a
+correção indicada é 0.18.2. Não foi imposta uma versão fora desse intervalo nem
+criado outro motor de parsing. A dependência pertence ao verificador Markdown de
+desenvolvimento; a aplicação Python não a inclui no seu runtime. O alerta
+permanece pendente de atualização compatível a montante; não foi suprimido.
