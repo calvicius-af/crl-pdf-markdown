@@ -48,7 +48,9 @@ Na interface, **Criar / usar pasta RNC…** prepara a árvore e preenche entrada
 **Entregar aprovados…** cobrem preparação, conferência e entrega.
 As decisões são vinculadas aos hashes; a entrega inclui relatório metodológico.
 A janela de conferência inclui ocorrências, correções versionadas, nova auditoria
-e OCR dirigido. A aprovação exige uma versão sem erros por resolver e uma decisão
+e OCR dirigido. A CLI permite reauditar uma seleção por família, regra e estado,
+com simulação prévia (`reaudit --dry-run`); ver o
+[percurso de seleção](docs/operacao/guia-utilizacao.md#reauditar-uma-seleção-pela-linha-de-comandos). A aprovação exige uma versão sem erros por resolver e uma decisão
 humana atual. Ver o [percurso de correção](docs/operacao/guia-utilizacao.md#corrigir-reauditar-e-decidir-na-gui)
 e a [hierarquia Markdown](docs/operacao/hierarquia-markdown.md).
 O caminho antigo `data/`/`results/` continua disponível para compatibilidade;

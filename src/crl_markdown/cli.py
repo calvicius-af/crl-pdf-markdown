@@ -70,6 +70,15 @@ def main(argv=None):
     audit_again.add_argument('--out', type=Path, required=True)
     audit_again.add_argument('--destination', type=Path)
     audit_again.add_argument('--document')
+    audit_again.add_argument('--family', action='append', default=[],
+                             help='Primeira subpasta do PDF, por exemplo convencoes; repetível; . para a raiz')
+    audit_again.add_argument('--rule', action='append', default=[],
+                             help='Regra presente na corrida anterior, por exemplo AMOUNTS; repetível')
+    audit_again.add_argument('--status', action='append', default=[],
+                             choices=['passed', 'review', 'blocked'],
+                             help='Estado automático na corrida anterior; repetível')
+    audit_again.add_argument('--dry-run', action='store_true',
+                             help='Listar a seleção em JSON sem criar saídas nem carregar modelos')
     audit_again.add_argument('--jobs', type=int, choices=[1, 2], default=2)
     revision = commands.add_parser('revise', help='Criar uma correção separada do original')
     revision.add_argument('--out', type=Path, required=True)
@@ -117,8 +126,14 @@ def main(argv=None):
             print(f'Correção auditada: {publication} ({report["quality_status"]})')
             return int(report['quality_status'] == 'blocked')
         if args.command == 'reaudit':
-            from .reaudit import reaudit
-            destination, reports = reaudit(args.out, args.destination, relative_source=args.document, jobs=args.jobs)
+            from .reaudit import plan_reaudit, reaudit
+            filters = dict(relative_source=args.document, families=args.family,
+                           rules=args.rule, statuses=args.status)
+            if args.dry_run:
+                _, _, selection = plan_reaudit(args.out, **filters)
+                print(json.dumps(selection, ensure_ascii=False, indent=2))
+                return 0
+            destination, reports = reaudit(args.out, args.destination, **filters, jobs=args.jobs)
             print(f'Reauditoria: {destination}')
             return int(any(r.get('quality_status') == 'blocked' or r.get('state') == 'falhou' for r in reports))
         if args.command == "review":
@@ -189,6 +204,9 @@ def main(argv=None):
             return 2
         return 0
     except (ValueError, OSError, ImportError, RuntimeError) as exc:
+        if args.command == 'reaudit' and args.dry_run:
+            print(f'Erro: {exc}', file=sys.stderr)
+            return 1
         from tempfile import gettempdir
 
         from .diagnostics import save_failure

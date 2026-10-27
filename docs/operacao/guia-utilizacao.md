@@ -77,6 +77,50 @@ pasta. Prefira uma saída nova por lote. Uma cache Docling verificada permite
 reaplicar regras mais depressa, mas uma nova extração é necessária quando o erro
 está no reconhecimento dos itens.
 
+## Reauditar uma seleção pela linha de comandos
+
+Para investigar um padrão sem repetir o lote inteiro, selecione os documentos
+pelas ocorrências e estados da corrida anterior. Comece por simular:
+
+```powershell
+.venv\Scripts\python.exe -m crl_markdown reaudit --out results\anterior --family convencoes --rule AMOUNTS --status blocked --dry-run
+.venv\Scripts\python.exe -m crl_markdown reaudit --out results\anterior --destination results\montantes --family convencoes --rule AMOUNTS --status blocked
+```
+
+No macOS/Linux, use `.venv/bin/python` e caminhos com `/`.
+
+- `--family`: primeira subpasta do caminho relativo no manifesto, como
+  `convencoes`, `portarias_extensao` ou `acordaos`. Use `.` para PDFs na raiz.
+  O filtro de pasta não reclassifica a tipologia nem o âmbito documental.
+- `--rule`: código exato de uma regra presente no manifesto, como `AMOUNTS`
+  ou `TABLE_OVERLAP`.
+- `--status`: estado automático `passed`, `review` ou `blocked`.
+- `--document`: caminho relativo exato de um PDF, incluindo as subpastas.
+- `--dry-run`: apresenta JSON com critérios, documentos selecionados, corrida
+  e hash do manifesto de origem; não lê a cache/PDF nem escreve resultados.
+
+Repita uma opção para aceitar qualquer dos seus valores: `--rule AMOUNTS
+--rule TABLE_OVERLAP`. Opções diferentes cruzam-se: família **e** regra **e**
+estado **e**, quando indicado, documento. Um valor desconhecido ou uma seleção
+vazia dá erro antes de criar a pasta de destino. Documentos sem extração completa
+não podem ser reauditados; use o filtro de estado para selecionar os já convertidos.
+
+A reutilização exige que os hashes do PDF e da extração coincidam com o manifesto
+selecionado e com a cache. Uma cache substituída ou sem essa identidade falha
+nesse documento, mesmo quando o seu relatório individual é internamente consistente.
+
+A seleção usa o retrato registado da corrida anterior, sem incorporar decisões
+ou correções humanas posteriores. Todos os controlos atuais são aplicados aos
+documentos selecionados, mesmo que uma regra usada no filtro tenha deixado de
+produzir ocorrências. A operação reaplica as regras à extração Docling guardada;
+para trabalhar sobre uma correção humana, use **Reauditar correção guardada**.
+
+O manifesto e os relatórios da nova corrida conservam a proveniência, os filtros
+e a dimensão da seleção. Uma corrida parcial não representa o corpus inteiro e
+não aprova os documentos. Os originais e as decisões anteriores são conservados.
+A GUI mantém o comando de reauditoria do lote completo; estes filtros de execução
+estão disponíveis na CLI.
+
 ## Recolha e nomeação: preparação inicial pelo apoio
 
 Os comandos abaixo funcionam a partir da raiz da aplicação ou da pasta de recursos

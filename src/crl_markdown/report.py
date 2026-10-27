@@ -123,6 +123,27 @@ def diagnostic(manifest, parent, *, detailed=True):
         "| Documento | Estado | Cobertura | Ordem | Tabelas | Erros / avisos |",
         "| --- | --- | --- | --- | --- | --- |",
     ]
+    origin = manifest.get('provenance', {})
+    if origin.get('operation') == 'reaudit':
+        filters = origin['filters']
+        selection = [
+            '## Seleção da reauditoria', '',
+            f"Corrida de origem: {escaped(origin['run_id'])}. "
+            f"Selecionados: **{len(origin['selected_documents'])} de {origin['total_documents']}**.", '',
+            link(origin['manifest'], parent, 'Manifesto de origem') + '  ',
+            f"SHA-256: `{origin['manifest_sha256']}`", '',
+            'Critérios aplicados ao retrato da corrida anterior; cada documento selecionado '
+            'recebe todos os controlos atuais. A seleção não concede aprovação humana.', '',
+        ]
+        for label, value in [('Documento', filters['document']),
+                             ('Famílias (primeira subpasta)', ', '.join(filters['families'])),
+                             ('Regras', ', '.join(filters['rules'])),
+                             ('Estados', ', '.join(filters['statuses']))]:
+            if value:
+                selection += [f'- {label}: {escaped(value)}.']
+        selection.append('')
+        index = lines.index('## Resumo')
+        lines[index:index] = selection
     for report in reports:
         audit = report.get("completeness", {})
         amounts = Counter(f["severity"] for f in report.get("findings", []))

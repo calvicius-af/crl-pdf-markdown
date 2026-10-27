@@ -356,6 +356,7 @@ def _run(
     converter_factory=None,
     entries_override=None,
     report_provider=None,
+    provenance=None,
 ) -> list[dict]:
     """Converte um PDF ou uma pasta de PDFs.
 
@@ -383,6 +384,8 @@ def _run(
             "overwrite": overwrite,
         },
     )
+    if provenance is not None:
+        manifest['provenance'] = provenance
     reports = []
     # Os relatórios do lote são escritos já no início e atualizados a cada
     # documento: uma corrida longa interrompida (janela fechada, falta de

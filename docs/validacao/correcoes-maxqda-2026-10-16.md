@@ -1,5 +1,10 @@
 # Correções da auditoria e dos casos MAXQDA — 16/10/2026
 
+Seguimento de 27/10: a CLI passou a oferecer filtros de reauditoria por família,
+regra e estado, com simulação e proveniência. Consulte o
+[registo de implementação](../desenvolvimento/reauditoria-seletiva-2026-10-27.md).
+As limitações e contagens abaixo conservam o retrato de 16/10.
+
 ## Implementação
 
 O trabalho está em `codex/5-auditoria-maxqda`, sobre a integração do PR #4.
