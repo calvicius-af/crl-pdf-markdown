@@ -25,6 +25,9 @@ def signed_values(text: str) -> Counter:
 
 
 def amounts(text: str) -> Counter:
+    # Pontos de preenchimento não são separadores decimais/de milhares.
+    # Sem esta fronteira, «Almoço........8,50 €» perde o valor na auditoria.
+    text = re.sub(r"\.{3,}", " ", text)
     return Counter(canonical_number(v) for v in AMOUNT.findall(text))
 
 
@@ -67,6 +70,16 @@ def _pdf_numeric_tokens(pdf: Path, document=None):
                     else:
                         gap, aligned = 100, False
                     close = aligned and 0 <= gap <= 4 and previous.get('direction', 'ltr') == direction
+                    # Espaços sobrepostos no PDF podem partir um único número
+                    # em «9» + «78,49». Só reunir fragmentos numéricos com uma
+                    # sobreposição subpontual na mesma linha e direção.
+                    overlapping_digits = (
+                        direction == previous.get('direction', 'ltr') == 'ltr'
+                        and aligned and -.5 <= gap < 0
+                        and bool(re.fullmatch(r'[-−–—+]?\d{1,3}', tokens[-1]))
+                        and bool(re.fullmatch(r'\d{1,3}(?:[,.]\d{2})?', value))
+                    )
+                    close = close or overlapping_digits
                     # Um operador no fim de uma linha de prosa continua na
                     # margem esquerda seguinte; nunca unir células distantes.
                     wrapped = (direction == 'ltr' and previous['x1'] > page.width * .75
@@ -80,13 +93,14 @@ def _pdf_numeric_tokens(pdf: Path, document=None):
                     if close and direction == 'ltr':
                         # Uma fronteira de célula não é espaço de milhares
                         # nem liga um travessão isolado ao valor da outra coluna.
-                        if any(previous['x1'] <= edge['x0'] <= word['x0']
+                        if any(min(previous['x1'], word['x0']) <= edge['x0']
+                               <= max(previous['x1'], word['x0'])
                                and edge['top'] <= word['top'] < edge['bottom']
                                for edge in page.vertical_edges):
                             close = False
                     if sign and aligned and direction == 'ltr' and 4 < gap <= previous['height'] * 2:
                         close = same_cell(previous, word)
-                    if (close and (sign or thousands)) or (wrapped and sign):
+                    if (close and (sign or thousands or overlapping_digits)) or (wrapped and sign):
                         tokens[-1] += value
                         grouped[-1] = grouped[-1] or bool(thousands)
                         continue
@@ -277,8 +291,13 @@ def _audit_pdf(
         numeric_evidence = []
         for page_no, page_text in enumerate(pages, 1):
             for line in page_text.splitlines():
-                compact = canonical_number(line)
-                hits = sorted(v for v in disputed if v.lstrip('+-') in compact)
+                # Comparar tokens inteiros: 500 não localiza 5000 e 8,50
+                # não localiza 18,50. O sinal faz parte da evidência.
+                values = set(amounts(line)) | set(signed_values(line))
+                values.update(ch for ch in line if ch in "%‰€$£§<>≤≥≠±")
+                values.update(re.sub(r'\s+', '', v) for v in
+                              re.findall(r'\d+(?:[.,]\d+)?\s*[%‰]', line))
+                hits = sorted(disputed & values)
                 if hits:
                     numeric_evidence.append({'page': page_no, 'values': hits, 'source_text': line})
         report['numeric_evidence'] = numeric_evidence

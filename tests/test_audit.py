@@ -154,3 +154,65 @@ def test_wider_sign_gap_inside_same_drawn_cell_is_preserved(tmp_path):
         grelha(50, 650, [120, 70], [25, 25]) + [
             (55, 685, 'Valor'), (180, 685, 'Nota'), (70, 660, '-'), (85, 660, '70 %')]])
     assert pdf_signed_values(pdf) == Counter({'-70': 1})
+
+
+def test_dot_leaders_preserve_amounts_and_still_detect_a_changed_value(tmp_path):
+    original = 'Almoço/jantar........8,50 EUR; total 1.250,00 EUR.'
+    pdf = escrever_pdf(tmp_path / 'leaders.pdf', [pagina_bte(1, [original])])
+    doc, text = estruturar(original, 'leaders')
+    result, findings, _ = audit_pdf(pdf, text, doc, text, 0)
+    assert amounts(original) == Counter({'8,50': 1, '1250,00': 1})
+    assert result['amounts_missing'] == result['amounts_extra'] == {}
+    assert not any(f.rule == 'AMOUNTS' for f in findings)
+    result, findings, _ = audit_pdf(pdf, text.replace('8,50', '18,50'), doc, text, 0)
+    assert result['amounts_missing'] == {'8,50': 1}
+    assert result['amounts_extra'] == {'18,50': 1}
+    assert any(f.rule == 'AMOUNTS' and f.severity == 'error' for f in findings)
+
+
+def test_overlapping_space_cannot_truncate_the_pdf_numeric_reference(tmp_path):
+    import pdfplumber
+    # Um espaço escrito sobre o primeiro algarismo faz extract_words separar
+    # «9» e «78,49», embora o PDF apresente um único 978,49 (caso ANACOM).
+    pdf = escrever_pdf(tmp_path / 'overlapping.pdf', [[
+        (50, 700, '1'), (70, 700, '9'), (75.5, 700, '78,49'), (70, 700, ' '),
+    ]])
+    with pdfplumber.open(pdf) as source:
+        words = source.pages[0].dedupe_chars().extract_words(x_tolerance=1, y_tolerance=1)
+        assert [w['text'] for w in words] == ['1', '9', '78,49']
+    assert pdf_amounts(pdf) == Counter({'978,49': 1})
+    doc, text = estruturar('1 | 978,49', 'overlapping')
+    result, findings, _ = audit_pdf(pdf, text, doc, text, 0)
+    assert not any(f.rule == 'AMOUNTS' for f in findings)
+    result, findings, _ = audit_pdf(pdf, '1 | 78,49', doc, text, 0)
+    assert result['amounts_missing'] == {'978,49': 1}
+    assert result['amounts_extra'] == {'78,49': 1}
+
+
+def test_numeric_overlap_never_joins_across_a_drawn_cell_boundary(tmp_path):
+    pdf = escrever_pdf(tmp_path / 'boundary.pdf', [[
+        (70, 700, '9'), (75.5, 700, '78,49'), (70, 700, ' '),
+        ('traco', 75.53, 690, 75.53, 715),
+    ]])
+    assert pdf_amounts(pdf) == Counter({'78,49': 1})
+
+
+def test_large_overlaps_are_not_interpreted_as_numeric_kerning(tmp_path):
+    pdf = escrever_pdf(tmp_path / 'ambiguous.pdf', [[
+        (70, 700, '9'), (73, 700, '78,49'), (70, 700, ' '),
+    ]])
+    assert pdf_amounts(pdf) == Counter({'78,49': 1})
+
+
+def test_numeric_evidence_matches_complete_values_with_their_signs(tmp_path):
+    original = ['O saldo é -500 euros.', 'O limite é 5000 euros.',
+                'O almoço custa 8,50 euros.', 'O jantar custa 18,50 euros.',
+                'O crédito é +500 euros.']
+    pdf = escrever_pdf(tmp_path / 'evidence.pdf', [pagina_bte(1, original)])
+    doc, text = estruturar('\n'.join(original), 'evidence')
+    result, _, _ = audit_pdf(pdf, text.replace('-500', '').replace(' 8,50', ''), doc, text, 0)
+    evidence = result['numeric_evidence']
+    assert {value for item in evidence for value in item['values']} == {'-500', '8,50'}
+    assert len(evidence) == 2
+    assert all('5000' not in item['source_text'] and '18,50' not in item['source_text']
+               and '+500' not in item['source_text'] for item in evidence)
