@@ -1,5 +1,9 @@
 # Repositório e integração — 16/10/2026
 
+Seguimento de 27/10: [revisão e consolidação](../revisoes/revisao-consolidacao-2026-10-27.md).
+Relação entre PRs e referências históricas novamente verificada; o inventário
+abaixo conserva o retrato anterior.
+
 Seguimento: `codex/5-auditoria-maxqda` parte da integração `9070ad6` e concentra
 o contrato comum de revisão/auditoria e os respetivos percursos GUI. Os commits
 separam siglas, motor de auditoria, GUI e correções numéricas/tabelas. Consulte

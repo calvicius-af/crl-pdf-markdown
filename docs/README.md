@@ -8,6 +8,11 @@ As [correções de 16/10 e casos MAXQDA](validacao/correcoes-maxqda-2026-10-16.m
 registam a implementação e a validação posterior ao diagnóstico inicial.
 A [hierarquia Markdown](operacao/hierarquia-markdown.md) define os níveis das
 divisões, cláusulas e anexos.
+O [seguimento de 27/10](desenvolvimento/reauditoria-seletiva-2026-10-27.md)
+acrescenta seleção de reauditoria por família, regra e estado, com simulação
+e proveniência verificadas num documento real. A
+[investigação dos montantes](desenvolvimento/montantes-2026-10-27.md) corrige dois
+defeitos do auditor e regista a reauditoria das 18 convenções selecionadas.
 
 | Preciso de…                                                      | Documento                                                                                          |
 | ---------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
@@ -25,6 +30,10 @@ divisões, cláusulas e anexos.
 | Preparar o relatório metodológico                                | [Modelo de conformidade](validacao/modelo-conformidade.md)                                         |
 | Consultar a consolidação e validação atual                       | [Verificação de fecho](validacao/fecho-2026-10-13.md)                                              |
 | Consultar a primeira integração de 13/10/2026                    | [Registo da intervenção](validacao/integracao-2026-10-13.md)                                       |
+
+A [revisão e consolidação de 27/10](revisoes/revisao-consolidacao-2026-10-27.md)
+regista o achado de integridade corrigido, a relação entre PRs e as referências
+históricas preservadas.
 
 ## Fontes fornecidas e como foram utilizadas
 
