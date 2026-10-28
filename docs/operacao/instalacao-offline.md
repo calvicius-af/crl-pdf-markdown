@@ -1,5 +1,7 @@
 # Instalar e reparar sem internet
 
+Para a versão de teste, comece pelo [guia curto](testar-pacote-offline.md).
+
 ## Para quem vai utilizar
 
 1. Receba uma pasta completa do pacote CRL, preparada para o seu sistema e Python.
@@ -73,7 +75,9 @@ py -3.13 scripts\preparar_offline.py --saida C:\CRL-pacote --modelos C:\modelos-
 O preparador cria wheelhouse, modelos, vocabulários, guias, instalador e manifesto
 de integridade. O instalador verifica hashes e compatibilidade antes de criar o
 ambiente. Usa pip com `--no-index`, sem compilar bibliotecas na estação e sem rede.
-A preparação precisa de rede; **não foi executada nesta intervenção**.
+A preparação precisa de rede; a instalação na estação utiliza apenas os ficheiros
+do pacote. O workflow disponibiliza o pacote completo apenas depois de o ensaio
+de instalação/conversão Windows terminar com sucesso.
 
 Se a preparação falhar, a pasta fica marcada `PACOTE_INCOMPLETO.txt` e não pode
 ser distribuída. Volte a preparar numa pasta nova após resolver a causa. A saída do
@@ -86,6 +90,20 @@ UNC. Ao passar uma origem `\\localhost\C$` ao pip, usa um URI com o servidor
 `127.0.0.1`, para evitar a interpretação de `localhost` como disco local.
 Se já descarregou e verificou os modelos, reutilize essa pasta; uma falha na
 preparação das wheels não exige descarregar novamente os modelos.
+
+## Caminhos com acentos no Windows
+
+O docling-parse 7.22.2 tem um problema na abertura dos seus recursos nativos
+quando o caminho das bibliotecas contém acentos. O instalador usa, quando
+disponível, o alias ASCII 8.3 da **mesma** pasta `site-packages`, verificado
+por identidade no sistema de ficheiros. Uma linha `.pth` local ao novo ambiente
+seleciona esse caminho antes de importar Docling; nenhuma wheel é alterada.
+O alias e o hash desse bootstrap ficam em `instalacao.json`.
+
+Se a estação não fornecer um alias ASCII, a instalação para antes do pip e
+conserva o lançador anterior. O apoio pode repetir com `--destination` numa pasta
+local sem acentos e com acesso de escrita. O pacote e os PDFs podem manter os
+seus nomes; não renomeie o utilizador nem altere os manifestos.
 
 ## Gate obrigatório antes de distribuir
 

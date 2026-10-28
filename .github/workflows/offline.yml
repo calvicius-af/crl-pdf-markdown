@@ -15,6 +15,8 @@ jobs:
   offline:
     runs-on: windows-latest
     timeout-minutes: 60
+    env:
+      PYTHONUTF8: '1'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -72,3 +74,13 @@ jobs:
             ${{ runner.temp }}/Pacote CRL com espaços/requirements.install.txt
             ${{ runner.temp }}/Pacote CRL com espaços/preparacao.txt
             ${{ runner.temp }}/Pacote CRL com espaços/falha.txt
+      - name: Disponibilizar pacote completo para teste
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: CRL-offline-0.3.1rc1-windows-x64-py313
+          path: ${{ runner.temp }}/Pacote CRL com espaços/
+          include-hidden-files: true
+          compression-level: 0
+          retention-days: 30
+          if-no-files-found: error

@@ -63,6 +63,10 @@ como único motor principal de conversão, com cache auditada e auditores auxili
 
 ## Instalar e utilizar
 
+Candidato de teste: **0.3.1rc1**. Para testar o pacote completo sem rede, siga
+o [guia curto de instalação e teste](docs/operacao/testar-pacote-offline.md).
+O pacote Windows só é disponibilizado após o ensaio de instalação/conversão.
+
 Python 3.11 a 3.13; as estações do CRL usam Windows com Python 3.13. Instalar o
 Python de python.org com a opção «tcl/tk and IDLE», necessária à interface
 gráfica. No macOS, só há pacotes do PyTorch para Apple Silicon com macOS 14 ou
