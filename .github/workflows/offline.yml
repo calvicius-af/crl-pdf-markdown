@@ -24,6 +24,25 @@ jobs:
           python-version: '3.13'
           cache: pip
           cache-dependency-path: requirements/runtime.txt
+      - name: Confirmar caminho local do utilizador com acentos
+        run: |
+          $destination = Join-Path $env:LOCALAPPDATA 'Instalação CRL com espaços'
+          "CRL_OFFLINE_DEST=$destination" >> $env:GITHUB_ENV
+          $probe = @'
+          import importlib.util, sys
+          from pathlib import Path
+          spec = importlib.util.spec_from_file_location('installer', 'scripts/instalar_offline.py')
+          installer = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(installer)
+          packages = Path(sys.argv[1]) / 'prova' / 'Lib/site-packages'
+          packages.mkdir(parents=True)
+          alias = installer.windows_ascii_path(packages)
+          print('Pasta original:', packages)
+          print('Alias nativo:', alias)
+          assert str(alias).isascii() and alias.samefile(packages)
+          '@
+          $probe | python - $destination
+          if ($LASTEXITCODE -ne 0) { throw 'O destino de ensaio não tem alias nativo seguro' }
       - name: Preparar runtime e modelos com rede
         run: |
           python -m pip install . -c requirements/runtime.txt
@@ -34,7 +53,7 @@ jobs:
       - name: Instalar de pacote só de leitura e executar conversão sem sockets
         run: |
           $package = "$env:RUNNER_TEMP\Pacote CRL com espaços"
-          $destination = "$env:RUNNER_TEMP\Instalação CRL com espaços"
+          $destination = $env:CRL_OFFLINE_DEST
           # W inclui SYNCHRONIZE, necessário também para abrir em leitura.
           # Negar apenas escrita/apagamento conserva a leitura do instalador.
           icacls $package /deny "$($env:USERNAME):(OI)(CI)(WD,AD,WEA,WA,DE,DC)"
@@ -61,19 +80,30 @@ jobs:
           & $config.python -m crl_markdown doctor --models $config.models --out "$destination\assistencia\doctor"
           if ($LASTEXITCODE -ne 0) { throw "Doctor encontrou problemas na instalação" }
           if (-not $config.ocr_tested) { throw "Este ensaio exige modelos OCR completos" }
+      - name: Reunir evidência pequena do ensaio
+        if: always()
+        run: |
+          $evidence = "$env:RUNNER_TEMP\Evidencia CRL"
+          New-Item -ItemType Directory -Force -Path $evidence | Out-Null
+          if ($env:CRL_OFFLINE_DEST) {
+            if (Test-Path "$env:CRL_OFFLINE_DEST\assistencia") {
+              Copy-Item "$env:CRL_OFFLINE_DEST\assistencia" $evidence -Recurse
+            }
+            if (Test-Path "$env:CRL_OFFLINE_DEST\instalacao.json") {
+              Copy-Item "$env:CRL_OFFLINE_DEST\instalacao.json" $evidence
+            }
+          }
+          foreach ($name in @('pacote.json', 'requirements.install.txt', 'preparacao.txt', 'falha.txt')) {
+            $file = Join-Path "$env:RUNNER_TEMP\Pacote CRL com espaços" $name
+            if (Test-Path $file) { Copy-Item $file $evidence }
+          }
       - name: Guardar evidência pequena do ensaio
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: evidencia-offline-windows-py313
           if-no-files-found: warn
-          path: |
-            ${{ runner.temp }}/Instalação CRL com espaços/assistencia/**
-            ${{ runner.temp }}/Instalação CRL com espaços/instalacao.json
-            ${{ runner.temp }}/Pacote CRL com espaços/pacote.json
-            ${{ runner.temp }}/Pacote CRL com espaços/requirements.install.txt
-            ${{ runner.temp }}/Pacote CRL com espaços/preparacao.txt
-            ${{ runner.temp }}/Pacote CRL com espaços/falha.txt
+          path: ${{ runner.temp }}/Evidencia CRL/
       - name: Disponibilizar pacote completo para teste
         if: success()
         uses: actions/upload-artifact@v4
