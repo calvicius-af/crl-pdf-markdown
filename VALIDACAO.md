@@ -1,5 +1,14 @@
 # Validação de extração e Markdown — 1 de outubro de 2026
 
+Seguimento de 27/10: [auditoria das 18 convenções com divergências de montantes](docs/desenvolvimento/montantes-2026-10-27.md).
+Dois defeitos do comparador corrigidos; AMOUNTS passa de 18 para 16 no subconjunto,
+com 17 bloqueados e um para revisão. Suíte local: **600 aprovados, 23 omissões**.
+As contagens globais e ensaios históricos abaixo conservam as datas originais.
+
+Seguimento de 16/10: [correções e validação dos casos MAXQDA](docs/validacao/correcoes-maxqda-2026-10-16.md).
+A suíte desta implementação passou **584 testes**, com **23 omissões condicionais**.
+Os números do diagnóstico inicial abaixo descrevem a corrida anterior às correções.
+
 Atualização de 16/10: [diagnóstico do lote de 411 documentos e plano de melhoria](docs/validacao/diagnostico-lote-2026-10-16.md).
 Foram convertidos 411, sem falhas, com 76 sem alertas, 230 para revisão e 105
 bloqueados. A suíte atual passou 528 testes, com 22 omissões condicionais.

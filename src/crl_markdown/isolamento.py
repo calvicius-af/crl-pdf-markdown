@@ -16,8 +16,10 @@ de dezenas de documentos, e um processo novo não herda o estado do anterior.
 
 import faulthandler
 import multiprocessing
+import os
 import time
 import traceback
+from datetime import datetime, timezone
 from pathlib import Path
 
 # Hipótese de mitigação, não um valor medido: renovar custa recarregar os
@@ -52,6 +54,7 @@ class ErroNoProcesso(RuntimeError):
 def _trabalhador(ligacao, options, factory, registo_falhas):
     from .pipeline import convert_pdf
 
+    destino = None
     if registo_falhas:
         destino = open(registo_falhas, "a", encoding="utf-8")  # noqa: SIM115
         faulthandler.enable(file=destino)
@@ -64,6 +67,12 @@ def _trabalhador(ligacao, options, factory, registo_falhas):
         if tarefa is None:
             break
         pdf, target, overwrite, audit_dir = tarefa
+        if destino is not None:
+            destino.write(
+                f"\nDocumento: {pdf}\nUTC: {datetime.now(timezone.utc).isoformat()} "
+                f"PID: {os.getpid()}\n"
+            )
+            destino.flush()
         if converter is None:
             try:
                 converter = factory(options)
@@ -96,6 +105,13 @@ class ConversorIsolado:
         self.contexto = multiprocessing.get_context("spawn")
         self.processo = self.ligacao = None
         self.feitos = 0
+        self.events = []
+
+    def _evento(self, kind, pdf, tentativa, **detail):
+        self.events.append({
+            "kind": kind, "source": str(pdf.resolve()), "attempt": tentativa,
+            "at_utc": datetime.now(timezone.utc).isoformat(), **detail,
+        })
 
     def _iniciar(self):
         if self.processo is not None:
@@ -163,12 +179,18 @@ class ConversorIsolado:
             else:
                 resultado = self._esperar(prazo)
             if resultado is None or resultado[0] == "prazo":
+                # O EOF pode chegar antes de multiprocessing atualizar exitcode.
+                # Recolher o estado antes de descartar (ou matar) o processo.
+                self.processo.join(1)
                 codigo = self.processo.exitcode
                 self._descartar()
                 if resultado is not None:
-                    raise FalhaNativa(
+                    self._evento("timeout", pdf, tentativa, timeout_seconds=prazo)
+                    raise TimeoutError(
                         f"a conversão excedeu {prazo:.0f} s e o processo foi terminado"
                     )
+                self._evento("worker_exit", pdf, tentativa, exitcode=codigo,
+                             retry=tentativa == 1)
                 if tentativa == 1:
                     self.aviso(
                         f"  o processo de conversão terminou com uma falha nativa (código "
@@ -188,6 +210,8 @@ class ConversorIsolado:
             if self.feitos >= self.renovar_a_cada:
                 self.fechar()
             if resultado[0] == "ok":
+                if tentativa == 2:
+                    self._evento("recovered", pdf, tentativa)
                 return resultado[1]
             raise ErroNoProcesso(resultado[1], resultado[2], resultado[3])
         raise AssertionError("inalcançável")

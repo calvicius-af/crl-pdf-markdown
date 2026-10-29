@@ -1,0 +1,721 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-27",
+  "scope": "18 documentos selecionados de uma corrida de 411; triagem técnica, sem aprovação humana integral.",
+  "baseline_run_id": "20261016T160138618141Z-a09195ae",
+  "baseline_manifest_sha256": "5bb965047936c8d22cbac1ec2a5788d414541e3d47c10e1e5c5e80d52815cf12",
+  "candidate_run_id": "20261027T195931683269Z-4862837e",
+  "candidate_manifest_sha256": "73fad7bb9cecbab249464982072ffc6f6111f895412164d7d6a1bbde2693c2df",
+  "pipeline_fingerprint": "33f1ee30172b170a0e5a08ce2db8f46cf5ddc58a42d21896710df3969ec86aee",
+  "selected_documents": 18,
+  "baseline_total": 411,
+  "before": {
+    "quality_status": {
+      "blocked": 18
+    },
+    "amounts_affected": 18
+  },
+  "after": {
+    "quality_status": {
+      "blocked": 17,
+      "review": 1
+    },
+    "amounts_affected": 16
+  },
+  "original_files_verified_unchanged": 2068,
+  "original_file_set_unchanged": true,
+  "all_selected_pdfs_and_markdown_unchanged": true,
+  "human_approvals_created": 0,
+  "documents": [
+    {
+      "document": "convencoes/PRI/2026_BTE_05_PRI_053_CCT_27204_ACAP-SINDEL+3.pdf",
+      "source_sha256": "ff2304dac05a163737dc7e8e37abaf7ac302a3c2b824abe8268378df68b2b446",
+      "markdown_sha256": "4f7ed6fbe3493dfe1689519612d40428850c3dbb9ea8036d705236c35fc495b7",
+      "markdown_unchanged": true,
+      "status_before": "blocked",
+      "status_after": "blocked",
+      "technical_triage": "auditor_dot_leaders",
+      "note": "Corrigido AMOUNTS: 8,50 preservado após pontos de preenchimento. Falta de -500 na fórmula mantém CRITICAL_SYMBOLS.",
+      "source_pages_to_review": [
+        29,
+        12
+      ],
+      "amounts_before": {
+        "amounts_missing": {
+          "8,50": 1
+        },
+        "amounts_extra": {}
+      },
+      "amounts_after": {
+        "amounts_missing": {},
+        "amounts_extra": {}
+      },
+      "remaining_error_rules": [
+        "CRITICAL_SYMBOLS"
+      ]
+    },
+    {
+      "document": "convencoes/PRI/2026_BTE_07_PRI_075_CCT-ALT_26761_ANF-SIFAP.pdf",
+      "source_sha256": "919041c1d7873120a65f3387b2ec1a87bf8e7671c6a2c13ffaedb8d70a7f2bbb",
+      "markdown_sha256": "b18c36848706ced32769790138af016e2ea9975f7cf88e906605bdf9d75d2656",
+      "markdown_unchanged": true,
+      "status_before": "blocked",
+      "status_after": "blocked",
+      "technical_triage": "merged_table_columns",
+      "note": "Hífen da categoria e salário fundidos numa célula, com Grau I/II/III deslocados. Conferência visual da página 3 confirma colunas distintas; não dispensar sinais.",
+      "source_pages_to_review": [
+        3
+      ],
+      "amounts_before": {
+        "amounts_missing": {
+          "939,78": 1,
+          "933,42": 1,
+          "926,59": 1
+        },
+        "amounts_extra": {
+          "-939,78": 1,
+          "-933,42": 1,
+          "-926,59": 1
+        }
+      },
+      "amounts_after": {
+        "amounts_missing": {
+          "939,78": 1,
+          "933,42": 1,
+          "926,59": 1
+        },
+        "amounts_extra": {
+          "-939,78": 1,
+          "-933,42": 1,
+          "-926,59": 1
+        }
+      },
+      "remaining_error_rules": [
+        "AMOUNTS",
+        "CRITICAL_SYMBOLS"
+      ]
+    },
+    {
+      "document": "convencoes/PRI/2026_BTE_07_PRI_077_AE-ALT_46670_GrupoPestanaPousadas-FESAHT.pdf",
+      "source_sha256": "b82e20b6f5b0888c12d6162195e4cd843c507b7d2a45a4600f1e43980d04691b",
+      "markdown_sha256": "4444780ec1f1c093762db52b1986e0d6290fefb0ec0100932bd2af0db3753e91",
+      "markdown_unchanged": true,
+      "status_before": "blocked",
+      "status_after": "blocked",
+      "technical_triage": "salary_grid_content_loss",
+      "note": "Valores sem algarismo de milhares e ocorrências ausentes em grelhas densas; manter bloqueio e conferir posições.",
+      "source_pages_to_review": [
+        3,
+        4,
+        7
+      ],
+      "amounts_before": {
+        "amounts_missing": {
+          "998,00": 1,
+          "982,00": 2,
+          "984,00": 2,
+          "986,00": 2,
+          "988,00": 1,
+          "990,00": 1,
+          "992,00": 1,
+          "994,00": 1,
+          "996,00": 1,
+          "970,00": 1,
+          "972,00": 1,
+          "974,00": 1,
+          "976,00": 1,
+          "978,00": 1,
+          "980,00": 1,
+          "1020,85": 1,
+          "1035,50": 1,
+          "1066,91": 1,
+          "1082,62": 1,
+          "1114,00": 1
+        },
+        "amounts_extra": {
+          "114,00": 1,
+          "082,62": 1,
+          "066,91": 1,
+          "035,50": 1,
+          "020,85": 1
+        }
+      },
+      "amounts_after": {
+        "amounts_missing": {
+          "998,00": 1,
+          "982,00": 2,
+          "984,00": 2,
+          "986,00": 2,
+          "988,00": 1,
+          "990,00": 1,
+          "992,00": 1,
+          "994,00": 1,
+          "996,00": 1,
+          "970,00": 1,
+          "972,00": 1,
+          "974,00": 1,
+          "976,00": 1,
+          "978,00": 1,
+          "980,00": 1,
+          "1020,85": 1,
+          "1035,50": 1,
+          "1066,91": 1,
+          "1082,62": 1,
+          "1114,00": 1
+        },
+        "amounts_extra": {
+          "114,00": 1,
+          "082,62": 1,
+          "066,91": 1,
+          "035,50": 1,
+          "020,85": 1
+        }
+      },
+      "remaining_error_rules": [
+        "AMOUNTS",
+        "COMPLETENESS",
+        "TABLE_OVERLAP"
+      ]
+    },
+    {
+      "document": "convencoes/PRI/2026_BTE_13_PRI_138_AE-ALT_46226_ANACOM-SINDETELCO+2.pdf",
+      "source_sha256": "f017d82d373ffa1256a974b2ec47052ac82b1477e5e7d56565aad003021878fb",
+      "markdown_sha256": "558042e260827004bcb90c1a4cce60048c1ea8a16db6d751bcfedba41da17daa",
+      "markdown_unchanged": true,
+      "status_before": "blocked",
+      "status_after": "review",
+      "technical_triage": "auditor_overlapping_space",
+      "note": "Corrigida referência 9 + 78,49: espaço sobreposto separava um único 978,49. Nível 1 fica numa coluna separada. Conferência visual local; sem aprovação integral.",
+      "source_pages_to_review": [
+        4
+      ],
+      "amounts_before": {
+        "amounts_missing": {
+          "78,49": 1
+        },
+        "amounts_extra": {
+          "978,49": 1
+        }
+      },
+      "amounts_after": {
+        "amounts_missing": {},
+        "amounts_extra": {}
+      },
+      "remaining_error_rules": []
+    },
+    {
+      "document": "convencoes/PRI/2026_BTE_14_PRI_146_ACT_17223_Regantes-SETAAB+22.pdf",
+      "source_sha256": "879baa9d9ca94f62b97238fbe2389650c7cf7d8dc18d11aad1f71a768880eae3",
+      "markdown_sha256": "867a7ef87fd46343bbe410db3c694661badb49285063f84b7d7322d704f2c68a",
+      "markdown_unchanged": true,
+      "status_before": "blocked",
+      "status_after": "blocked",
+      "technical_triage": "table_count_and_position_disagreement",
+      "note": "Desacordo de uma ocorrência de 920,00, sobreposições e posições de células. A localização exata dessa ocorrência continua pendente.",
+      "source_pages_to_review": [],
+      "amounts_before": {
+        "amounts_missing": {
+          "920,00": 1
+        },
+        "amounts_extra": {}
+      },
+      "amounts_after": {
+        "amounts_missing": {
+          "920,00": 1
+        },
+        "amounts_extra": {}
+      },
+      "remaining_error_rules": [
+        "AMOUNTS",
+        "CRITICAL_SYMBOLS",
+        "IMAGE",
+        "TABLE_CELL_POSITION",
+        "TABLE_OVERLAP"
+      ]
+    },
+    {
+      "document": "convencoes/PRI/2026_BTE_15_PRI_166_ACT_17225_LACTICOOP-LACTICINIOS+1.pdf",
+      "source_sha256": "85e0093365a97e3c2a5fbe31bd8444475f9a5eddb5648628dc82c1af59e3b361",
+      "markdown_sha256": "a893e6c1ead30775047430bf0f0764ac7028c7cfed76c436de29c172fe4dcf85",
+      "markdown_unchanged": true,
+      "status_before": "blocked",
+      "status_after": "blocked",
+      "technical_triage": "empty_formula_item",
+      "note": "Fórmula A = VM x 0,75 : 30 em orig de item Docling formula, com text vazio; ausente no Markdown. Outra fórmula fracionária também tem text vazio.",
+      "source_pages_to_review": [
+        9,
+        8
+      ],
+      "amounts_before": {
+        "amounts_missing": {
+          "0,75": 1
+        },
+        "amounts_extra": {}
+      },
+      "amounts_after": {
+        "amounts_missing": {
+          "0,75": 1
+        },
+        "amounts_extra": {}
+      },
+      "remaining_error_rules": [
+        "AMOUNTS"
+      ]
+    },
+    {
+      "document": "convencoes/PRI/2026_BTE_15_PRI_167_ACT_17226_LACTICOOP-SETAAB+1.pdf",
+      "source_sha256": "43e86f5dcbe5035641ca3de62a51814c6c7f29ffc9db2b37cda55fbf05630cf9",
+      "markdown_sha256": "1afdaa10a96c05284583ac8d726d4dc4114a6acccbd2d08aff067271892ed59e",
+      "markdown_unchanged": true,
+      "status_before": "blocked",
+      "status_after": "blocked",
+      "technical_triage": "empty_formula_item",
+      "note": "Fórmula A = VM x 0,75 : 30 em orig de item Docling formula, com text vazio; ausente no Markdown. Não aprovar por simples dispensa de AMOUNTS.",
+      "source_pages_to_review": [
+        9
+      ],
+      "amounts_before": {
+        "amounts_missing": {
+          "0,75": 1
+        },
+        "amounts_extra": {}
+      },
+      "amounts_after": {
+        "amounts_missing": {
+          "0,75": 1
+        },
+        "amounts_extra": {}
+      },
+      "remaining_error_rules": [
+        "AMOUNTS"
+      ]
+    },
+    {
+      "document": "convencoes/PRI/2026_BTE_17_PRI_199_AE-ALT_47062_CITEFORMA-SITESE.pdf",
+      "source_sha256": "7c35a7ad6921b055efb61447f8deb87deb41b3455d2ae535f86fe6ca71742194",
+      "markdown_sha256": "0d1367c8760e87b16fc0369a13d365e334083493dcfea14ca03f5f1fbd494c90",
+      "markdown_unchanged": true,
+      "status_before": "blocked",
+      "status_after": "blocked",
+      "technical_triage": "missing_salary_occurrences",
+      "note": "20 ocorrências monetárias em falta, incluindo valores que aparecem noutras linhas. A presença de uma cópia não comprova conservação da tabela.",
+      "source_pages_to_review": [
+        23,
+        24
+      ],
+      "amounts_before": {
+        "amounts_missing": {
+          "1446,51": 1,
+          "1035,63": 1,
+          "1074,56": 1,
+          "1130,71": 1,
+          "1183,35": 1,
+          "1235,98": 1,
+          "1288,63": 1,
+          "1341,25": 1,
+          "1393,88": 1,
+          "1974,59": 1,
+          "2137,05": 1,
+          "2353,90": 1,
+          "2570,73": 1,
+          "2790,66": 1,
+          "3019,58": 1,
+          "3250,36": 1,
+          "3481,16": 1,
+          "3711,96": 1,
+          "3885,06": 1,
+          "4058,13": 1
+        },
+        "amounts_extra": {}
+      },
+      "amounts_after": {
+        "amounts_missing": {
+          "1446,51": 1,
+          "1035,63": 1,
+          "1074,56": 1,
+          "1130,71": 1,
+          "1183,35": 1,
+          "1235,98": 1,
+          "1288,63": 1,
+          "1341,25": 1,
+          "1393,88": 1,
+          "1974,59": 1,
+          "2137,05": 1,
+          "2353,90": 1,
+          "2570,73": 1,
+          "2790,66": 1,
+          "3019,58": 1,
+          "3250,36": 1,
+          "3481,16": 1,
+          "3711,96": 1,
+          "3885,06": 1,
+          "4058,13": 1
+        },
+        "amounts_extra": {}
+      },
+      "remaining_error_rules": [
+        "AMOUNTS",
+        "IMAGE"
+      ]
+    },
+    {
+      "document": "convencoes/PRI/2026_BTE_18_PRI_219_AE-ALT_46988_ManosDouro-FESMAR.pdf",
+      "source_sha256": "175d76c748c2b8be29dda841493c1dca5e7a9c0d5681e15d95097f0096e64b60",
+      "markdown_sha256": "10cc283ad9028c16c9695bdfe16bc9346d3d06d7b091964edcb9c1dc05b0aef5",
+      "markdown_unchanged": true,
+      "status_before": "blocked",
+      "status_after": "blocked",
+      "technical_triage": "missing_salary_row",
+      "note": "Sequência 1 001,00 a 1 197,00 e sete símbolos euro ausentes; conferir linha remuneratória antes de corrigir.",
+      "source_pages_to_review": [
+        30
+      ],
+      "amounts_before": {
+        "amounts_missing": {
+          "1001,00": 1,
+          "1032,00": 1,
+          "1063,00": 1,
+          "1095,00": 1,
+          "1128,00": 1,
+          "1162,00": 1,
+          "1197,00": 1
+        },
+        "amounts_extra": {}
+      },
+      "amounts_after": {
+        "amounts_missing": {
+          "1001,00": 1,
+          "1032,00": 1,
+          "1063,00": 1,
+          "1095,00": 1,
+          "1128,00": 1,
+          "1162,00": 1,
+          "1197,00": 1
+        },
+        "amounts_extra": {}
+      },
+      "remaining_error_rules": [
+        "AMOUNTS",
+        "CRITICAL_SYMBOLS"
+      ]
+    },
+    {
+      "document": "convencoes/PRI/2026_BTE_21_PRI_243_AE-ALT_47145_REBONAVE-TRANSPORTESFLUVIAIS+1.pdf",
+      "source_sha256": "013e038536151c9095f53c3a07ce565059551a910cf540c00a998eb1d86647da",
+      "markdown_sha256": "190d3cd0b0779860580e2ed2b08c13f7712c62c13894bad4ba21ce60ec9362c5",
+      "markdown_unchanged": true,
+      "status_before": "blocked",
+      "status_after": "blocked",
+      "technical_triage": "missing_salary_cell",
+      "note": "Montante 3 417,46 e um símbolo euro ausentes; conferir célula/linha na fonte.",
+      "source_pages_to_review": [
+        4
+      ],
+      "amounts_before": {
+        "amounts_missing": {
+          "3417,46": 1
+        },
+        "amounts_extra": {}
+      },
+      "amounts_after": {
+        "amounts_missing": {
+          "3417,46": 1
+        },
+        "amounts_extra": {}
+      },
+      "remaining_error_rules": [
+        "AMOUNTS",
+        "CRITICAL_SYMBOLS"
+      ]
+    },
+    {
+      "document": "convencoes/PRI/2026_BTE_24_PRI_283_AE-ALT_46359_UnitedEuropeanCar-FESMAR.pdf",
+      "source_sha256": "4dd06147c1a470b852b3f532df3bc3176fa2de92be04511ebb207d2d5340d9e9",
+      "markdown_sha256": "ab2549748502e3332d79bc368156b1113b063129d54b27a15574639a661c4df8",
+      "markdown_unchanged": true,
+      "status_before": "blocked",
+      "status_after": "blocked",
+      "technical_triage": "empty_formula_item",
+      "note": "Duas fórmulas fracionárias têm orig preservado e text vazio: Rh = Rm × 12 × 1,5 52 × Hs e Rh = Rm × 12 × 1,75 52 × Hs. Não converter esta sequência em fórmula linear sem recuperar a fração.",
+      "source_pages_to_review": [
+        4,
+        5
+      ],
+      "amounts_before": {
+        "amounts_missing": {
+          "1,75": 1
+        },
+        "amounts_extra": {}
+      },
+      "amounts_after": {
+        "amounts_missing": {
+          "1,75": 1
+        },
+        "amounts_extra": {}
+      },
+      "remaining_error_rules": [
+        "AMOUNTS"
+      ]
+    },
+    {
+      "document": "convencoes/PRI/2026_BTE_30_PRI_373_AE-ALT_47019_SCML-SDPGL+7.pdf",
+      "source_sha256": "de1e42d6ee4f1510ba35b50e8e778a3bbf294be3f2f9f7dfce7ef13fef1b06a9",
+      "markdown_sha256": "88aee38b2b44ef24975cd0232a15bbdc4961966a1a3250532821057ebe216194",
+      "markdown_unchanged": true,
+      "status_before": "blocked",
+      "status_after": "blocked",
+      "technical_triage": "thousands_split_between_cells",
+      "note": "Algarismos iniciais de 1 163,87, 1 957,47 e 2 190,94 surgem na célula anterior. Junção global apagaria o erro de associação.",
+      "source_pages_to_review": [
+        3
+      ],
+      "amounts_before": {
+        "amounts_missing": {
+          "1163,87": 1,
+          "1957,47": 1,
+          "2190,94": 1
+        },
+        "amounts_extra": {
+          "163,87": 1,
+          "957,47": 1,
+          "190,94": 1
+        }
+      },
+      "amounts_after": {
+        "amounts_missing": {
+          "1163,87": 1,
+          "1957,47": 1,
+          "2190,94": 1
+        },
+        "amounts_extra": {
+          "163,87": 1,
+          "957,47": 1,
+          "190,94": 1
+        }
+      },
+      "remaining_error_rules": [
+        "AMOUNTS"
+      ]
+    },
+    {
+      "document": "convencoes/PRI/2026_BTE_32_PRI_395_ACT-ALT_16136_AutoEstradas-SETACCOP+3.pdf",
+      "source_sha256": "8fe6ff3c2db6fb98e99ddb875d9f2891dcb2bd641ededbc2ebd2a40b58a71b91",
+      "markdown_sha256": "5a783c8d5f854632ecca3d6abe8f3d6f99375b2ed7204b38080020ee79f294f0",
+      "markdown_unchanged": true,
+      "status_before": "blocked",
+      "status_after": "blocked",
+      "technical_triage": "thousands_split_between_cells",
+      "note": "1 561,00 surge como 1 e 561,00 em células distintas em duas cópias da tabela. Também falta -500 numa fórmula.",
+      "source_pages_to_review": [
+        6,
+        38,
+        11
+      ],
+      "amounts_before": {
+        "amounts_missing": {
+          "1561,00": 2
+        },
+        "amounts_extra": {
+          "561,00": 2
+        }
+      },
+      "amounts_after": {
+        "amounts_missing": {
+          "1561,00": 2
+        },
+        "amounts_extra": {
+          "561,00": 2
+        }
+      },
+      "remaining_error_rules": [
+        "AMOUNTS",
+        "CRITICAL_SYMBOLS",
+        "TABLE_CELL_POSITION",
+        "TABLE_OVERLAP"
+      ]
+    },
+    {
+      "document": "convencoes/PRI/2026_BTE_33_PRI_413_AE-ALT-RECT_46691_FundacaoINATEL-SINTAP.pdf",
+      "source_sha256": "5f6bb484389491bc595ccae40ccb5375af2649aea068ce592810f012639b4eef",
+      "markdown_sha256": "8b6c71a6e313f3e53e1f80d1c2839a53b9b5f5d4e20657fed43aa13b52908c9d",
+      "markdown_unchanged": true,
+      "status_before": "blocked",
+      "status_after": "blocked",
+      "technical_triage": "salary_grid_count_disagreement",
+      "note": "Faltam ocorrências de valores numa grelha com TABLE_GRID_GAP; localizar linha/categoria sem usar contagem global como prova de associação.",
+      "source_pages_to_review": [
+        2,
+        3
+      ],
+      "amounts_before": {
+        "amounts_missing": {
+          "965,35": 1,
+          "930,00": 1,
+          "1000,13": 1,
+          "1034,90": 1,
+          "1069,67": 1,
+          "1104,44": 1,
+          "1139,22": 1,
+          "1173,99": 1,
+          "1208,77": 1
+        },
+        "amounts_extra": {}
+      },
+      "amounts_after": {
+        "amounts_missing": {
+          "965,35": 1,
+          "930,00": 1,
+          "1000,13": 1,
+          "1034,90": 1,
+          "1069,67": 1,
+          "1104,44": 1,
+          "1139,22": 1,
+          "1173,99": 1,
+          "1208,77": 1
+        },
+        "amounts_extra": {}
+      },
+      "remaining_error_rules": [
+        "AMOUNTS",
+        "TABLE_GRID_GAP"
+      ]
+    },
+    {
+      "document": "convencoes/SPE/2026_BTE_31_SPE_387_AE-ALT-RECT_47109_CARRISTUR-ASPTC.pdf",
+      "source_sha256": "2c0846b9cf2a96808b949fb67e69db66815eeb99d95f8199516d7f7914ab32cd",
+      "markdown_sha256": "7d42f6ca9687a1e7a268fe711dde71545f5dfea19d0f5c57550b7602a146b1c0",
+      "markdown_unchanged": true,
+      "status_before": "blocked",
+      "status_after": "blocked",
+      "technical_triage": "thousands_split_and_overlap",
+      "note": "Uma ocorrência de 1 967,00 foi partida: 967,00 numa célula e algarismo 1 deslocado. TABLE_OVERLAP permanece.",
+      "source_pages_to_review": [
+        2
+      ],
+      "amounts_before": {
+        "amounts_missing": {
+          "1967,00": 1
+        },
+        "amounts_extra": {
+          "967,00": 1
+        }
+      },
+      "amounts_after": {
+        "amounts_missing": {
+          "1967,00": 1
+        },
+        "amounts_extra": {
+          "967,00": 1
+        }
+      },
+      "remaining_error_rules": [
+        "AMOUNTS",
+        "TABLE_OVERLAP"
+      ]
+    },
+    {
+      "document": "convencoes/SPE/2026_BTE_31_SPE_388_AE-ALT-RECT_47126_CARRISTUR-FECTRANS.pdf",
+      "source_sha256": "63b0eda891a52eaf72392afa30ccdb97a8175a260674baa61db056ea5ddff51f",
+      "markdown_sha256": "5ae4ae7c55b9ecab232f36584e661a6d0ea457ea93cf120cc18f798ce914bc87",
+      "markdown_unchanged": true,
+      "status_before": "blocked",
+      "status_after": "blocked",
+      "technical_triage": "thousands_split_and_overlap",
+      "note": "Padrão CARRISTUR: algarismo de milhares deslocado numa grelha rodada com sobreposições.",
+      "source_pages_to_review": [
+        2
+      ],
+      "amounts_before": {
+        "amounts_missing": {
+          "1967,00": 1
+        },
+        "amounts_extra": {
+          "967,00": 1
+        }
+      },
+      "amounts_after": {
+        "amounts_missing": {
+          "1967,00": 1
+        },
+        "amounts_extra": {
+          "967,00": 1
+        }
+      },
+      "remaining_error_rules": [
+        "AMOUNTS",
+        "TABLE_OVERLAP"
+      ]
+    },
+    {
+      "document": "convencoes/SPE/2026_BTE_31_SPE_389_AE-ALT-RECT_47110_CARRISTUR-SITRA.pdf",
+      "source_sha256": "245990715a35b3e56dbbff1d0c613f7275b1a98254260b11fc68c09a52dfba03",
+      "markdown_sha256": "0d0c65607ebd49ee82671a209e1489212ceec1ee17e6b4e79a63e1272304c9dc",
+      "markdown_unchanged": true,
+      "status_before": "blocked",
+      "status_after": "blocked",
+      "technical_triage": "thousands_split_and_overlap",
+      "note": "Padrão CARRISTUR: algarismo de milhares deslocado numa grelha rodada com sobreposições.",
+      "source_pages_to_review": [
+        2
+      ],
+      "amounts_before": {
+        "amounts_missing": {
+          "1967,00": 1
+        },
+        "amounts_extra": {
+          "967,00": 1
+        }
+      },
+      "amounts_after": {
+        "amounts_missing": {
+          "1967,00": 1
+        },
+        "amounts_extra": {
+          "967,00": 1
+        }
+      },
+      "remaining_error_rules": [
+        "AMOUNTS",
+        "TABLE_OVERLAP"
+      ]
+    },
+    {
+      "document": "convencoes/SPE/2026_BTE_31_SPE_390_AE-ALT-RECT_47111_CARRISTUR-SNMOT.pdf",
+      "source_sha256": "7e4a551c7c057cd547d7399d8e67868784718164060ad5643dacc0044bef6746",
+      "markdown_sha256": "e5950e7bcf7461f0e88e068436e2ac6bd0bfbd4ae5575683a9dcd59a34bbdc11",
+      "markdown_unchanged": true,
+      "status_before": "blocked",
+      "status_after": "blocked",
+      "technical_triage": "thousands_split_and_overlap",
+      "note": "Padrão CARRISTUR: algarismo de milhares deslocado numa grelha rodada com sobreposições.",
+      "source_pages_to_review": [
+        2
+      ],
+      "amounts_before": {
+        "amounts_missing": {
+          "1967,00": 1
+        },
+        "amounts_extra": {
+          "967,00": 1
+        }
+      },
+      "amounts_after": {
+        "amounts_missing": {
+          "1967,00": 1
+        },
+        "amounts_extra": {
+          "967,00": 1
+        }
+      },
+      "remaining_error_rules": [
+        "AMOUNTS",
+        "TABLE_OVERLAP"
+      ]
+    }
+  ],
+  "limitations": [
+    "Não extrapolar estados para o lote inteiro.",
+    "Triagem de perdas/associações não substitui conferência de todas as células.",
+    "Fórmulas sem text continuam pendentes; orig não garante estrutura de frações."
+  ]
+}

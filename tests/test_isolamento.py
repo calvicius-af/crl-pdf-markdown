@@ -41,6 +41,20 @@ def test_native_crash_is_retried_in_a_new_process(tmp_path, monkeypatch):
     assert any("falha nativa" in line and "a repetir b.pdf" in line for line in lines)
     assert "Fatal Python error" in (out / "_auditoria/falha_nativa.log").read_text("utf-8")
     assert (out / "2026/30/b.md").is_file()
+    manifest = json.loads((out / "_auditoria/manifest.json").read_text("utf-8"))
+    events = manifest['execution_events']
+    assert [(event['kind'], event['attempt']) for event in events] == [
+        ('worker_exit', 1), ('recovered', 2),
+    ]
+    assert events[0]['exitcode'] not in (None, 0)
+    assert events[0]['retry'] is True
+    assert events[0]['source'].endswith('b.pdf')
+    assert events[0]['at_utc'].endswith('+00:00')
+    diagnostic = (out / '_auditoria/diagnostico.md').read_text('utf-8')
+    assert 'Incidentes de execução' in diagnostic
+    assert 'Documentos recuperados numa nova tentativa: **1**' in diagnostic
+    native = (out / '_auditoria/falha_nativa.log').read_text('utf-8')
+    assert 'b.pdf\nUTC:' in native
 
 
 def test_repeated_native_crash_fails_only_that_document(tmp_path, monkeypatch):
@@ -50,6 +64,30 @@ def test_repeated_native_crash_fails_only_that_document(tmp_path, monkeypatch):
     assert "duas vezes" in reports[1]["error"]
     manifest = json.loads((out / "_auditoria/manifest.json").read_text("utf-8"))
     assert manifest["status"] == "concluida"
+    assert [event['kind'] for event in manifest['execution_events']] == [
+        'worker_exit', 'worker_exit',
+    ]
+    assert manifest['execution_events'][-1]['retry'] is False
+
+
+def test_timeout_is_not_a_native_crash_and_next_document_continues(tmp_path, monkeypatch):
+    original = isolamento.ConversorIsolado._esperar
+
+    def timeout_once(self, prazo):
+        if not self.events:
+            self.processo.kill()
+            return ('prazo',)
+        return original(self, prazo)
+
+    monkeypatch.setattr(isolamento.ConversorIsolado, '_esperar', timeout_once)
+    out, reports, _lines = _run(tmp_path, monkeypatch)
+    assert reports[0]['error_type'] == 'TimeoutError'
+    assert reports[0]['recovery']['code'] == 'CRL-TEMPO'
+    assert all(report['state'] != 'falhou' for report in reports[1:])
+    manifest = json.loads((out / '_auditoria/manifest.json').read_text('utf-8'))
+    assert [event['kind'] for event in manifest['execution_events']] == ['timeout']
+    assert manifest['execution_events'][0]['attempt'] == 1
+    assert manifest['status'] == 'concluida'
 
 
 def test_python_errors_in_the_worker_keep_their_type(tmp_path, monkeypatch):

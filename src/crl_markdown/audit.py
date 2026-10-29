@@ -2,13 +2,14 @@
 
 import re
 from collections import Counter
+from contextlib import nullcontext
 from dataclasses import fields
 from pathlib import Path
 
 from .legacy import auditoria, completude, sanidade
 from .quality import Finding
 
-AMOUNT = re.compile(r"(?<![\d.,])[-−–—+]?(?:\d{1,3}(?:[ .\u00a0]\d{3})+|\d+)[,.]\d{2}(?!\d)")
+AMOUNT = re.compile(r"(?<![\d.,])(?:[-−–—+][ \t\u00a0]*)?(?:\d{1,3}(?:[ .\u00a0]\d{3})+|\d+)[,.]\d{2}(?!\d)")
 SIGNED = re.compile(
     r"(?<![\w.,])[-−–—+][ \t\u00a0]*(?:\d{1,3}(?:[ .\u00a0]\d{3})+|\d+)(?:[.,]\d+)?"
 )
@@ -24,19 +25,37 @@ def signed_values(text: str) -> Counter:
 
 
 def amounts(text: str) -> Counter:
+    # Pontos de preenchimento não são separadores decimais/de milhares.
+    # Sem esta fronteira, «Almoço........8,50 €» perde o valor na auditoria.
+    text = re.sub(r"\.{3,}", " ", text)
     return Counter(canonical_number(v) for v in AMOUNT.findall(text))
 
 
-def _pdf_numeric_tokens(pdf: Path):
+def _pdf_numeric_tokens(pdf: Path, document=None):
     """Agrupa sinais/milhares contíguos; não concatena colunas afastadas."""
     import pdfplumber
 
-    with pdfplumber.open(pdf) as document:
+    with (nullcontext(document) if document is not None else pdfplumber.open(pdf)) as document:
         for page in document.pages:
             words = page.dedupe_chars().extract_words(
-                line_dir_rotated="ltr", char_dir_rotated="btt"
+                x_tolerance=1, y_tolerance=1, line_dir_rotated="ltr", char_dir_rotated="btt"
             )
-            tokens = []
+            tokens, grouped = [], []
+            numeric_tables = None
+
+            def same_cell(left, right):
+                nonlocal numeric_tables
+                if numeric_tables is None:
+                    numeric_tables = page.find_tables()
+                for table in numeric_tables:
+                    for box in table.cells:
+                        def contained(word):
+                            x = (word['x0'] + word['x1']) / 2
+                            y = (word['top'] + word['bottom']) / 2
+                            return box[0] <= x < box[2] and box[1] <= y < box[3]
+                        if contained(left) and contained(right):
+                            return True
+                return False
             for index, word in enumerate(words):
                 value = word['text']
                 if index:
@@ -51,13 +70,42 @@ def _pdf_numeric_tokens(pdf: Path):
                     else:
                         gap, aligned = 100, False
                     close = aligned and 0 <= gap <= 4 and previous.get('direction', 'ltr') == direction
-                    sign = tokens[-1] in {'-', '−', '–', '—', '+'} and re.match(r"^\d", value)
-                    thousands = (re.fullmatch(r"[-−–—+]?\d+", tokens[-1])
+                    # Espaços sobrepostos no PDF podem partir um único número
+                    # em «9» + «78,49». Só reunir fragmentos numéricos com uma
+                    # sobreposição subpontual na mesma linha e direção.
+                    overlapping_digits = (
+                        direction == previous.get('direction', 'ltr') == 'ltr'
+                        and aligned and -.5 <= gap < 0
+                        and bool(re.fullmatch(r'[-−–—+]?\d{1,3}', tokens[-1]))
+                        and bool(re.fullmatch(r'\d{1,3}(?:[,.]\d{2})?', value))
+                    )
+                    close = close or overlapping_digits
+                    # Um operador no fim de uma linha de prosa continua na
+                    # margem esquerda seguinte; nunca unir células distantes.
+                    wrapped = (direction == 'ltr' and previous['x1'] > page.width * .75
+                               and word['x0'] < page.width * .3
+                               and 0 <= word['top'] - previous['bottom'] <= previous['height'])
+                    sign = bool(re.search(r'[-−–—+]$', tokens[-1])) and re.match(r"^\d", value)
+                    numeric_tail = re.search(r'(?<![\w.,])[-−–—+]?\d+$', tokens[-1])
+                    leading_group = numeric_tail and len(re.sub(r'\D', '', numeric_tail.group())) <= 3
+                    thousands = (numeric_tail and (grouped[-1] or leading_group)
                                  and re.fullmatch(r"\d{3}(?:[,.]\d{2})?", value))
-                    if close and (sign or thousands):
+                    if close and direction == 'ltr':
+                        # Uma fronteira de célula não é espaço de milhares
+                        # nem liga um travessão isolado ao valor da outra coluna.
+                        if any(min(previous['x1'], word['x0']) <= edge['x0']
+                               <= max(previous['x1'], word['x0'])
+                               and edge['top'] <= word['top'] < edge['bottom']
+                               for edge in page.vertical_edges):
+                            close = False
+                    if sign and aligned and direction == 'ltr' and 4 < gap <= previous['height'] * 2:
+                        close = same_cell(previous, word)
+                    if (close and (sign or thousands or overlapping_digits)) or (wrapped and sign):
                         tokens[-1] += value
+                        grouped[-1] = grouped[-1] or bool(thousands)
                         continue
                 tokens.append(value)
+                grouped.append(False)
             yield from tokens
 
 
@@ -76,7 +124,27 @@ def pdf_amounts(pdf: Path) -> Counter:
     return result
 
 
-def audit_pdf(
+def audit_pdf(pdf, plain, structure, structured_text, exported_tables, *, reference=None, docling_document=None):
+    import pdfplumber
+    try:
+        document = pdfplumber.open(pdf)
+    except Exception:
+        return _audit_pdf(pdf, plain, structure, structured_text, exported_tables, reference=reference)
+    with document:
+        try:
+            signed, monetary = Counter(), Counter()
+            for value in _pdf_numeric_tokens(pdf, document):
+                signed.update(signed_values(value))
+                monetary.update(amounts(value))
+            counts = signed, monetary
+        except Exception:
+            counts = None
+        return _audit_pdf(pdf, plain, structure, structured_text, exported_tables,
+                          reference=reference, shared_document=document, numeric_counts=counts,
+                          docling_document=docling_document)
+
+
+def _audit_pdf(
     pdf: Path,
     plain: str,
     structure: dict,
@@ -84,6 +152,9 @@ def audit_pdf(
     exported_tables: int,
     *,
     reference=None,
+    shared_document=None,
+    numeric_counts=None,
+    docling_document=None,
 ):
     try:
         pages, blind_pages = reference if reference is not None else completude.ler_referencia(pdf)
@@ -133,7 +204,7 @@ def audit_pdf(
         expected_symbols = symbols(reference_text) + critical_values(reference_text)
         actual_symbols = symbols(plain) + critical_values(plain)
         try:
-            expected_symbols += pdf_signed_values(pdf)
+            expected_symbols += numeric_counts[0] if numeric_counts is not None else pdf_signed_values(pdf)
             actual_symbols += signed_values(plain)
         except Exception as exc:
             findings.append(Finding("SIGNED_VALUES_UNAVAILABLE", 0,
@@ -149,7 +220,7 @@ def audit_pdf(
     missing_amounts, extra_amounts = Counter(), Counter()
     table_count, image_pages = None, []
     try:
-        expected, actual = pdf_amounts(pdf), amounts(plain)
+        expected, actual = (numeric_counts[1] if numeric_counts is not None else pdf_amounts(pdf)), amounts(plain)
         missing_amounts, extra_amounts = expected - actual, actual - expected
         if missing_amounts or extra_amounts:
             findings.append(
@@ -161,8 +232,11 @@ def audit_pdf(
                     "error",
                 )
             )
-        table_count = auditoria.contar_tabelas_pdfplumber(pdf)
-        image_pages = auditoria.paginas_com_imagem(pdf)
+        table_count = auditoria.contar_tabelas_pdfplumber(pdf, document=shared_document)
+        image_pages = auditoria.paginas_com_imagem(pdf, document=shared_document)
+        if shared_document is not None and docling_document is not None:
+            from .table_repair import verify_cell_positions
+            findings.extend(verify_cell_positions(shared_document, docling_document))
         for message in auditoria.divergencias(table_count, exported_tables):
             findings.append(Finding("TABLE_AUDIT", 0, message))
         if table_count and not exported_tables:
@@ -210,5 +284,22 @@ def audit_pdf(
         amounts_engine="pdfplumber_words_geometric",
         reference_tables=table_count,
     )
+    # Evidência navegável: manter o desacordo e as passagens fonte, mesmo
+    # quando a correspondência é agregada e não se pode atribuir uma célula.
+    disputed = set(missing_amounts) | set(extra_amounts) | set(critical_missing) | set(critical_extra)
+    if disputed and not measure.erro:
+        numeric_evidence = []
+        for page_no, page_text in enumerate(pages, 1):
+            for line in page_text.splitlines():
+                # Comparar tokens inteiros: 500 não localiza 5000 e 8,50
+                # não localiza 18,50. O sinal faz parte da evidência.
+                values = set(amounts(line)) | set(signed_values(line))
+                values.update(ch for ch in line if ch in "%‰€$£§<>≤≥≠±")
+                values.update(re.sub(r'\s+', '', v) for v in
+                              re.findall(r'\d+(?:[.,]\d+)?\s*[%‰]', line))
+                hits = sorted(disputed & values)
+                if hits:
+                    numeric_evidence.append({'page': page_no, 'values': hits, 'source_text': line})
+        report['numeric_evidence'] = numeric_evidence
     report.pop("palavras_referencia", None)
     return report, findings, completude.diagnostico([measure])

@@ -18,9 +18,9 @@ from .audit import audit_pdf
 from .document import plain_markdown, prepare
 from .isolamento import ConversorIsolado, FalhaArranque
 from .legacy import completude
+from .policies import fingerprint, model_fingerprint, policy, profile_context
 from .quality import lint, parser
 from .report import new_manifest, write_reports
-from .tipologias import perfil_documental
 
 
 @dataclass(frozen=True)
@@ -90,6 +90,7 @@ def validate_options(options: Options):
 def make_converter(options: Options):
     validate_options(options)
     apply_offline(options.offline)
+    from docling.datamodel.backend_options import ThreadedDoclingParseBackendOptions
     from docling.datamodel.base_models import InputFormat
     from docling.datamodel.pipeline_options import PdfPipelineOptions, TableFormerMode
     from docling.document_converter import DocumentConverter, PdfFormatOption
@@ -108,7 +109,12 @@ def make_converter(options: Options):
     pipeline.table_structure_options.do_cell_matching = True
     return DocumentConverter(
         allowed_formats=[InputFormat.PDF],
-        format_options={InputFormat.PDF: PdfFormatOption(pipeline_options=pipeline)},
+        format_options={InputFormat.PDF: PdfFormatOption(
+            pipeline_options=pipeline,
+            # Mitigação a validar em Windows: limitar os leitores nativos após
+            # quedas observadas no parser; não reduz as threads dos modelos.
+            backend_options=ThreadedDoclingParseBackendOptions(parser_threads=1),
+        )},
     )
 
 
@@ -219,15 +225,18 @@ def convert_pdf(
     overwrite: bool = False,
     *,
     audit_dir: Path | None = None,
+    markdown_override: str | None = None,
+    generated_headings_override=None,
 ) -> dict:
     raw_target, report_target = audit_paths(target, audit_dir)
     check_output_paths(target, audit_dir, overwrite=overwrite)
+    source_digest = models._sha256(pdf)
     result = converter.convert(pdf)
     status = getattr(result.status, "value", str(result.status))
     if status != "success":
         raise RuntimeError(f"Conversão incompleta ({status}): {pdf.name}")
     raw = result.document.export_to_markdown(image_placeholder="<!-- image -->")
-    subtype = perfil_documental(pdf.stem)
+    subtype, profile_origin = profile_context(pdf)
     reference = None
     reference_words = []
     try:
@@ -239,8 +248,25 @@ def convert_pdf(
     except Exception:
         # A auditoria reportará a indisponibilidade; não inventar reparações.
         pass
-    prepared = prepare(result.document, pdf.stem, subtype=subtype, reference_words=reference_words)
+    from .table_repair import recover_tables
+    try:
+        table_repairs = recover_tables(pdf, result.document)
+    except Exception:
+        table_repairs = {}  # Conservar a extração e os seus bloqueios se não houver prova auxiliar.
+    prepared = prepare(result.document, pdf.stem, subtype=subtype, reference_words=reference_words,
+                       table_repairs=table_repairs)
     markdown = prepared.markdown
+    if markdown_override is not None:
+        from .quality import normalize
+        from .revisions import correction_structure
+        markdown = normalize(markdown_override)
+        prepared.generated_headings = list(generated_headings_override or ())
+        prepared.structure, prepared.structured_text = correction_structure(
+            markdown, prepared.generated_headings, pdf.stem, subtype)
+        prepared.tables = sum(t.type == 'table_open' for t in parser().parse(markdown))
+        prepared.findings = [f for f in prepared.findings if f.rule != 'RENDER_CONTENT']
+        prepared.transformations.append({'stage': 'correcao_humana',
+            'reason': 'Versão editada separadamente; nova auditoria de conteúdo e estrutura.'})
     title_added = not any(
         token.type == "heading_open" and token.tag == "h1" for token in parser().parse(markdown)
     )
@@ -260,6 +286,7 @@ def convert_pdf(
         prepared.structured_text,
         prepared.tables,
         reference=reference,
+        docling_document=result.document,
     )
     findings.extend(audit_findings)
     state = "rever" if any(f.severity != "info" for f in findings) else "sem_alertas_automaticos"
@@ -267,8 +294,12 @@ def convert_pdf(
     report = {
         "source": str(pdf.resolve()),
         "document_profile": subtype,
+        "profile_origin": profile_origin,
+        "audit_policy_version": policy()['versao'],
+        "pipeline_fingerprint": fingerprint(),
+        "model_manifest_sha256": model_fingerprint(options.models),
         "output": str(target.resolve()),
-        "source_sha256": hashlib.sha256(pdf.read_bytes()).hexdigest(),
+        "source_sha256": source_digest,
         "markdown_sha256": hashlib.sha256(markdown.encode("utf-8")).hexdigest(),
         "raw_markdown_sha256": hashlib.sha256(raw.encode("utf-8")).hexdigest(),
         "docling_version": getattr(converter, "docling_version", None) or version("docling"),
@@ -307,6 +338,8 @@ def convert_pdf(
         "completeness": audit,
         "findings": [finding.to_dict() for finding in findings],
     }
+    if models._sha256(pdf) != source_digest:
+        raise ValueError('O PDF mudou durante a conversão/auditoria. Repita com a fonte estável.')
     atomic_write(raw_target, raw)
     atomic_write(report_target, json.dumps(report, ensure_ascii=False, indent=2) + "\n")
     atomic_write(report_target.with_suffix(".md"), diagnostic)
@@ -327,6 +360,9 @@ def _run(
     progress=print,
     converter=None,
     converter_factory=None,
+    entries_override=None,
+    report_provider=None,
+    provenance=None,
 ) -> list[dict]:
     """Converte um PDF ou uma pasta de PDFs.
 
@@ -335,7 +371,7 @@ def _run(
     nativa leva esse processo, não a corrida. Com `converter`, a conversão
     corre neste processo, como nos testes e na reaplicação de uma cache.
     """
-    entries = discover(source)
+    entries = discover(source) if entries_override is None else entries_override
     if not entries:
         raise ValueError("Não foram encontrados PDFs.")
     # Detecta colisões também em volumes Windows/macOS que ignoram maiúsculas.
@@ -354,6 +390,8 @@ def _run(
             "overwrite": overwrite,
         },
     )
+    if provenance is not None:
+        manifest['provenance'] = provenance
     reports = []
     # Os relatórios do lote são escritos já no início e atualizados a cada
     # documento: uma corrida longa interrompida (janela fechada, falta de
@@ -379,7 +417,7 @@ def _run(
     progress(f"Corrida {manifest['run_id']}: {len(entries)} PDF de {source}")
     isolated = None
     try:
-        if converter is None:
+        if converter is None and report_provider is None:
             validate_options(options)
             # O processo de conversão herda o ambiente: o modo offline tem de
             # estar decidido antes de ele arrancar.
@@ -390,15 +428,27 @@ def _run(
                 registo_falhas=audit / "falha_nativa.log",
                 aviso=progress,
             )
+            manifest["execution_events"] = isolated.events
         for index, (pdf, relative) in enumerate(entries, 1):
             progress(f"[{index}/{len(entries)}] {pdf.name}")
             target = output / relative
             audit_dir = output / "_auditoria" / "documentos" / relative.parent
             try:
-                report = None if overwrite else adopt_previous_report(pdf, target, audit_dir)
+                report = None if overwrite or report_provider is not None else adopt_previous_report(pdf, target, audit_dir)
                 if report is not None:
+                    stored = report.get('options', {})
+                    if (report.get('pipeline_fingerprint') != fingerprint()
+                            or bool(stored.get('ocr')) != options.ocr
+                            or stored.get('models') != (str(options.models) if options.models else None)
+                            or report.get('model_manifest_sha256') != model_fingerprint(options.models)
+                            or (converter is None and report.get('docling_version') != version('docling'))):
+                        raise ValueError('As opções ou regras mudaram. Use Reauditar para reaplicar '
+                                         'as regras numa saída nova; mudanças de OCR/modelos '
+                                         'exigem nova extração numa pasta nova.')
                     # Retomar uma corrida: o mesmo PDF já foi convertido.
                     report["reused"] = True
+                elif report_provider is not None:
+                    report = report_provider(pdf, target, audit_dir)
                 elif isolated is not None:
                     report = isolated.convert_pdf(pdf, target, overwrite, audit_dir)
                 else:

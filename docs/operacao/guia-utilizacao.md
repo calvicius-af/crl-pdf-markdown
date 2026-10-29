@@ -31,24 +31,95 @@
 8. Importe os ficheiros de `documentos/` no MAXQDA. Conserve o relatório junto
    da entrega e registe a versão e o resultado da importação.
 
-Se o texto mudar durante ou depois da conferência, a aprovação é recusada ou
-invalida-se. Correções manuais devem ser guardadas separadamente em
-`3_analise/revisao_textual`; o ciclo de nova auditoria dessas correções ainda está
-em desenvolvimento. Não altere o JSON da auditoria para desbloquear um documento.
+Se o texto ou a auditoria mudar, é necessária uma decisão sobre a versão atual.
+Não altere o JSON nem o Markdown final para desbloquear o documento: use o editor
+de correções, que conserva o original e cria uma publicação auditada separada.
 
-A mensagem «resolva os erros e volte a converter» não significa que exista já
-um editor de correções na GUI. Se o documento estiver bloqueado, conserve a
-extração, abra o relatório individual em `_auditoria/documentos` e registe a
-regra e a passagem que precisam de correção técnica. Repetir a conversão com as
-mesmas opções pode reproduzir o mesmo erro. O apoio deve distinguir perda real
-de conteúdo de regra inadequada à família documental antes de escolher a ação.
-O [diagnóstico e plano de melhoria de 16/10](../validacao/diagnostico-lote-2026-10-16.md)
-explica os casos conhecidos e os issues para completar este percurso.
+## Corrigir, reauditar e decidir na GUI
+
+1. Para aplicar regras atualizadas a uma conversão existente, selecione a sua
+   **Pasta de saída** e clique em **Reauditar lote (sem nova extração)**.
+   A operação verifica a cache e cria uma pasta nova. O campo de saída passa a
+   apontar para essa nova corrida quando termina; a anterior fica conservada.
+2. Abra **Conferir / aprovar…**. Filtre por estado, família ou regra e selecione
+   o documento. A lista mostra as ocorrências, IDs e páginas disponíveis.
+   **Relatório deste documento** abre as evidências da versão selecionada.
+3. Preencha o responsável. Se há erro real, escolha **Criar / editar correção**.
+   Edite no rascunho separado, guarde e clique em **Reauditar correção guardada**.
+   O editor tem deslocação horizontal para tabelas largas.
+4. Depois da auditoria, confira o resultado com o PDF. A caixa de conferência
+   integral é reposta; uma correção não concede aprovação automaticamente.
+5. Para registar uma resolução, selecione a ocorrência, indique a página e as
+   evidências nas notas e use a ação adequada: **conferido** para avisos,
+   **corrigido** para uma grelha efetivamente alterada, **decorativo** para uma
+   figura sem conteúdo a transcrever ou **transcrito** quando a transcrição foi
+   incorporada e conferida. Clique em **Resolver ocorrência e reauditar**.
+   Montantes, completude e falhas de referência não podem ser dispensados por nota.
+6. Se faltar reconhecimento de conteúdo numa imagem, use **Reler páginas com
+   OCR** e indique as páginas e a pasta de modelos locais. Só essas páginas são
+   reextraídas; as restantes são verificadas e reutilizadas. Se um elemento
+   atravessar a seleção, inclua todas as suas páginas. Uma edição humana ativa
+   exige reconciliação e não é substituída automaticamente pelo OCR.
+7. Registe a decisão sobre a versão atual. A aprovação fica desativada enquanto
+   houver erros por resolver. A rejeição continua disponível. **Entregar aprovados**
+   utiliza a revisão ativa aprovada, preservando o nome relativo do documento.
+
+As correções ficam em `_auditoria/correcoes`, com publicações imutáveis e
+referência para a versão ativa em `_auditoria/versoes`. O relatório do lote é o
+retrato da corrida original; cada correção tem a sua auditoria. A janela de
+conferência e a entrega verificam a versão ativa e os seus hashes.
+
+Consulte a [hierarquia Markdown](hierarquia-markdown.md) e os
+[perfis de auditoria](../../src/crl_markdown/vocabularios/perfis_auditoria.md).
 
 Não selecione «Substituir saídas existentes» se houver correções humanas nessa
 pasta. Prefira uma saída nova por lote. Uma cache Docling verificada permite
 reaplicar regras mais depressa, mas uma nova extração é necessária quando o erro
 está no reconhecimento dos itens.
+
+## Reauditar uma seleção pela linha de comandos
+
+Para investigar um padrão sem repetir o lote inteiro, selecione os documentos
+pelas ocorrências e estados da corrida anterior. Comece por simular:
+
+```powershell
+.venv\Scripts\python.exe -m crl_markdown reaudit --out results\anterior --family convencoes --rule AMOUNTS --status blocked --dry-run
+.venv\Scripts\python.exe -m crl_markdown reaudit --out results\anterior --destination results\montantes --family convencoes --rule AMOUNTS --status blocked
+```
+
+No macOS/Linux, use `.venv/bin/python` e caminhos com `/`.
+
+- `--family`: primeira subpasta do caminho relativo no manifesto, como
+  `convencoes`, `portarias_extensao` ou `acordaos`. Use `.` para PDFs na raiz.
+  O filtro de pasta não reclassifica a tipologia nem o âmbito documental.
+- `--rule`: código exato de uma regra presente no manifesto, como `AMOUNTS`
+  ou `TABLE_OVERLAP`.
+- `--status`: estado automático `passed`, `review` ou `blocked`.
+- `--document`: caminho relativo exato de um PDF, incluindo as subpastas.
+- `--dry-run`: apresenta JSON com critérios, documentos selecionados, corrida
+  e hash do manifesto de origem; não lê a cache/PDF nem escreve resultados.
+
+Repita uma opção para aceitar qualquer dos seus valores: `--rule AMOUNTS
+--rule TABLE_OVERLAP`. Opções diferentes cruzam-se: família **e** regra **e**
+estado **e**, quando indicado, documento. Um valor desconhecido ou uma seleção
+vazia dá erro antes de criar a pasta de destino. Documentos sem extração completa
+não podem ser reauditados; use o filtro de estado para selecionar os já convertidos.
+
+A reutilização exige que os hashes do PDF e da extração coincidam com o manifesto
+selecionado e com a cache. Uma cache substituída ou sem essa identidade falha
+nesse documento, mesmo quando o seu relatório individual é internamente consistente.
+
+A seleção usa o retrato registado da corrida anterior, sem incorporar decisões
+ou correções humanas posteriores. Todos os controlos atuais são aplicados aos
+documentos selecionados, mesmo que uma regra usada no filtro tenha deixado de
+produzir ocorrências. A operação reaplica as regras à extração Docling guardada;
+para trabalhar sobre uma correção humana, use **Reauditar correção guardada**.
+
+O manifesto e os relatórios da nova corrida conservam a proveniência, os filtros
+e a dimensão da seleção. Uma corrida parcial não representa o corpus inteiro e
+não aprova os documentos. Os originais e as decisões anteriores são conservados.
+A GUI mantém o comando de reauditoria do lote completo; estes filtros de execução
+estão disponíveis na CLI.
 
 ## Recolha e nomeação: preparação inicial pelo apoio
 

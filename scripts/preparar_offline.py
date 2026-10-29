@@ -152,12 +152,14 @@ def prepare(output, models):
         batch = (root / 'scripts/Instalar_CRL.bat').read_text('utf-8')
         batch = batch.replace('3.13', f'{sys.version_info.major}.{sys.version_info.minor}')
         (output / 'Instalar_CRL.bat').write_text(batch, encoding='utf-8', newline='\r\n')
-        shutil.copyfile(root / 'docs/operacao/instalacao-offline.md', output / 'LEIA_PRIMEIRO.md')
+        shutil.copyfile(root / 'docs/operacao/testar-pacote-offline.md', output / 'LEIA_PRIMEIRO.md')
+        shutil.copyfile(root / 'docs/operacao/instalacao-offline.md', output / 'INSTALACAO_E_AJUDA.md')
         write_smoke(output / 'smoke.pdf')
         files = {p.relative_to(output).as_posix(): sha256(p)
                  for p in sorted(output.rglob('*')) if p.is_file()}
         manifest = {'schema': 2, 'platform': sys.platform, 'machine': platform.machine(),
                     'python': list(sys.version_info[:2]), 'files': files, 'versions': versions,
+                    'source_revision': os.environ.get('GITHUB_SHA'),
                     'ocr': ocr, 'validation': 'por_validar_na_estacao'}
         (output / 'pacote.json').write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + '\n',
                                           encoding='utf-8')

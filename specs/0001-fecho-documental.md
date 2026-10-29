@@ -11,6 +11,10 @@ concretiza as lacunas de auditoria por tipologia, correção e nova auditoria.
 O [inventário do repositório](../docs/desenvolvimento/repositorio-2026-10-16.md)
 identifica a linha de consolidação. O estado desta especificação continua parcial.
 
+Seguimento: [implementação e casos MAXQDA](../docs/validacao/correcoes-maxqda-2026-10-16.md),
+incluindo perfis, correções versionadas, reauditoria, OCR dirigido e política
+explícita de hierarquia. Os ensaios complexos MAXQDA e de estação continuam pendentes.
+
 ## Objetivo e fronteira do produto
 
 Preparar um corpus de documentos publicados no BTE, a partir dos índices recebidos,
@@ -138,8 +142,10 @@ texto estruturado, não ao Markdown com marcação.
 
 O relatório conserva normalizações de itens por página/nó e diferença entre
 Markdown bruto/final, além dos nós e do texto de referência dos offsets.
-Por completar: ciclo de correção manual com nova auditoria e histórico de versões;
-editar diretamente um resultado invalida a aprovação e a retoma.
+O ciclo de correção manual com nova auditoria e histórico está implementado em
+rascunhos separados e publicações imutáveis. A decisão e a entrega usam hashes da
+revisão ativa. Editar diretamente o resultado, fora desse ciclo, invalida a
+aprovação e a retoma. A aceitação documental alargada continua pendente.
 
 ### RF-06 — Tabelas
 

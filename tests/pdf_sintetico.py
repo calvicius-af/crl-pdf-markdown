@@ -52,6 +52,10 @@ def _conteudo(linhas: list[tuple]) -> bytes:
             tracos.append(b"%.2f %.2f m %.2f %.2f l S" % (x0, y0, x1, y1))
             continue
         x, y, texto, *modo = item
+        if modo and modo[0] == 'small':
+            partes.append(b'/F1 4 Tf 1 0 0 1 %.1f %.1f Tm (' % (x, y) + _escapar(texto)
+                          + b') Tj /F1 10 Tf')
+            continue
         if modo and modo[0] == "times":
             partes.append(b"/F2 10 Tf 1 0 0 1 %.1f %.1f Tm (" % (x, y) + _escapar(texto)
                           + b") Tj /F1 10 Tf")
