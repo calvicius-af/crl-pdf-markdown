@@ -90,6 +90,7 @@ def validate_options(options: Options):
 def make_converter(options: Options):
     validate_options(options)
     apply_offline(options.offline)
+    from docling.datamodel.backend_options import ThreadedDoclingParseBackendOptions
     from docling.datamodel.base_models import InputFormat
     from docling.datamodel.pipeline_options import PdfPipelineOptions, TableFormerMode
     from docling.document_converter import DocumentConverter, PdfFormatOption
@@ -108,7 +109,12 @@ def make_converter(options: Options):
     pipeline.table_structure_options.do_cell_matching = True
     return DocumentConverter(
         allowed_formats=[InputFormat.PDF],
-        format_options={InputFormat.PDF: PdfFormatOption(pipeline_options=pipeline)},
+        format_options={InputFormat.PDF: PdfFormatOption(
+            pipeline_options=pipeline,
+            # Mitigação a validar em Windows: limitar os leitores nativos após
+            # quedas observadas no parser; não reduz as threads dos modelos.
+            backend_options=ThreadedDoclingParseBackendOptions(parser_threads=1),
+        )},
     )
 
 
@@ -422,6 +428,7 @@ def _run(
                 registo_falhas=audit / "falha_nativa.log",
                 aviso=progress,
             )
+            manifest["execution_events"] = isolated.events
         for index, (pdf, relative) in enumerate(entries, 1):
             progress(f"[{index}/{len(entries)}] {pdf.name}")
             target = output / relative

@@ -1,0 +1,47 @@
+{
+  "evidence_sha256": "7a1920e569ff287be834b7dfa98aec546901e716b8c967b810b6364ee338bff2",
+  "run_id": "20261029T105631008244Z-052888a6",
+  "started_at_utc": "2026-10-29T10:56:31.008244+00:00",
+  "finished_at_utc": "2026-10-29T13:12:39.673601+00:00",
+  "status": "concluida",
+  "documents": 324,
+  "counts": {
+    "passed": 178,
+    "review": 78,
+    "blocked": 68
+  },
+  "definitive_conversion_failures": 0,
+  "native_retries": 3,
+  "native_retries_recovered": 3,
+  "ocr": false,
+  "offline": true,
+  "docling_version": "2.134.0",
+  "baseline_comparison": {
+    "manifest": "results/reauditoria-final-20261016/_auditoria/manifest.json",
+    "matching_sha256": {
+      "source_sha256": 324,
+      "markdown_sha256": 324,
+      "raw_markdown_sha256": 323,
+      "docling_document_sha256": 0
+    }
+  },
+  "rules": {
+    "STRUCTURE": 45,
+    "COMPLETENESS": 31,
+    "LIST_MARKER": 45,
+    "CRITICAL_SYMBOLS": 30,
+    "TABLE_SPAN": 504,
+    "TABLE_WIDE": 126,
+    "TABLE_OVERLAP": 46,
+    "TABLE_AS_TEXT": 5,
+    "AMOUNTS": 14,
+    "IMAGE": 19,
+    "TABLE_CELL_POSITION": 125,
+    "LEGAL_LIST_BULLET": 4,
+    "TABLE_EMPTY": 23,
+    "TABLE_RECONSTRUCTED": 12,
+    "TABLE_GRID_GAP": 12,
+    "CLAUSE_TITLE_SPLIT": 2,
+    "TABLE_CELL_GEOMETRY": 1
+  }
+}

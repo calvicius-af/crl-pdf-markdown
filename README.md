@@ -63,7 +63,7 @@ como único motor principal de conversão, com cache auditada e auditores auxili
 
 ## Instalar e utilizar
 
-Candidato de teste: **0.3.1rc1**. Para testar o pacote completo sem rede, siga
+Candidato de teste: **0.3.1rc2**. Para testar o pacote completo sem rede, siga
 o [guia curto de instalação e teste](docs/operacao/testar-pacote-offline.md).
 O pacote Windows só é disponibilizado após o ensaio de instalação/conversão.
 

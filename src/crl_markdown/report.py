@@ -123,6 +123,30 @@ def diagnostic(manifest, parent, *, detailed=True):
         "| Documento | Estado | Cobertura | Ordem | Tabelas | Erros / avisos |",
         "| --- | --- | --- | --- | --- | --- |",
     ]
+    events = manifest.get('execution_events', [])
+    if events:
+        totals = Counter(event['kind'] for event in events)
+        execution = [
+            '## Incidentes de execução', '',
+            f"Terminações inesperadas do conversor: **{totals['worker_exit']}**. "
+            f"Documentos recuperados numa nova tentativa: **{totals['recovered']}**. "
+            f"Limites de tempo excedidos: **{totals['timeout']}**.", '',
+            'A recuperação permite continuar o lote; não elimina a causa da queda '
+            'nem altera a avaliação do conteúdo. O manifesto conserva cada evento '
+            'com documento, tentativa e data UTC.', '',
+            '| Documento | Evento | Tentativa | Código de saída |',
+            '| --- | --- | --- | --- |',
+        ]
+        labels = {'worker_exit': 'Terminação inesperada', 'recovered': 'Recuperado',
+                  'timeout': 'Tempo excedido'}
+        for event in events:
+            execution.append(
+                f"| {escaped(event['source'])} | {labels.get(event['kind'], event['kind'])} "
+                f"| {event['attempt']} | {event.get('exitcode', '—')} |"
+            )
+        execution.append('')
+        index = lines.index('## Documentos')
+        lines[index:index] = execution
     origin = manifest.get('provenance', {})
     if origin.get('operation') == 'reaudit':
         filters = origin['filters']

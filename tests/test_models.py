@@ -134,6 +134,7 @@ def test_converter_uses_fixed_portuguese_ocr_engine(tmp_path):
     assert (ocr.kind, ocr.backend) == ("rapidocr", "torch")
     # O Docling normaliza a etiqueta (iso:pt → iso:pt-Latn).
     assert len(ocr.lang) == 1 and ocr.lang[0].startswith("iso:pt")
+    assert converter.format_to_options[InputFormat.PDF].backend_options.parser_threads == 1
 
 @pytest.mark.parametrize('data', [[], {}, {'files': []}, {'files': [{}]},
     {'files': [{'path': '../outside', 'sha256': '0'*64, 'bytes': 1}]},

@@ -108,7 +108,7 @@ jobs:
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: CRL-offline-0.3.1rc1-windows-x64-py313
+          name: CRL-offline-0.3.1rc2-windows-x64-py313
           path: ${{ runner.temp }}/Pacote CRL com espaços/
           include-hidden-files: true
           compression-level: 0
