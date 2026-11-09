@@ -4,6 +4,20 @@ import re
 import time
 
 
+def track(items, event=None, *, stage, label, unit="documentos"):
+    """Conta cada item depois do trabalho, incluindo iterações com continue."""
+    if event is None:
+        yield from items
+        return
+    total = len(items)
+    event({"stage": stage, "label": label, "total": total, "completed": 0,
+           "unit": unit, "reset_counter": True})
+    for index, item in enumerate(items, 1):
+        yield item
+        event({"stage": stage, "label": label, "total": total, "completed": index,
+               "unit": unit})
+
+
 class ProgressReporter:
     """Observa o protocolo de progresso existente, sem mudar as regras de extração.
 
@@ -53,15 +67,18 @@ class OperationProgress:
         self.clock = clock
         self.started = None
         self.finished = None
+        self.estimate_started = None
         self.total = None
         self.completed = 0
         self.phase = "Pronto para começar"
         self.document = ""
         self.active = False
         self.failed = False
+        self.unit = "PDFs"
 
     def begin(self, label):
         self.started = self.clock()
+        self.estimate_started = self.started
         self.finished = None
         self.total = None
         self.completed = 0
@@ -69,13 +86,17 @@ class OperationProgress:
         self.document = ""
         self.active = True
         self.failed = False
+        self.unit = "PDFs"
 
     def update(self, event):
         stage = event["stage"]
+        if event.get("reset_counter"):
+            self.estimate_started = self.clock()
         self.total = event.get("total", self.total)
         self.completed = event.get("completed", self.completed)
+        self.unit = event.get("unit", self.unit)
         self.document = event.get("document", "")
-        self.phase = {
+        self.phase = event.get("label") or {
             "preparing": "A preparar a conversão",
             "converting": "A processar e conferir o documento",
             "completed_document": "Documento processado",
@@ -95,8 +116,9 @@ class OperationProgress:
         percent = None if not self.total else min(100, 100 * self.completed / self.total)
         remaining = None
         if self.active and self.total and 0 < self.completed < self.total:
-            remaining = elapsed * (self.total - self.completed) / self.completed
+            phase_elapsed = max(0, self.clock() - self.estimate_started)
+            remaining = phase_elapsed * (self.total - self.completed) / self.completed
         return {"phase": self.phase, "document": self.document, "total": self.total,
                 "completed": self.completed, "percent": percent,
                 "elapsed": elapsed, "remaining": remaining, "active": self.active,
-                "failed": self.failed}
+                "failed": self.failed, "unit": self.unit}

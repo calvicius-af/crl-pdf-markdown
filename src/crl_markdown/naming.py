@@ -103,7 +103,8 @@ def _copy_verified(source, destination, digest):
 
 
 def execute_records(registry, root, table, scopes=None, *, apply=False, scheme="adr0022",
-                    families=None, workspace=True, accept_warnings=False, named_root=None):
+                    families=None, workspace=True, accept_warnings=False, named_root=None,
+                    progress_event=None):
     """Pré-verifica o lote; a simulação não altera identidades nem o registo."""
     if scheme not in nomeacao.ESQUEMAS:
         raise ValueError("Esquema desconhecido; use v4 ou adr0022.")
@@ -116,7 +117,9 @@ def execute_records(registry, root, table, scopes=None, *, apply=False, scheme="
     nomeacao.resolver_convencoes_base(entries, rules)
     prepared = {entry["chave"]: entry for entry in entries}
     results, plans = [], []
-    for entry in entries:
+    from .progress import track
+    for entry in track(entries, progress_event, stage="planning_names",
+                       label="A conferir os nomes e o catálogo", unit="registos"):
         family = nomeacao._familia(entry)
         if families is not None and family not in families:
             continue
@@ -181,7 +184,8 @@ def execute_records(registry, root, table, scopes=None, *, apply=False, scheme="
     destinations = {}
     for _, result, _, destination, digest, _ in plans:
         destinations.setdefault(destination, set()).add(digest)
-    for entry, result, source, destination, digest, scope in plans:
+    for entry, result, source, destination, digest, scope in track(
+            plans, progress_event, stage="applying_names", label="A organizar os PDFs nomeados", unit="PDFs"):
         if len(destinations[destination]) > 1:
             result.update(estado="por_confirmar", motivo="Dois PDFs diferentes têm o mesmo nome no lote; reveja o índice.")
             continue
@@ -254,7 +258,7 @@ def execute_records(registry, root, table, scopes=None, *, apply=False, scheme="
 
 
 def name_records(registry, root, siglas, scopes_path=None, *, apply=False, scheme="adr0022",
-                 families=None, named_root=None):
+                 families=None, named_root=None, progress_event=None):
     records = Registo.carregar(Path(registry))
     if not records.entradas:
         raise ValueError("Registo vazio ou inexistente. Faça primeiro a recolha a partir dos índices.")
@@ -264,4 +268,5 @@ def name_records(registry, root, siglas, scopes_path=None, *, apply=False, schem
             scopes = {key(row["nome"]): row["ambito"] for row in csv.DictReader(handle, delimiter=";")}
     table = nomeacao.tabela_de_siglas(equipa=siglas)
     return execute_records(records, root, table, scopes, apply=apply,
-                           scheme=scheme, families=families, named_root=named_root)
+                           scheme=scheme, families=families, named_root=named_root,
+                           progress_event=progress_event)

@@ -9,7 +9,7 @@ from types import SimpleNamespace
 import pytest
 
 from crl_markdown.pipeline import Options, run
-from crl_markdown.progress import OperationProgress, ProgressReporter, duration
+from crl_markdown.progress import OperationProgress, ProgressReporter, duration, track
 
 
 def test_percentage_only_changes_when_documents_complete_and_eta_uses_elapsed():
@@ -51,6 +51,32 @@ def test_interrupted_operation_keeps_measured_progress_and_new_run_resets_it():
 def test_elapsed_time_is_readable_for_long_batches():
     assert duration(3 * 3600 + 125.9) == "03:02:05"
     assert duration(-1) == "00:00:00"
+
+
+def test_tracking_counts_completed_work_and_resets_eta_for_next_phase():
+    now = [100.0]
+    model = OperationProgress(clock=lambda: now[0])
+    model.begin("Recolha")
+    for item in track([1, 2], model.update, stage="collecting", label="Recolher", unit="registos"):
+        assert model.snapshot()["completed"] == item - 1
+        now[0] += 10
+    assert model.snapshot()["percent"] == 100
+    assert model.snapshot()["elapsed"] == 20
+    for item in track([1, 2, 3], model.update, stage="naming", label="Nomear", unit="PDFs"):
+        if item == 2:
+            snapshot = model.snapshot()
+            assert snapshot["elapsed"] == 25
+            assert snapshot["remaining"] == 10  # usa os 5 s da fase atual, não os 25 s totais
+            assert snapshot["unit"] == "PDFs"
+        now[0] += 5
+
+
+def test_interrupted_tracked_item_is_not_counted_as_completed():
+    events = []
+    with pytest.raises(ValueError):
+        for item in track([1, 2], events.append, stage="naming", label="Nomear"):
+            raise ValueError("Falha antes de terminar o item")
+    assert events[-1]["completed"] == 0
 
 
 def test_pipeline_progress_covers_success_failure_and_finalization(tmp_path):

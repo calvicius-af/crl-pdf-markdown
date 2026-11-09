@@ -34,6 +34,9 @@ no separador **Preparar e conferir**. A área **Atividade** tem deslocamento
 vertical; pode ler mensagens anteriores sem a aplicação o levar novamente ao fim.
 
 Na conversão e na reauditoria, a percentagem conta documentos já processados.
+Na recolha, conta os registos do índice indicado; na organização, apresenta
+separadamente a conferência do catálogo e a aplicação dos nomes. A contagem
+e a estimativa recomeçam ao mudar de fase, mantendo o tempo total decorrido.
 O PDF que ainda está em curso não recebe uma percentagem inventada. O tempo
 decorrido é atualizado enquanto o programa trabalha; o tempo restante é uma
 estimativa calculada depois do primeiro documento e pode variar com o tamanho

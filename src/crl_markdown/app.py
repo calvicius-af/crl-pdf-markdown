@@ -341,7 +341,7 @@ def main(argv=None):
             transcript = io.StringIO()
             try:
                 with contextlib.redirect_stdout(transcript):
-                    result = collect(selected)
+                    result = collect(selected, progress_event=lambda event: events.put(("progress", event)))
                 events.put(("log", transcript.getvalue()))
                 events.put(("log", "Recolha terminada. Confira as pendências no relatório." if result
                             else "Recolha e nomeação terminadas. Pode construir o Markdown."))
@@ -379,7 +379,8 @@ def main(argv=None):
                 results = name_records(workspace / "0_gestao/catalogo/registo_bte.jsonl", workspace,
                                        workspace / "0_gestao/vocabularios/siglas.csv",
                                        workspace / "0_gestao/vocabularios/empregadores_ambito.csv",
-                                       apply=True, named_root=Path(configured["named"]) if configured else None)
+                                       apply=True, named_root=Path(configured["named"]) if configured else None,
+                                       progress_event=lambda event: events.put(("progress", event)))
                 counts = Counter(row["estado"] for row in results)
                 events.put(("log", "Organização local terminada: " + ", ".join(
                     f"{n} {state}" for state, n in sorted(counts.items()))))
@@ -497,7 +498,7 @@ def main(argv=None):
             totals_text.set("Contagem indisponível nesta operação" if snapshot["active"] else "")
             progress.configure(value=0)
         else:
-            totals_text.set(f"{snapshot['completed']}/{snapshot['total']} PDFs processados "
+            totals_text.set(f"{snapshot['completed']}/{snapshot['total']} {snapshot['unit']} processados "
                             f"({percent:.1f}%)".replace(".", ","))
             progress.configure(value=percent)
         timing = "Tempo decorrido: " + duration(snapshot["elapsed"])
