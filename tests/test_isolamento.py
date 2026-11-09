@@ -17,6 +17,16 @@ from tests.test_pipeline import _bte_inputs
 pytest.importorskip("docling_core")
 
 
+def test_offline_worker_blocks_dependency_network_attempt_before_conversion(tmp_path):
+    out = tmp_path / "out"
+    with pytest.raises(isolamento.FalhaArranque, match="OfflineNetworkError"):
+        run(_bte_inputs(tmp_path), out, Options(offline=True), progress=lambda line: None,
+            converter_factory=worker_fakes.tenta_rede)
+    manifest = json.loads((out / "_auditoria/manifest.json").read_text(encoding="utf-8"))
+    assert manifest["status"] == "interrompida"
+    assert manifest["recovery"]["code"] == "CRL-REDE-OFFLINE"
+
+
 def _run(tmp_path, monkeypatch, **env):
     for key, value in env.items():
         monkeypatch.setenv(key, str(value))

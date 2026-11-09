@@ -1,5 +1,12 @@
 # CRL — PDF para Markdown
 
+Para utilizar no Windows, o procedimento da linha 0.4 é um **instalador único
+offline**, com Python, bibliotecas e modelos incluídos. Consulte
+[instalar e abrir no Windows](docs/operacao/instalacao-windows.md).
+A versão **0.4.0rc2** é candidata: a entrega oficial depende da construção e do
+[ensaio de aceitação numa estação CRL](docs/desenvolvimento/distribuicao-windows.md).
+Os comandos abaixo destinam-se ao desenvolvimento e à preparação técnica.
+
 Variante de [crl-app-cct](https://github.com/calvicius-af/crl-app-cct), com o
 histórico Git preservado, dedicada à importação direta de documentos no MAXQDA.
 
@@ -56,16 +63,17 @@ e a [hierarquia Markdown](docs/operacao/hierarquia-markdown.md).
 O caminho antigo `data/`/`results/` continua disponível para compatibilidade;
 `--workspace` é o caminho recomendado para novos lotes.
 
-Para estações sem rede, usar o [pacote e instalador offline](docs/operacao/instalacao-offline.md).
-Os scripts foram preparados; a instalação numa estação Windows e a importação
+O [pacote técnico offline](docs/operacao/instalacao-offline.md) continua disponível
+para o apoio preparar a distribuição. A instalação numa estação Windows e a importação
 direta no MaxQDA continuam gates de aceitação por realizar. Docling mantém-se
 como único motor principal de conversão, com cache auditada e auditores auxiliares.
 
-## Instalar e utilizar
+## Instalar para desenvolvimento
 
-Candidato de teste: **0.3.1rc2**. Para testar o pacote completo sem rede, siga
-o [guia curto de instalação e teste](docs/operacao/testar-pacote-offline.md).
-O pacote Windows só é disponibilizado após o ensaio de instalação/conversão.
+Candidato do instalador completo: **0.4.0rc2**. A preparação e os gates de entrega
+estão em [distribuição Windows](docs/desenvolvimento/distribuicao-windows.md).
+Os pacotes 0.3.1rc2 e o [guia técnico anterior](docs/operacao/testar-pacote-offline.md)
+exigiam Python pré-instalado e não satisfazem o critério da instalação autónoma.
 
 Python 3.11 a 3.13; as estações do CRL usam Windows com Python 3.13. Instalar o
 Python de python.org com a opção «tcl/tk and IDLE», necessária à interface
