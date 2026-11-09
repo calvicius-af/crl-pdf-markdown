@@ -77,4 +77,11 @@ if __name__ == "__main__":
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--source", type=Path, help="Cópia do smoke.pdf, por exemplo em L:")
     args = parser.parse_args()
-    check(args.out, args.source)
+    try:
+        check(args.out, args.source)
+    except Exception:
+        import traceback
+        # pythonw não tem stderr; conservar a causa mesmo sem chegar ao pipeline.
+        args.out.mkdir(parents=True, exist_ok=True)
+        (args.out / "falha_ensaio.txt").write_text(traceback.format_exc(), encoding="utf-8")
+        raise
