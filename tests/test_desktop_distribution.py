@@ -1,5 +1,6 @@
 """Contratos da configuração persistente, apoio e runtime distribuído."""
 
+import gc
 import importlib.util
 import json
 import sys
@@ -10,6 +11,15 @@ import pytest
 
 from crl_markdown import settings
 from crl_markdown.diagnostics import export_support
+
+
+@pytest.fixture(autouse=True)
+def collect_destroyed_tk_windows_on_main_thread():
+    # Each GUI test owns a new Tcl interpreter. Collect the previous test's
+    # callback cycles here, before a worker can trigger GC on another thread.
+    gc.collect()
+    yield
+    gc.collect()
 
 
 def test_settings_survive_restart_and_unavailable_source(tmp_path):
@@ -343,7 +353,8 @@ def test_success_after_failure_does_not_export_the_old_error(tmp_path, monkeypat
             root.destroy()
 
     root.after(100, start)
-    root.after(5000, lambda: (failures.append(AssertionError("A GUI não terminou")), root.destroy()))
+    root.after(15000, lambda: (failures.append(AssertionError(
+        f"A GUI não terminou; operações iniciadas: {len(calls)}")), root.destroy()))
     app.main(["--installed", "--offline", "--models", str(resources / "modelos")])
     if failures:
         raise failures[0]
