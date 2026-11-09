@@ -10,6 +10,7 @@ def prepare_environment():
 
     resources = Path(sys.executable).resolve().parent.parent / "recursos"
     os.environ.update({"HF_HUB_OFFLINE": "1", "TRANSFORMERS_OFFLINE": "1",
+                       "HF_HUB_DISABLE_TELEMETRY": "1", "DO_NOT_TRACK": "1",
                        "HF_HOME": str(user_folder() / "cache-hf"),
                        "TORCH_HOME": str(user_folder() / "cache-torch")})
     # Modelos ONNX e o parser PDF podem exigir um alias ANSI em Windows.

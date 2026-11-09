@@ -57,15 +57,26 @@ jobs:
         shell: pwsh
         run: |
           $version = python -c "from crl_markdown import __version__; print(__version__)"
+          $binaryVersion = python -c "import re; from crl_markdown import __version__; print('.'.join(re.findall(r'\d+', __version__)[:4]))"
           $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
           if (-not (Test-Path $iscc)) { throw 'Inno Setup 6 não está instalado no construtor' }
-          & $iscc "/DPayload=$env:CRL_PAYLOAD" "/DAppVersion=$version" "/DOutput=$env:RUNNER_TEMP\instalador" packaging/windows/CRL.iss
+          & $iscc "/DPayload=$env:CRL_PAYLOAD" "/DAppVersion=$version" "/DBinaryVersion=$binaryVersion" "/DOutput=$env:RUNNER_TEMP\instalador" packaging/windows/CRL.iss
           if ($LASTEXITCODE -ne 0) { throw 'Falhou a compilação do instalador' }
           $installers = @(Get-ChildItem "$env:RUNNER_TEMP\instalador\*.exe")
           if ($installers.Count -ne 1) { throw 'Esperava-se exatamente um instalador' }
           if (Get-ChildItem "$env:RUNNER_TEMP\instalador\*.bin") { throw 'O instalador tem partes externas' }
           $hash = (Get-FileHash $installers[0].FullName -Algorithm SHA256).Hash.ToLower()
           "$hash  $($installers[0].Name)" | Set-Content "$env:RUNNER_TEMP\instalador\SHA256SUMS.txt" -Encoding utf8
+          $signatures = foreach ($binary in @($installers[0].FullName, "$env:CRL_PAYLOAD\python\python.exe", "$env:CRL_PAYLOAD\python\pythonw.exe")) {
+            $signature = Get-AuthenticodeSignature $binary
+            [PSCustomObject]@{
+              file = Split-Path $binary -Leaf
+              status = [string]$signature.Status
+              publisher = if ($signature.SignerCertificate) { $signature.SignerCertificate.Subject } else { $null }
+              sha256 = (Get-FileHash $binary -Algorithm SHA256).Hash.ToLower()
+            }
+          }
+          $signatures | ConvertTo-Json | Set-Content "$env:RUNNER_TEMP\instalador\ASSINATURAS.json" -Encoding utf8
       - name: Instalar e testar o EXE compilado
         shell: pwsh
         run: |

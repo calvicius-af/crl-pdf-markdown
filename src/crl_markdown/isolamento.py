@@ -54,6 +54,10 @@ class ErroNoProcesso(RuntimeError):
 def _trabalhador(ligacao, options, factory, registo_falhas):
     from .pipeline import convert_pdf
 
+    if options.offline:
+        from .offline import install_guard
+        install_guard()
+
     destino = None
     if registo_falhas:
         destino = open(registo_falhas, "a", encoding="utf-8")  # noqa: SIM115

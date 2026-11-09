@@ -3,7 +3,7 @@
 Para utilizar no Windows, o procedimento da linha 0.4 é um **instalador único
 offline**, com Python, bibliotecas e modelos incluídos. Consulte
 [instalar e abrir no Windows](docs/operacao/instalacao-windows.md).
-A versão **0.4.0rc1** é candidata: a entrega oficial depende da construção e do
+A versão **0.4.0rc2** é candidata: a entrega oficial depende da construção e do
 [ensaio de aceitação numa estação CRL](docs/desenvolvimento/distribuicao-windows.md).
 Os comandos abaixo destinam-se ao desenvolvimento e à preparação técnica.
 
@@ -70,7 +70,7 @@ como único motor principal de conversão, com cache auditada e auditores auxili
 
 ## Instalar para desenvolvimento
 
-Candidato do instalador completo: **0.4.0rc1**. A preparação e os gates de entrega
+Candidato do instalador completo: **0.4.0rc2**. A preparação e os gates de entrega
 estão em [distribuição Windows](docs/desenvolvimento/distribuicao-windows.md).
 Os pacotes 0.3.1rc2 e o [guia técnico anterior](docs/operacao/testar-pacote-offline.md)
 exigiam Python pré-instalado e não satisfazem o critério da instalação autónoma.

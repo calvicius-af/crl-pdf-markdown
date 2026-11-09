@@ -12,6 +12,9 @@
 AppId={{026193C4-73BB-46B1-A923-469A65D11285}
 AppName=CRL — PDF para Markdown
 AppVersion={#AppVersion}
+#ifdef BinaryVersion
+VersionInfoVersion={#BinaryVersion}
+#endif
 AppPublisher=CRL
 DefaultDirName={localappdata}\Programs\CRL-PDF-Markdown\{#AppVersion}
 UsePreviousAppDir=no

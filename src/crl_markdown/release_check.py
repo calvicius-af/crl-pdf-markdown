@@ -3,16 +3,13 @@
 import argparse
 import hashlib
 import json
-import sys
 from importlib.metadata import version
 from pathlib import Path
 
 
 def block_network():
-    def audit(event, args):
-        if event in {"socket.connect", "socket.getaddrinfo", "socket.gethostbyname", "socket.sendto"}:
-            raise RuntimeError("O ensaio offline tentou usar a rede: " + event)
-    sys.addaudithook(audit)
+    from .offline import install_guard
+    install_guard()
 
 
 def converter(options):

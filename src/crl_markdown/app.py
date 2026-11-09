@@ -19,11 +19,22 @@ def main(argv=None):
     args = parser.parse_args(argv)
     root = tk.Tk()
     from . import __version__, settings
+    from .progress import OperationProgress, ProgressReporter, duration
     root.title(f"CRL — PDF para Markdown {__version__}")
-    root.geometry("900x760")
-    root.minsize(750, 560)
-    frame = ttk.Frame(root, padding=16)
+    root.geometry(f"900x{max(600, min(760, root.winfo_screenheight() - 120))}")
+    root.minsize(750, 600)
+    frame = ttk.Frame(root, padding=12)
     frame.pack(fill="both", expand=True)
+    frame.columnconfigure(0, weight=1)
+    frame.rowconfigure(3, weight=1)
+    toolbar = ttk.Frame(frame)
+    toolbar.grid(row=1, column=0, sticky="ew", pady=(4, 8))
+    notebook = ttk.Notebook(frame)
+    notebook.grid(row=2, column=0, sticky="ew", pady=(0, 8))
+    conversion_panel = ttk.Frame(notebook, padding=8)
+    tools_panel = ttk.Frame(notebook, padding=8)
+    notebook.add(conversion_panel, text="Converter PDFs")
+    notebook.add(tools_panel, text="Preparar e conferir")
     source, output, workspace_path = tk.StringVar(), tk.StringVar(), tk.StringVar()
     ocr, offline, overwrite = tk.BooleanVar(), tk.BooleanVar(), tk.BooleanVar()
     models = tk.StringVar()
@@ -58,7 +69,7 @@ def main(argv=None):
     family_labels = {"Convenções (inclui ACEP/ACCE)": "convencao", "Portarias": "extensao",
                      "Adesões": "adesao", "Acórdãos": "acordao", "Cessações de vigência": "cessacao",
                      "Outros avisos": "aviso", "Todos os documentos IRCT": "todos"}
-    selected_family = tk.StringVar(value=next(iter(family_labels)))
+    selected_family = tk.StringVar(value="Todos os documentos IRCT")
     def choose_family(_event=None):
         from .workspace import document_source
         if configured:
@@ -66,7 +77,8 @@ def main(argv=None):
             source.set(str(Path(configured["named"]) / DOCUMENT_FOLDERS[family_labels[selected_family.get()]]))
         elif workspace_path.get():
             source.set(str(document_source(workspace_path.get(), family_labels[selected_family.get()])))
-    ttk.Label(frame, text="Preparar documentos Markdown para importação no MAXQDA").pack(anchor="w")
+    ttk.Label(frame, text="Preparar documentos Markdown para importação no MAXQDA").grid(
+        row=0, column=0, sticky="w")
     def use_workspace():
         from .workspace import initialize
         folder = filedialog.askdirectory(title="Escolha ou crie a pasta RNC_Dados_AAAA")
@@ -80,15 +92,15 @@ def main(argv=None):
             output.set(str(workspace / "2_processamento/texto"))
             messagebox.showinfo("Pastas prontas", "A árvore RNC está pronta. Os ficheiros existentes "
                                 "foram conservados. Coloque os índices em 1_fontes/indices_bte.")
-    ttk.Button(frame, text="Configurar pastas…", command=configure).pack(anchor="w", pady=4)
+    ttk.Button(toolbar, text="Configurar pastas…", command=configure).pack(side="left", padx=(0, 8))
     if args.installed:
         def use_sample():
             source.set(str(args.models.parent / "smoke.pdf"))
-        ttk.Button(frame, text="Usar PDF de teste incluído", command=use_sample).pack(anchor="w", pady=4)
+        ttk.Button(toolbar, text="Usar PDF de teste incluído", command=use_sample).pack(side="left")
     if not args.installed:
-        ttk.Button(frame, text="Criar / usar pasta RNC…", command=use_workspace).pack(anchor="w", pady=4)
-    ttk.Label(frame, text="Documentos a converter na pasta RNC").pack(anchor="w")
-    family_box = ttk.Combobox(frame, textvariable=selected_family, values=list(family_labels), state="readonly")
+        ttk.Button(toolbar, text="Criar / usar pasta RNC…", command=use_workspace).pack(side="left")
+    ttk.Label(conversion_panel, text="Documentos a converter na pasta RNC").pack(anchor="w")
+    family_box = ttk.Combobox(conversion_panel, textvariable=selected_family, values=list(family_labels), state="readonly")
     family_box.pack(fill="x")
     family_box.bind("<<ComboboxSelected>>", choose_family)
     for label, variable in (
@@ -98,8 +110,8 @@ def main(argv=None):
     ):
         if args.installed and variable is models:
             continue
-        ttk.Label(frame, text=label).pack(anchor="w", pady=(8, 0))
-        row = ttk.Frame(frame)
+        ttk.Label(conversion_panel, text=label).pack(anchor="w", pady=(8, 0))
+        row = ttk.Frame(conversion_panel)
         row.pack(fill="x")
         ttk.Entry(row, textvariable=variable).pack(side="left", fill="x", expand=True)
 
@@ -117,8 +129,8 @@ def main(argv=None):
                     source.set(chosen)
 
             ttk.Button(row, text="PDF…", command=choose_pdf).pack(side="left")
-    flags = ttk.Frame(frame)
-    flags.pack(fill="x", pady=8)
+    flags = ttk.Frame(conversion_panel)
+    flags.pack(fill="x", pady=(10, 0))
     for text, variable in (
         ("OCR (digitalizações)", ocr),
         ("Modelos locais / offline", offline),
@@ -127,13 +139,53 @@ def main(argv=None):
         if args.installed and variable is offline:
             continue
         ttk.Checkbutton(flags, text=text, variable=variable).pack(side="left")
-    log = tk.Text(frame, height=10, state="disabled", wrap="word")
-    log.pack(fill="both", expand=True)
+    activity = ttk.LabelFrame(frame, text="Atividade", padding=6)
+    activity.grid(row=3, column=0, sticky="nsew")
+    activity.rowconfigure(0, weight=1)
+    activity.columnconfigure(0, weight=1)
+    log = tk.Text(activity, height=10, state="disabled", wrap="word", font="TkTextFont")
+    log.grid(row=0, column=0, sticky="nsew")
+    scrollbar = ttk.Scrollbar(activity, orient="vertical", command=log.yview)
+    scrollbar.grid(row=0, column=1, sticky="ns")
+    log.configure(yscrollcommand=scrollbar.set)
+    status_panel = ttk.Frame(frame)
+    status_panel.grid(row=4, column=0, sticky="ew", pady=6)
+    status_panel.columnconfigure(1, weight=1)
+    phase_text = tk.StringVar(value="Pronto para começar")
+    totals_text = tk.StringVar()
+    time_text = tk.StringVar(value="Tempo decorrido: 00:00:00")
+    phase_label = ttk.Label(status_panel, textvariable=phase_text, wraplength=800)
+    phase_label.grid(row=0, column=0, columnspan=2, sticky="w")
+    status_panel.bind("<Configure>", lambda event: phase_label.configure(wraplength=max(280, event.width)))
+    activity_pulse = ttk.Progressbar(status_panel, mode="indeterminate", length=70)
+    activity_pulse.grid(row=1, column=0, sticky="ew", padx=(0, 8), pady=4)
+    progress = ttk.Progressbar(status_panel, mode="determinate", maximum=100)
+    progress.grid(row=1, column=1, sticky="ew", pady=4)
+    ttk.Label(status_panel, textvariable=totals_text).grid(row=2, column=0, columnspan=2, sticky="w")
+    ttk.Label(status_panel, textvariable=time_text).grid(row=3, column=0, columnspan=2, sticky="w")
+    actions = ttk.Frame(frame)
+    actions.grid(row=5, column=0, sticky="ew")
+    actions.columnconfigure((0, 1), weight=1)
 
     report_path = None
     last_error = None
     running = threading.Event()
     reaudit_cancel = threading.Event()
+    operation = OperationProgress()
+    operation_context = "Interface"
+    operation_failed = False
+    pulse_active = False
+
+    def begin_operation(label):
+        nonlocal last_error, operation_context, operation_failed, report_path
+        last_error = None
+        report_path = None
+        report_button.configure(state="disabled")
+        operation_failed = False
+        operation_context = label
+        operation.begin(label)
+        running.set()
+        button.configure(state="disabled")
 
     def close():
         # A conversão corre numa thread que morre com a janela. Os documentos
@@ -173,12 +225,14 @@ def main(argv=None):
         previous_run = previous_manifest.read_bytes() if previous_manifest.exists() else None
         button.configure(state="disabled")
         report_button.configure(state="disabled")
-        running.set()
+        begin_operation("A preparar a conversão")
 
         def worker():
             try:
+                reporter = ProgressReporter(lambda line: events.put(("log", line)),
+                                            lambda event: events.put(("progress", event)))
                 reports = run(
-                    *args, overwrite=replace, progress=lambda line: events.put(("log", line))
+                    *args, overwrite=replace, progress=reporter,
                 )
                 failed = sum(r["state"] == "falhou" for r in reports)
                 review = sum(r["state"] == "rever" for r in reports)
@@ -222,12 +276,12 @@ def main(argv=None):
 
         threading.Thread(target=worker, daemon=True).start()
 
-    button = ttk.Button(frame, text="Construir Markdown", command=start)
-    button.pack(pady=(8, 0))
+    button = ttk.Button(flags, text="Construir Markdown", command=start)
+    button.pack(side="right", padx=(12, 0))
     report_button = ttk.Button(
-        frame, text="Abrir relatório do lote", command=open_report, state="disabled"
+        actions, text="Abrir relatório do lote", command=open_report, state="disabled"
     )
-    report_button.pack(pady=(4, 0))
+    report_button.grid(row=0, column=0, sticky="ew", padx=(0, 6))
 
     def save_support():
         from .diagnostics import export_support
@@ -237,24 +291,29 @@ def main(argv=None):
         if not target:
             return
         attachments = [report_path, report_path.with_suffix(".json")] if report_path else []
-        audit = Path(output.get()) / "_auditoria"
+        audit = (report_path.parent if report_path and report_path.name == "diagnostico.md"
+                 else Path(output.get()) / "_auditoria")
         attachments += [audit / name for name in ("manifest.json", "progresso.log", "falha_nativa.log")]
         try:
-            export_support(target, error=last_error, log=log.get("1.0", "end"), attachments=attachments)
+            export_support(target, error=last_error, context=operation_context,
+                           log=log.get("1.0", "end"), attachments=attachments)
         except OSError:
             messagebox.showerror("Não foi possível guardar", "Escolha outra pasta onde possa guardar ficheiros.")
         else:
             messagebox.showinfo("Relatório guardado", "Entregue o ZIP ao apoio informático.")
 
-    ttk.Button(frame, text="Guardar relatório para o apoio", command=save_support).pack(pady=4)
-    progress = ttk.Progressbar(frame, mode="indeterminate")
-    progress.pack(fill="x", pady=4)
-    progress_active = False
+    ttk.Button(actions, text="Guardar relatório para o apoio", command=save_support).grid(
+        row=0, column=1, sticky="ew", padx=(6, 0))
 
     def callback_error(error_type, error, tb):
-        nonlocal last_error
+        nonlocal last_error, operation_context, operation_failed
         from .diagnostics import support_dialog
         last_error = error.with_traceback(tb)
+        if not running.is_set():
+            operation_context = "Validar operação pela interface"
+            operation_failed = True
+            operation.begin(operation_context)
+            operation.finish(failed=True)
         support_dialog(root, last_error, "Interface")
     root.report_callback_exception = callback_error
 
@@ -277,7 +336,7 @@ def main(argv=None):
             selected.indices = configured["indices"]
             selected.destino = configured["originals"]
             selected.named_root = Path(configured["named"])
-        running.set()
+        begin_operation("A recolher PDFs do BTE (usa Internet)")
         def work():
             transcript = io.StringIO()
             try:
@@ -314,7 +373,7 @@ def main(argv=None):
         workspace = Path(workspace_path.get())
         from .workspace import initialize
         initialize(workspace)
-        running.set()
+        begin_operation("A organizar os PDFs")
         def work():
             try:
                 results = name_records(workspace / "0_gestao/catalogo/registo_bte.jsonl", workspace,
@@ -353,10 +412,12 @@ def main(argv=None):
             return
         current_output = Path(output.get())
         reaudit_cancel.clear()
-        running.set()
+        begin_operation("A reauditar o Markdown")
         def worker():
             try:
-                destination, reports = reaudit(current_output, progress=lambda line: events.put(("log", line)),
+                reporter = ProgressReporter(lambda line: events.put(("log", line)),
+                                            lambda event: events.put(("progress", event)))
+                destination, reports = reaudit(current_output, progress=reporter,
                                                cancel_event=reaudit_cancel)
                 events.put(("output", str(destination)))
                 events.put(("report", destination / "_auditoria/diagnostico.md"))
@@ -382,42 +443,77 @@ def main(argv=None):
             messagebox.showinfo("Entrega pronta", f"Importe os Markdown da pasta documentos.\n{destination}\n\n"
                                 "O relatório de conformidade acompanha a entrega.")
 
-    workflow = ttk.Frame(frame)
-    workflow.pack(pady=8)
-    ttk.Button(workflow, text="Recolher PDFs (usa internet)", command=collect_workspace).pack(side="left")
-    ttk.Button(workflow, text="Organizar PDFs (sem rede)", command=organize_workspace).pack(side="left")
-    ttk.Button(workflow, text="Conferir / aprovar…", command=review_document).pack(side="left")
-    ttk.Button(workflow, text="Entregar aprovados…", command=deliver_approved).pack(side="left")
-
-    ttk.Button(frame, text="Reauditar lote (sem nova extração)", command=reaudit_batch).pack(pady=4)
+    tools_panel.columnconfigure((0, 1), weight=1, uniform="tools")
+    tools = (
+        ("Recolher PDFs (usa internet)", collect_workspace, "Segue as ligações dos índices Excel no site do BTE."),
+        ("Organizar PDFs (sem rede)", organize_workspace, "Atribui os nomes RNC e conserva os originais."),
+        ("Conferir / aprovar…", review_document, "Revê alertas e regista a decisão sobre cada documento."),
+        ("Entregar aprovados…", deliver_approved, "Cria uma entrega dos documentos já aprovados."),
+        ("Reauditar lote (sem nova extração)", reaudit_batch, "Aplica os controlos atuais ao Markdown existente."),
+    )
+    tool_descriptions = []
+    for index, (label, command, description) in enumerate(tools):
+        row, column = divmod(index, 2)
+        cell = ttk.Frame(tools_panel, padding=(4, 3))
+        cell.grid(row=row, column=column, sticky="nsew")
+        ttk.Button(cell, text=label, command=command).pack(fill="x")
+        note = ttk.Label(cell, text=description, wraplength=340)
+        note.pack(fill="x", pady=(3, 0))
+        tool_descriptions.append(note)
+    tools_panel.bind("<Configure>", lambda event: [
+        note.configure(wraplength=max(200, event.width // 2 - 24)) for note in tool_descriptions])
 
     def poll():
-        nonlocal report_path, last_error, progress_active
+        nonlocal report_path, last_error, operation_failed, pulse_active
         while not events.empty():
             kind, text = events.get_nowait()
-            if kind == "output":
+            if kind == "progress":
+                operation.update(text)
+            elif kind == "output":
                 output.set(text)
             elif kind == "report":
                 report_path = text
                 report_button.configure(state="normal")
             elif kind == "done":
                 running.clear()
+                operation.finish(failed=operation_failed)
                 button.configure(state="normal")
             elif kind == "failure":
                 from .diagnostics import support_dialog
                 last_error = text
+                operation_failed = True
                 support_dialog(root, text, "Operação pela interface")
             else:
+                follow = log.yview()[1] >= 0.99
                 log.configure(state="normal")
                 log.insert("end", text + "\n")
-                log.see("end")
+                if follow:
+                    log.see("end")
                 log.configure(state="disabled")
-        if running.is_set() and not progress_active:
-            progress.start(15)
-            progress_active = True
-        elif not running.is_set() and progress_active:
-            progress.stop()
-            progress_active = False
+        snapshot = operation.snapshot()
+        phase_text.set(snapshot["phase"] + (" — " + snapshot["document"] if snapshot["document"] else ""))
+        percent = snapshot["percent"]
+        if percent is None:
+            totals_text.set("Contagem indisponível nesta operação" if snapshot["active"] else "")
+            progress.configure(value=0)
+        else:
+            totals_text.set(f"{snapshot['completed']}/{snapshot['total']} PDFs processados "
+                            f"({percent:.1f}%)".replace(".", ","))
+            progress.configure(value=percent)
+        timing = "Tempo decorrido: " + duration(snapshot["elapsed"])
+        if snapshot["active"]:
+            if snapshot["total"] and snapshot["completed"] == snapshot["total"]:
+                timing += "  ·  A finalizar o lote"
+            else:
+                timing += ("  ·  Restante estimado: cerca de " + duration(snapshot["remaining"])
+                           if snapshot["remaining"] is not None else "  ·  Restante estimado: a calcular")
+        time_text.set(timing)
+        if running.is_set() and not pulse_active:
+            activity_pulse.start(15)
+            pulse_active = True
+        elif not running.is_set() and pulse_active:
+            activity_pulse.stop()
+            pulse_active = False
         root.after(100, poll)
 
     poll()

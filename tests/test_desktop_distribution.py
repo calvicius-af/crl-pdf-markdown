@@ -230,3 +230,118 @@ def test_startup_error_is_visible_with_hidden_root():
     finally:
         root.destroy()
     assert visible == [True]
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="Disposição da janela Windows")
+def test_controls_fit_narrow_window_in_both_tabs(tmp_path, monkeypatch):
+    import tkinter as tk
+    from tkinter import ttk
+
+    from crl_markdown import app
+
+    try:
+        root = tk.Tk()
+    except tk.TclError:
+        pytest.skip("Sem ambiente gráfico")
+    monkeypatch.setattr(app.tk, "Tk", lambda: root)
+    monkeypatch.setattr(settings, "load", lambda: settings.defaults(tmp_path / "dados"))
+    checked = []
+
+    def descendants(widget):
+        for child in widget.winfo_children():
+            yield child
+            yield from descendants(child)
+
+    def inspect():
+        root.geometry("750x600")
+        root.update_idletasks()
+        notebook = next(w for w in descendants(root) if isinstance(w, ttk.Notebook))
+        try:
+            for tab in (0, 1):
+                notebook.select(tab)
+                root.update_idletasks()
+                for widget in descendants(root):
+                    if isinstance(widget, ttk.Button) and widget.winfo_ismapped():
+                        assert widget.winfo_reqwidth() <= widget.winfo_width()
+                        assert widget.winfo_rootx() >= root.winfo_rootx()
+                        assert widget.winfo_rootx() + widget.winfo_width() <= root.winfo_rootx() + root.winfo_width()
+                        assert widget.winfo_rooty() + widget.winfo_height() <= root.winfo_rooty() + root.winfo_height()
+                log = next(w for w in descendants(root) if isinstance(w, tk.Text))
+                assert log.winfo_height() >= 60
+                checked.append(tab)
+        finally:
+            root.destroy()
+
+    monkeypatch.setattr(root, "mainloop", inspect)
+    app.main(["--installed", "--offline", "--models", str(tmp_path / "recursos/modelos")])
+    assert checked == [0, 1]
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="Relatório da operação atual na GUI Windows")
+def test_success_after_failure_does_not_export_the_old_error(tmp_path, monkeypatch):
+    import tkinter as tk
+    from tkinter import ttk
+
+    from crl_markdown import app, diagnostics
+
+    try:
+        root = tk.Tk()
+    except tk.TclError:
+        pytest.skip("Sem ambiente gráfico")
+    root.withdraw()
+    monkeypatch.setattr(app.tk, "Tk", lambda: root)
+    monkeypatch.setattr(settings, "load", lambda: settings.defaults(tmp_path / "dados"))
+    resources = tmp_path / "recursos"
+    resources.mkdir()
+    (resources / "smoke.pdf").write_bytes(b"UI test fixture")
+    target = tmp_path / "apoio.zip"
+    monkeypatch.setattr(app.filedialog, "asksaveasfilename", lambda **kwargs: str(target))
+    monkeypatch.setattr(app.messagebox, "showinfo", lambda *args, **kwargs: None)
+    monkeypatch.setattr(diagnostics, "support_dialog", lambda *args: None)
+    calls, failures = [], []
+
+    def run(*args, **kwargs):
+        calls.append(1)
+        if len(calls) == 1:
+            raise ValueError("ERRO_ANTIGO_SENTINELA")
+        return []
+
+    monkeypatch.setattr(app, "run", run)
+
+    def widgets(parent):
+        for child in parent.winfo_children():
+            yield child
+            yield from widgets(child)
+
+    def button(text):
+        return next(w for w in widgets(root) if isinstance(w, ttk.Button) and w.cget("text") == text)
+
+    def start():
+        button("Usar PDF de teste incluído").invoke()
+        button("Construir Markdown").invoke()
+        root.after(50, continue_test)
+
+    def continue_test():
+        try:
+            if button("Construir Markdown").instate(["disabled"]):
+                root.after(50, continue_test)
+                return
+            if len(calls) == 1:
+                button("Construir Markdown").invoke()
+                root.after(50, continue_test)
+                return
+            button("Guardar relatório para o apoio").invoke()
+            with zipfile.ZipFile(target) as archive:
+                data = json.loads(archive.read("apoio.json"))
+                assert "traceback" not in data and "problem" not in data
+                assert not any("falha-" in name for name in archive.namelist())
+            root.destroy()
+        except BaseException as error:
+            failures.append(error)
+            root.destroy()
+
+    root.after(100, start)
+    root.after(5000, lambda: (failures.append(AssertionError("A GUI não terminou")), root.destroy()))
+    app.main(["--installed", "--offline", "--models", str(resources / "modelos")])
+    if failures:
+        raise failures[0]

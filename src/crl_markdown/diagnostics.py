@@ -34,7 +34,17 @@ def safe_detail(text: str) -> str:
 def explain(error: BaseException) -> dict:
     detail = safe_detail(str(error))
     lowered = detail.lower()
-    if 'documento bloqueado' in lowered:
+    if 'não foram encontrados pdfs' in lowered:
+        code, action = 'CRL-SEM-PDFS', (
+            'Use PDF… para escolher um documento, ou Pasta… para escolher uma pasta que contenha PDFs. '
+            'Confirme no Explorador que os ficheiros estão disponíveis, incluindo nas subpastas. '
+            'Se usar uma pasta sincronizada, aguarde que os PDFs fiquem disponíveis neste computador.')
+    elif 'o modo offline bloqueou' in lowered:
+        code, action = 'CRL-REDE-OFFLINE', (
+            'Uma biblioteca tentou aceder à rede durante a conversão local. '
+            'Os modelos devem vir incluídos na instalação. Guarde o relatório para o apoio '
+            'e peça a verificação do pacote instalado.')
+    elif 'documento bloqueado' in lowered:
         code, action = 'CRL-QUALIDADE', (
             'Abra Conferir / aprovar e selecione a ocorrência do documento. '
             'Use Criar / editar correção e Reauditar correção para erros de conteúdo, '
