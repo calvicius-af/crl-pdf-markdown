@@ -855,6 +855,7 @@ def collect(args):
         aplicar=True,
         scheme=getattr(args, "esquema", "adr0022"),
         workspace=bool(workspace and Path(args.nomes) == NOMES_OMISSAO),
+        named_root=getattr(args, "named_root", None),
         tabela=nomeacao.tabela_de_siglas(equipa=args.siglas[0], caminhos=args.siglas[1:])
         if args.siglas else nomeacao.tabela_de_siglas(),
         familias=familias,

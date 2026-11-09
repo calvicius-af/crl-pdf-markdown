@@ -103,7 +103,7 @@ def _copy_verified(source, destination, digest):
 
 
 def execute_records(registry, root, table, scopes=None, *, apply=False, scheme="adr0022",
-                    families=None, workspace=True, accept_warnings=False):
+                    families=None, workspace=True, accept_warnings=False, named_root=None):
     """Pré-verifica o lote; a simulação não altera identidades nem o registo."""
     if scheme not in nomeacao.ESQUEMAS:
         raise ValueError("Esquema desconhecido; use v4 ou adr0022.")
@@ -157,7 +157,7 @@ def execute_records(registry, root, table, scopes=None, *, apply=False, scheme="
                 raise ValueError("Hash do PDF diferente do registo de recolha; não copiar.")
             folder = Path(root)
             if workspace:
-                folder = folder / "1_fontes/irct"
+                folder = Path(named_root) if named_root else folder / "1_fontes/irct"
             else:
                 folder = folder / f"bte_{entry['ano']}"
             folder /= nomeacao.PASTA_FAMILIA[family]
@@ -253,7 +253,8 @@ def execute_records(registry, root, table, scopes=None, *, apply=False, scheme="
     return results
 
 
-def name_records(registry, root, siglas, scopes_path=None, *, apply=False, scheme="adr0022", families=None):
+def name_records(registry, root, siglas, scopes_path=None, *, apply=False, scheme="adr0022",
+                 families=None, named_root=None):
     records = Registo.carregar(Path(registry))
     if not records.entradas:
         raise ValueError("Registo vazio ou inexistente. Faça primeiro a recolha a partir dos índices.")
@@ -263,4 +264,4 @@ def name_records(registry, root, siglas, scopes_path=None, *, apply=False, schem
             scopes = {key(row["nome"]): row["ambito"] for row in csv.DictReader(handle, delimiter=";")}
     table = nomeacao.tabela_de_siglas(equipa=siglas)
     return execute_records(records, root, table, scopes, apply=apply,
-                           scheme=scheme, families=families)
+                           scheme=scheme, families=families, named_root=named_root)
