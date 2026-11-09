@@ -26,7 +26,7 @@ def main(argv=None):
     frame = ttk.Frame(root, padding=12)
     frame.pack(fill="both", expand=True)
     frame.columnconfigure(0, weight=1)
-    frame.rowconfigure(3, weight=1)
+    frame.rowconfigure(3, weight=1, minsize=100)
     toolbar = ttk.Frame(frame)
     toolbar.grid(row=1, column=0, sticky="ew", pady=(4, 8))
     notebook = ttk.Notebook(frame)
@@ -517,6 +517,11 @@ def main(argv=None):
             pulse_active = False
         root.after(100, poll)
 
+    # Font sizes and Windows display scaling vary between stations. Reserve
+    # room for readable activity text as well as the controls at the bottom.
+    root.update_idletasks()
+    minimum_height = max(600, frame.winfo_reqheight() - activity.winfo_reqheight() + 100)
+    root.minsize(750, minimum_height)
     poll()
     def first_start():
         if startup_error:

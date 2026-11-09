@@ -254,12 +254,14 @@ def test_controls_fit_narrow_window_in_both_tabs(tmp_path, monkeypatch):
 
     def inspect():
         root.geometry("750x600")
-        root.update_idletasks()
+        # Native Windows map/configure events need the regular event loop too.
+        root.update()
         notebook = next(w for w in descendants(root) if isinstance(w, ttk.Notebook))
         try:
             for tab in (0, 1):
                 notebook.select(tab)
-                root.update_idletasks()
+                root.update()
+                assert notebook.winfo_ismapped()
                 for widget in descendants(root):
                     if isinstance(widget, ttk.Button) and widget.winfo_ismapped():
                         assert widget.winfo_reqwidth() <= widget.winfo_width()
