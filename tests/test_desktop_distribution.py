@@ -95,6 +95,15 @@ def test_runtime_copy_excludes_builder_packages_but_keeps_tk_and_dlls(tmp_path, 
     assert (destination / "Lib/tkinter/resource").is_file()
     assert (destination / "tcl/tcl8.6/resource").is_file()
     assert str(source) not in (destination / "python313._pth").read_text()
+    crt = tmp_path / "Microsoft.VC143.CRT"
+    crt.mkdir()
+    (crt / "msvcp140.dll").write_bytes(b"CRT fixture")
+    with pytest.raises(ValueError, match="CRT incompleta"):
+        module.copy_cpp_runtime(destination, crt)
+    for name in ("vcruntime140.dll", "vcruntime140_1.dll", "concrt140.dll"):
+        (crt / name).write_bytes(b"CRT fixture")
+    module.copy_cpp_runtime(destination, crt)
+    assert (destination / "msvcp140.dll").read_bytes() == b"CRT fixture"
 
 
 def test_custom_named_folder_is_used_without_relocating_assigned_files(tmp_path):
@@ -115,3 +124,83 @@ def test_custom_named_folder_is_used_without_relocating_assigned_files(tmp_path)
     again = execute_records(records, root, table, {}, apply=True, named_root=elsewhere)
     assert again[0]["estado"] == "nomeado"
     assert target.is_file() and not elsewhere.exists()
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="Ensaio da interface do instalador Windows")
+def test_first_window_saves_folders_and_conversion_uses_them(tmp_path, monkeypatch):
+    import tkinter as tk
+    from tkinter import ttk
+
+    from crl_markdown import app
+
+    try:
+        root = tk.Tk()
+    except tk.TclError:
+        pytest.skip("Sem ambiente gráfico para o ensaio Tk")
+    root.withdraw()
+    monkeypatch.setattr(app.tk, "Tk", lambda: root)
+    monkeypatch.setenv("LOCALAPPDATA", str(tmp_path / "perfil"))
+    resources = tmp_path / "recursos"
+    resources.mkdir()
+    (resources / "smoke.pdf").write_bytes(b"PDF fixture; converter replaced in UI test")
+    values = settings.defaults(tmp_path / "dados")
+    calls, failures = [], []
+
+    def conversion(source, output, options, **kwargs):
+        calls.append((source, output, options))
+        return []
+
+    monkeypatch.setattr(app, "run", conversion)
+
+    def descendants(widget):
+        for child in widget.winfo_children():
+            yield child
+            yield from descendants(child)
+
+    def click(text):
+        button = next(child for child in descendants(root)
+                      if isinstance(child, ttk.Button) and child.cget("text") == text)
+        button.invoke()
+
+    def finish():
+        try:
+            assert calls
+            assert calls[0][0] == resources / "smoke.pdf"
+            assert calls[0][1] == Path(values["markdown"])
+            assert calls[0][2].offline and calls[0][2].models == resources / "modelos"
+            assert settings.load() == values
+        except BaseException as error:
+            failures.append(error)
+        finally:
+            root.destroy()
+
+    def configure():
+        try:
+            window = next(child for child in root.winfo_children() if isinstance(child, tk.Toplevel))
+            entries = [child for child in descendants(window) if isinstance(child, ttk.Entry)]
+            assert len(entries) == 5
+            for entry, value in zip(entries, values.values()):
+                entry.delete(0, "end")
+                entry.insert(0, value)
+            click("Guardar e continuar")
+            # Aguardar o retorno de wait_window para aplicar a configuração.
+            root.after(50, convert)
+        except BaseException as error:
+            failures.append(error)
+            root.destroy()
+
+    def convert():
+        try:
+            click("Usar PDF de teste incluído")
+            click("Construir Markdown")
+            root.after(250, finish)
+        except BaseException as error:
+            failures.append(error)
+            root.destroy()
+
+    # Dispara já dentro do wait_window da primeira configuração.
+    root.after(200, configure)
+    root.after(5000, lambda: (failures.append(AssertionError("Interface não terminou")), root.destroy()))
+    app.main(["--installed", "--offline", "--models", str(resources / "modelos")])
+    if failures:
+        raise failures[0]

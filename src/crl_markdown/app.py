@@ -245,6 +245,7 @@ def main(argv=None):
     ttk.Button(frame, text="Guardar relatório para o apoio", command=save_support).pack(pady=4)
     progress = ttk.Progressbar(frame, mode="indeterminate")
     progress.pack(fill="x", pady=4)
+    progress_active = False
 
     def callback_error(error_type, error, tb):
         nonlocal last_error
@@ -387,7 +388,7 @@ def main(argv=None):
     ttk.Button(frame, text="Reauditar lote (sem nova extração)", command=reaudit_batch).pack(pady=4)
 
     def poll():
-        nonlocal report_path, last_error
+        nonlocal report_path, last_error, progress_active
         while not events.empty():
             kind, text = events.get_nowait()
             if kind == "output":
@@ -407,12 +408,12 @@ def main(argv=None):
                 log.insert("end", text + "\n")
                 log.see("end")
                 log.configure(state="disabled")
-        if running.is_set() and not progress.instate(["disabled"]):
+        if running.is_set() and not progress_active:
             progress.start(15)
-            progress.state(["disabled"])
-        elif not running.is_set() and progress.instate(["disabled"]):
+            progress_active = True
+        elif not running.is_set() and progress_active:
             progress.stop()
-            progress.state(["!disabled"])
+            progress_active = False
         root.after(100, poll)
 
     poll()

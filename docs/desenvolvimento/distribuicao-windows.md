@@ -15,8 +15,9 @@ PRs que alteram o produto. O workflow:
 
 1. Usa as constraints de runtime e transitivas Windows já fixadas no projeto.
 2. Prepara modelos com manifesto e wheels com hashes usando `preparar_offline.py`.
-3. Usa `montar_windows.py` para copiar o runtime completo do construtor, instalar
-   as wheels nele e juntar modelos, recursos e licenças. Não usa um venv
+3. Usa `montar_windows.py` para copiar o runtime completo do construtor e o CRT
+   C++ redistribuível oficial de Visual Studio, instalar as wheels nele e juntar
+   modelos, recursos e licenças. Não usa um venv
    deslocável nem depende do Python instalado no computador de destino.
 4. Muda a pasta do runtime, verifica os hashes e versões, abre Tcl/Tk e converte
    o PDF sintético com texto e OCR em processos isolados, com sockets bloqueados
@@ -74,3 +75,5 @@ wheels e dos modelos e confirmar a sua redistribuição antes de publicar.
 Referências técnicas: [runtime Python no Windows](https://docs.python.org/3.13/using/windows.html),
 [privilégios do Inno Setup](https://jrsoftware.org/ishelp/topic_setup_privilegesrequired.htm)
 e [limite do instalador único](https://jrsoftware.org/ishelp/topic_setup_diskspanning.htm).
+O CRT usa [distribuição local junto do executável](https://learn.microsoft.com/en-us/cpp/windows/choosing-a-deployment-method?view=msvc-170);
+o construtor precisa das ferramentas C++ redistribuíveis de Visual Studio.

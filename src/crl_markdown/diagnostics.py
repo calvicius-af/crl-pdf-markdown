@@ -115,7 +115,8 @@ def export_support(target, *, error=None, context="Interface", log="", attachmen
             "context": safe_detail(context)}
     if error is not None:
         data.update(explain(error))
-        data["traceback"] = safe_detail("".join(traceback.format_exception(error)))
+        data["traceback"] = safe_detail(getattr(error, "remote_traceback", "")
+                                        or "".join(traceback.format_exception(error)))
     target = Path(target)
     # Produzir primeiro num temporário conserva o relatório anterior se falhar.
     with tempfile.NamedTemporaryFile(dir=target.parent, delete=False) as handle:

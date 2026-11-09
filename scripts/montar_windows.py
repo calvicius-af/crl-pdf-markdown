@@ -12,6 +12,29 @@ from pathlib import Path
 from instalar_offline import install_command, sha256, verify
 
 
+def copy_cpp_runtime(destination, source=None):
+    """Redistribuição local do CRT oficial; não executar um instalador que peça admin."""
+    if source is None:
+        candidates = []
+        if os.environ.get("VCToolsRedistDir"):
+            candidates.extend(Path(os.environ["VCToolsRedistDir"]).glob("x64/Microsoft.VC*.CRT"))
+        vswhere = Path(os.environ.get("ProgramFiles(x86)", "C:/Program Files (x86)")) / (
+            "Microsoft Visual Studio/Installer/vswhere.exe")
+        if vswhere.is_file():
+            installation = subprocess.check_output([str(vswhere), "-latest", "-products", "*",
+                                                     "-property", "installationPath"], text=True).strip()
+            candidates.extend((Path(installation) / "VC/Redist/MSVC").glob("*/x64/Microsoft.VC*.CRT"))
+        if not candidates:
+            raise ValueError("Falta o CRT redistribuível x64 de Visual Studio no construtor. "
+                             "Instale as ferramentas C++ ou indique --vc-runtime.")
+        source = max(candidates, key=lambda path: tuple(int(n) for n in path.parents[1].name.split(".")))
+    required = {"msvcp140.dll", "vcruntime140.dll", "vcruntime140_1.dll", "concrt140.dll"}
+    if not required.issubset(path.name.lower() for path in source.glob("*.dll")):
+        raise ValueError("Pasta CRT incompleta; usar o redist x64 oficial, sem DLLs debug.")
+    for path in source.glob("*.dll"):
+        shutil.copy2(path, destination / path.name)
+
+
 def runtime_files(source, destination):
     """Copiar a distribuição CPython completa; dependências vêm só das wheels fixadas."""
     for name in ("python.exe", "pythonw.exe", "python313.dll", "vcruntime140.dll", "LICENSE.txt"):
@@ -33,7 +56,7 @@ def runtime_files(source, destination):
         ".\nLib\nDLLs\nLib/site-packages\nimport site\n", encoding="ascii")
 
 
-def build(package, destination):
+def build(package, destination, cpp_runtime=None):
     if sys.platform != "win32" or platform.machine().lower() != "amd64" or sys.version_info[:2] != (3, 13):
         raise ValueError("Preparar em Windows x64, com CPython 3.13 completo.")
     manifest = verify(package)
@@ -44,6 +67,7 @@ def build(package, destination):
     destination.mkdir(parents=True)
     runtime = destination / "python"
     runtime_files(Path(sys.base_prefix), runtime)
+    copy_cpp_runtime(runtime, cpp_runtime)
     resources = destination / "recursos"
     resources.mkdir()
     for name in ("modelos", "vocabularios"):
@@ -76,5 +100,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--pacote", type=Path, required=True)
     parser.add_argument("--saida", type=Path, required=True)
+    parser.add_argument("--vc-runtime", type=Path, help="Pasta x64/Microsoft.VC*.CRT oficial do construtor")
     args = parser.parse_args()
-    build(args.pacote.absolute(), args.saida.absolute())
+    build(args.pacote.absolute(), args.saida.absolute(), args.vc_runtime)
