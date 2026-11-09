@@ -202,19 +202,23 @@ def main(argv=None):
                     events.put(("report", failure))
                 except OSError:
                     from tempfile import gettempdir
-                    failure = save_failure(exc, Path(gettempdir()) / "CRL-assistencia", "Conversão")
-                    events.put(("log", f"Como resolver: {failure}"))
-                    events.put(("report", failure))
+                    try:
+                        failure = save_failure(exc, Path(gettempdir()) / "CRL-assistencia", "Conversão")
+                        events.put(("report", failure))
+                    except OSError:
+                        events.put(("log", "Use Guardar relatório para o apoio e escolha uma pasta com escrita."))
             finally:
-                path = args[1] / "_auditoria" / "diagnostico.md"
-                current_manifest = args[1] / "_auditoria" / "manifest.json"
-                if (
-                    path.exists()
-                    and current_manifest.exists()
-                    and current_manifest.read_bytes() != previous_run
-                ):
-                    events.put(("report", path))
-                events.put(("done", ""))
+                try:
+                    path = args[1] / "_auditoria" / "diagnostico.md"
+                    current_manifest = args[1] / "_auditoria" / "manifest.json"
+                    if (path.exists() and current_manifest.exists()
+                            and current_manifest.read_bytes() != previous_run):
+                        events.put(("report", path))
+                except OSError:
+                    events.put(("log", "Não foi possível abrir o relatório do lote. "
+                                "Use Guardar relatório para o apoio."))
+                finally:
+                    events.put(("done", ""))
 
         threading.Thread(target=worker, daemon=True).start()
 

@@ -14,6 +14,7 @@ AppName=CRL — PDF para Markdown
 AppVersion={#AppVersion}
 AppPublisher=CRL
 DefaultDirName={localappdata}\Programs\CRL-PDF-Markdown\{#AppVersion}
+UsePreviousAppDir=no
 DisableDirPage=no
 DisableProgramGroupPage=yes
 PrivilegesRequired=lowest
