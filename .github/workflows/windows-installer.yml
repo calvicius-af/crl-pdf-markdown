@@ -40,7 +40,9 @@ jobs:
       - name: Ensaiar runtime deslocado com origem L e sockets bloqueados
         shell: pwsh
         run: |
-          $payload = "$env:RUNNER_TEMP\Distribuição CRL com espaços"
+          # D: do runner não fornece aliases curtos; acentos são ensaiados
+          # separadamente no destino C: com a verificação do instalador.
+          $payload = "$env:RUNNER_TEMP\CRL runtime com espacos"
           Move-Item "$env:RUNNER_TEMP\payload-original" $payload
           New-Item -ItemType Directory "$env:RUNNER_TEMP\origem" | Out-Null
           Copy-Item "$payload\recursos\smoke.pdf" "$env:RUNNER_TEMP\origem\smoke.pdf"
