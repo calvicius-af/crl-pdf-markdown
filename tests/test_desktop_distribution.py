@@ -204,3 +204,29 @@ def test_first_window_saves_folders_and_conversion_uses_them(tmp_path, monkeypat
     app.main(["--installed", "--offline", "--models", str(resources / "modelos")])
     if failures:
         raise failures[0]
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="Janela de erro de arranque Windows")
+def test_startup_error_is_visible_with_hidden_root():
+    import tkinter as tk
+
+    from crl_markdown.diagnostics import support_dialog
+
+    try:
+        root = tk.Tk()
+    except tk.TclError:
+        pytest.skip("Sem ambiente gráfico")
+    root.withdraw()
+    visible = []
+
+    def inspect():
+        window = next(child for child in root.winfo_children() if isinstance(child, tk.Toplevel))
+        visible.append(window.winfo_viewable())
+        window.destroy()
+
+    root.after(300, inspect)
+    try:
+        support_dialog(root, ImportError("biblioteca em falta"), "Abrir CRL")
+    finally:
+        root.destroy()
+    assert visible == [True]

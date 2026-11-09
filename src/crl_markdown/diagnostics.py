@@ -142,7 +142,10 @@ def support_dialog(parent, error, context):
     info = explain(error)
     window = tk.Toplevel(parent)
     window.title("A operação não terminou")
-    window.transient(parent)
+    # No arranque, a raiz está escondida. Um transient dessa raiz também fica
+    # invisível no Windows/macOS, precisamente quando é necessário pedir apoio.
+    if parent.winfo_viewable():
+        window.transient(parent)
     window.grab_set()
     frame = ttk.Frame(window, padding=20)
     frame.pack(fill="both", expand=True)
