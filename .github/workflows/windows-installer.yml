@@ -73,8 +73,9 @@ jobs:
           if ($process.ExitCode -ne 0) { throw 'Falhou a instalação do EXE' }
           $shortcut = Join-Path ([Environment]::GetFolderPath('Desktop')) 'Abrir CRL.lnk'
           if (-not (Test-Path $shortcut)) { throw 'Falta o atalho Abrir CRL' }
-          & "$destination\python\python.exe" -I -X utf8 -B -m crl_markdown.release_check --out "$env:RUNNER_TEMP\evidencia-instalacao"
-          if ($LASTEXITCODE -ne 0) { throw 'Falhou a conversão após instalar o EXE' }
+          # O atalho usa pythonw: testar também sem stdout/stderr de consola.
+          $check = Start-Process "$destination\python\pythonw.exe" -ArgumentList '-I', '-X', 'utf8', '-B', '-m', 'crl_markdown.release_check', '--out', "`"$env:RUNNER_TEMP\evidencia-instalacao`"" -Wait -PassThru
+          if ($check.ExitCode -ne 0) { throw 'Falhou a conversão sem consola após instalar o EXE' }
       - name: Guardar instalador candidato
         uses: actions/upload-artifact@v4
         with:
