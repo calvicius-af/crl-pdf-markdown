@@ -75,7 +75,7 @@ def test_editor_and_parent_close_preserve_unsaved_edits(damaged_output, monkeypa
         assert not root.review_close_guards[0]()
         monkeypatch.setattr('tkinter.messagebox.askyesnocancel', lambda *a, **k: True)
         assert root.review_close_guards[0]()
-        assert 'Correção por guardar' in (view.revision / 'correcao.md').read_text()
+        assert 'Correção por guardar' in (view.revision / 'correcao.md').read_text(encoding='utf-8')
     finally:
         root.destroy()
 
@@ -143,7 +143,7 @@ def test_second_reviewer_gets_new_draft_with_own_authorship(damaged_output):  # 
     from crl_markdown.revisions import audit_revision, create_revision
     first = create_revision(damaged_output, 'source.pdf', 'Pessoa A')
     path = first / 'correcao.md'
-    path.write_text(path.read_text().replace('125,00', '-125,00'), encoding='utf-8')
+    path.write_text(path.read_text(encoding='utf-8').replace('125,00', '-125,00'), encoding='utf-8')
     audit_revision(first)
     before = path.read_bytes()
     root = tk.Tk()
@@ -154,7 +154,7 @@ def test_second_reviewer_gets_new_draft_with_own_authorship(damaged_output):  # 
         view.reviewer.set('Pessoa B')
         view.edit_revision()
         assert view.revision != first
-        assert json.loads((view.revision / 'revision.json').read_text())['reviewer'] == 'Pessoa B'
+        assert json.loads((view.revision / 'revision.json').read_text(encoding='utf-8'))['reviewer'] == 'Pessoa B'
         assert path.read_bytes() == before
     finally:
         root.destroy()

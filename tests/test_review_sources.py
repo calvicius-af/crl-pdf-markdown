@@ -45,7 +45,7 @@ def test_saved_correction_can_be_resumed_and_audited_in_relocated_folder(damaged
     out = damaged_output
     revision = create_revision(out, 'source.pdf', 'Pessoa A')
     draft = revision / 'correcao.md'
-    draft.write_text(draft.read_text().replace('125,00', '-125,00'), encoding='utf-8')
+    draft.write_text(draft.read_text(encoding='utf-8').replace('125,00', '-125,00'), encoding='utf-8')
     other = tmp_path / 'machine-b'
     copied = other / 'lote'
     shutil.copytree(out, copied)
@@ -62,12 +62,12 @@ def test_saved_correction_can_be_resumed_and_audited_in_relocated_folder(damaged
     assert len(drafts) == 1
     publication, corrected = audit_revision(drafts[0])
     assert publication.is_relative_to(copied)
-    assert '-125,00' in (publication / 'source.md').read_text()
+    assert '-125,00' in (publication / 'source.md').read_text(encoding='utf-8')
     assert corrected['quality_status'] != 'blocked'
     _verified(copied, document)
     assert not list((out / '_auditoria/versoes').glob('*.json'))
     pointer = next((copied / '_auditoria/versoes').glob('*.json'))
-    assert Path(json.loads(pointer.read_text())['publication']).parts[0] == '_auditoria'
+    assert Path(json.loads(pointer.read_text(encoding='utf-8'))['publication']).parts[0] == '_auditoria'
 
 
 def test_cached_reaudit_preserves_profile_after_source_rename(tmp_path, converter):  # noqa: F811
@@ -86,4 +86,4 @@ def test_cached_reaudit_preserves_profile_after_source_rename(tmp_path, converte
     assert reports[0]['document_profile'] == 'acordao'
     assert reports[0]['relative_source'] == name
     assert (destination / Path(name).with_suffix('.md')).is_file()
-    assert json.loads((destination / '_auditoria/manifest.json').read_text())['source'] == str(pdfs)
+    assert json.loads((destination / '_auditoria/manifest.json').read_text(encoding='utf-8'))['source'] == str(pdfs)

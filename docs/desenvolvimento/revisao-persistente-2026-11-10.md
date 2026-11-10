@@ -49,8 +49,9 @@ Ver [evidência da recuperação](../validacao/recuperacao-windows-2026-11-10.md
 - Correção de falso bloqueio em marcadores de listas de horários, com sinais
   negativos reais, fórmulas, percentagens e montantes ainda sujeitos a controlo.
 
-O código passou para **0.4.0rc3**, em preparação. Não foi construído nem publicado
-um instalador deste candidato nesta intervenção.
+O código passou para **0.4.0rc3**, em preparação. A construção e os ensaios CI
+são acompanhados no [PR #20](https://github.com/calvicius-af/crl-pdf-markdown/pull/20).
+Este registo distingue os testes de desenvolvimento da aceitação da distribuição.
 
 ## Evidência e limites
 
@@ -81,6 +82,21 @@ manual de decisões concorrentes bloqueia a entrega até reconciliação identif
 Foi testado o regresso de uma correção auditada/aprovada à pasta principal,
 incluindo a repetição da importação sem duplicar efeitos e a reposição após falha.
 
+Um ensaio adicional usou o lote real de 324 documentos e OCR nativo forçado de
+página inteira no acórdão: 1625 ficheiros anteriores, incluindo um rascunho
+automático de teste, ficaram idênticos; os 325 documentos resultantes foram
+verificados. A exportação para uma cópia independente verificou os PDFs com os
+caminhos originais simulados como indisponíveis e importou um segundo rascunho,
+preservando ambos e repetindo a importação sem duplicar efeitos. Não se criaram
+aprovações humanas fictícias. A evidência extensa fica em
+`results/validacao/continuidade-real-rc3-20261110`.
+
+Esse ensaio nativo usa macOS/Python 3.11.18, Docling 2.128.0, Torch 2.14.0 e
+RapidOCR 3.9.2; complementa os testes das versões fixadas no CI. O OCR forçado
+produziu perdas de conteúdo/montantes e permaneceu bloqueado, confirmando que a
+continuidade de revisão não é tratada como aprovação de fidelidade. Um primeiro
+arranque no ambiente mínimo sem Docling também conservou os 1625 ficheiros.
+
 No corpus recebido, compararam-se os sinais numéricos dos **30 PDFs** que tinham
 `CRITICAL_SYMBOLS`: um falso bloqueio foi eliminado, mantendo os outros 29 alertas
 nessa comparação. A reauditoria completa do caso confirmado passou de bloqueado
@@ -94,8 +110,9 @@ indisponíveis, PDFs renomeados e revisores/processos distintos. A conferência
 do lote Windows recuperado também foi aberta na GUI local. Isto não representa
 um ensaio de um instalador novo em duas estações Windows reais.
 
-Falta construir o instalador 0.4.0rc3 e executar os gates de distribuição Windows
-e MAXQDA já definidos no projeto. Não há validação de bloqueios numa partilha CRL
+O estado da construção do instalador 0.4.0rc3 consta do PR #20. Os gates de
+distribuição na estação CRL e MAXQDA continuam separados dos ensaios CI.
+Não há validação de bloqueios numa partilha CRL
 real. O mecanismo de cópias/importação explícita evita depender desses bloqueios
 entre máquinas; uma pasta OneDrive não constitui uma base de dados partilhada.
 

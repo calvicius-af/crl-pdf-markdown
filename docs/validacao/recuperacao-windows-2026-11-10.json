@@ -43,6 +43,8 @@
     }
   },
   "release": {
+    "snapshot_scope": "recovery_before_ci",
+    "ci_tracking_url": "https://github.com/calvicius-af/crl-pdf-markdown/pull/20",
     "installer_built": false,
     "windows_station_acceptance": false
   },

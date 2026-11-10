@@ -19,7 +19,7 @@ def test_missing_error_remains_until_explicit_current_version_confirmation(damag
                         notes='Não pode dispensar montantes atuais.', expected_version=before['current_version_id'])
     revision = create_revision(out, 'source.pdf', 'Pessoa A')
     draft = revision / 'correcao.md'
-    draft.write_text(draft.read_text().replace('125,00', '-125,00'), encoding='utf-8')
+    draft.write_text(draft.read_text(encoding='utf-8').replace('125,00', '-125,00'), encoding='utf-8')
     audit_revision(revision)
     after = history(out, 'source.pdf')
     recovered = next(r for r in after['occurrences'] if r['occurrence_id'] == old['occurrence_id'])
@@ -34,11 +34,11 @@ def test_missing_error_remains_until_explicit_current_version_confirmation(damag
     row = next(r for r in saved['occurrences'] if r['occurrence_id'] == old['occurrence_id'])
     assert row['status'] == 'human_resolved'
     assert row['resolution']['reviewer'] == 'Pessoa A'
-    assert json.loads(confirmation.read_text())['previous_status'] == 'absent_unconfirmed'
+    assert json.loads(confirmation.read_text(encoding='utf-8'))['previous_status'] == 'absent_unconfirmed'
     # Uma nova versão não herda a confirmação como uma dispensa do erro real.
     second = create_revision(out, 'source.pdf', 'Pessoa B')
     text = second / 'correcao.md'
-    text.write_text(text.read_text().replace('-125,00', '125,00'), encoding='utf-8')
+    text.write_text(text.read_text(encoding='utf-8').replace('-125,00', '125,00'), encoding='utf-8')
     audit_revision(second)
     latest = history(out, 'source.pdf')
     assert any(r['finding']['rule'] == 'AMOUNTS' and r['status'] == 'pending'
@@ -75,9 +75,9 @@ def test_source_change_invalidates_historical_confirmation(reviewed_output, monk
 def test_tampered_snapshot_is_not_silently_accepted(reviewed_output):  # noqa: F811
     history(reviewed_output, 'a.pdf')
     snapshot = next((reviewed_output / '_auditoria/ocorrencias').rglob('versoes/*.json'))
-    data = json.loads(snapshot.read_text())
+    data = json.loads(snapshot.read_text(encoding='utf-8'))
     data['findings'] = []
-    snapshot.write_text(json.dumps(data))
+    snapshot.write_text(json.dumps(data), encoding='utf-8')
     with pytest.raises(ValueError, match='perdeu integridade'):
         history(reviewed_output, 'a.pdf')
 

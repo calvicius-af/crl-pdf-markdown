@@ -77,4 +77,5 @@ A evidência extensa fica em `results/recuperacao-windows-20261110`, excluída d
 A restauração do índice permite voltar a conferir o lote na aplicação anterior,
 mas essa versão pode voltar a trocar o índice numa nova conversão. As proteções
 persistentes e a colaboração pertencem ao código 0.4.0rc3 em preparação, cujo
-instalador ainda não foi construído/aceite nesta intervenção.
+estado de construção e testes está no [PR #20](https://github.com/calvicius-af/crl-pdf-markdown/pull/20).
+A recuperação dos documentos não constitui aceitação do instalador.

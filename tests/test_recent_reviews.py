@@ -12,7 +12,7 @@ from tests.test_desktop_distribution import (
 def make_output(tmp_path, name):
     path = tmp_path / name
     (path / '_auditoria').mkdir(parents=True)
-    (path / '_auditoria/manifest.json').write_text('{}')
+    (path / '_auditoria/manifest.json').write_text('{}', encoding='utf-8')
     return path
 
 
@@ -45,10 +45,10 @@ def test_unavailable_folder_does_not_erase_the_recent_record(tmp_path):
 def test_corrupt_recent_index_is_preserved_and_reported(tmp_path):
     path = tmp_path / 'recentes.json'
     content = json.dumps({'schema': 1, 'folders': ['invalid']})
-    path.write_text(content)
+    path.write_text(content, encoding='utf-8')
     with pytest.raises(ValueError, match='entradas inválidas'):
         settings.recent_reviews('projeto', path)
-    assert path.read_text() == content
+    assert path.read_text(encoding='utf-8') == content
 
 
 @pytest.mark.skipif(os.environ.get('CRL_TEST_TK') != '1', reason='Ensaio Tk explícito numa sessão gráfica')

@@ -80,9 +80,9 @@ isolados ou utilizar um ZIP de branch como atualização normal.
 
 ## Estado da distribuição
 
-A linha 0.4.0rc3 está em preparação, ainda sem instalador construído para esta
-intervenção, e sujeita a construção e
-validação. Só uma versão com a ficha de aceitação preenchida deve ser entregue
+A linha 0.4.0rc3 é candidata e está sujeita a construção e validação. O estado
+da construção está no [PR do candidato](https://github.com/calvicius-af/crl-pdf-markdown/pull/20).
+Só uma versão com a ficha de aceitação preenchida deve ser entregue
 como distribuição oficial. O instalador instala para o utilizador atual e não
 pede privilégios de administrador; isso não confirma as permissões ou políticas
 efetivas de uma estação CRL.

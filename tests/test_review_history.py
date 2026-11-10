@@ -13,7 +13,7 @@ from tests.test_validation import reviewed_output  # noqa: F401
 
 
 def full_manifest(output):
-    old = json.loads((output / '_auditoria/manifest.json').read_text())
+    old = json.loads((output / '_auditoria/manifest.json').read_text(encoding='utf-8'))
     pdf = Path(old['documents'][0]['source'])
     manifest = new_manifest(pdf, output, [(pdf, Path('a.md'))], {})
     manifest['run_id'] = '20000101-original'
@@ -49,7 +49,7 @@ def test_324_documents_survive_single_document_ocr_attempt(reviewed_output, tmp_
                 'findings': [], 'options': {'ocr': True}}
 
     run(pdf, output, Options(ocr=True), report_provider=provider, progress=lambda _: None)
-    latest = json.loads((output / '_auditoria/manifest.json').read_text())
+    latest = json.loads((output / '_auditoria/manifest.json').read_text(encoding='utf-8'))
     assert len(latest['documents']) == 1
     restored = _load(output)
     assert len(restored['documents']) == 325
@@ -62,7 +62,7 @@ def test_324_documents_survive_single_document_ocr_attempt(reviewed_output, tmp_
     _verified(output, doc)
     result = deliver(output, tmp_path / 'entrega-recuperada')
     assert (result.parent / 'documentos/a.md').is_file()
-    data = json.loads(result.with_suffix('.json').read_text())
+    data = json.loads(result.with_suffix('.json').read_text(encoding='utf-8'))
     assert data['documents'][0]['human_review']['run_id'] == original['run_id']
 
 
@@ -132,7 +132,7 @@ def test_invalid_history_is_reported_instead_of_silently_dropping_documents(tmp_
     out = tmp_path / 'out'
     path = out / '_auditoria/corridas/old/manifest.json'
     path.parent.mkdir(parents=True)
-    path.write_text('{broken')
+    path.write_text('{broken', encoding='utf-8')
     with pytest.raises(ValueError, match='ilegível'):
         load_history(out)
 
@@ -144,7 +144,7 @@ def test_draft_concurrent_saves_keep_first_changes_and_reject_stale_session(tmp_
     first.save('Correção da pessoa A')
     with pytest.raises(ValueError, match='outra janela ou máquina'):
         second.save('Correção da pessoa B')
-    assert path.read_text() == 'Correção da pessoa A'
+    assert path.read_text(encoding='utf-8') == 'Correção da pessoa A'
     assert second.text == 'Base'
     reopened = DraftSession(path)
     assert reopened.text == 'Correção da pessoa A'

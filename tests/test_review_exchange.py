@@ -21,7 +21,7 @@ def approve(out, document, reviewer):
 
 def add_second(out):
     path = out / '_auditoria/manifest.json'
-    manifest = json.loads(path.read_text())
+    manifest = json.loads(path.read_text(encoding='utf-8'))
     first = manifest['documents'][0]
     source = out.parent / 'b.pdf'
     shutil.copy2(out.parent / 'a.pdf', source)
@@ -47,9 +47,9 @@ def test_independent_reviews_merge_with_authorship_and_reimport_is_idempotent(re
     assert (out / second.relative_to(branch)).read_bytes() == second.read_bytes()
     assert merge_review(out, branch, reviewer='Coordenador')['imported'] == 0
     delivery = deliver(out, tmp_path / 'entrega')
-    records = json.loads(delivery.with_suffix('.json').read_text())['documents']
+    records = json.loads(delivery.with_suffix('.json').read_text(encoding='utf-8'))['documents']
     assert {r['human_review']['reviewer'] for r in records} == {'Pessoa A', 'Pessoa B'}
-    receipt = json.loads((out / result['receipt']).read_text())
+    receipt = json.loads((out / result['receipt']).read_text(encoding='utf-8'))
     assert receipt['status'] == 'complete' and receipt['reviewer'] == 'Coordenador'
 
 
@@ -79,7 +79,7 @@ def test_export_contains_hash_verified_pdfs_for_another_machine(reviewed_output,
 def test_damaged_base_or_altered_corpus_refuses_import(reviewed_output, tmp_path):  # noqa: F811
     out = reviewed_output
     branch = export_review(out, tmp_path / 'pessoa-b', reviewer='Pessoa B')
-    (branch / 'a.md').write_text('Alteração fora do editor')
+    (branch / 'a.md').write_text('Alteração fora do editor', encoding='utf-8')
     with pytest.raises(ValueError, match='alterar o corpus'):
         plan_merge(out, branch)
     (branch / 'a.md').unlink()
@@ -92,9 +92,9 @@ def test_old_human_decision_cannot_be_rewritten_through_import(reviewed_output, 
     old = approve(out, 'a.pdf', 'Pessoa A')
     branch = export_review(out, tmp_path / 'pessoa-b', reviewer='Pessoa B')
     path = branch / old.relative_to(out)
-    data = json.loads(path.read_text())
+    data = json.loads(path.read_text(encoding='utf-8'))
     data['notes'] = 'Tentativa de alterar uma decisão antiga'
-    path.write_text(json.dumps(data))
+    path.write_text(json.dumps(data), encoding='utf-8')
     with pytest.raises(ValueError, match='imutável'):
         plan_merge(out, branch)
 
@@ -125,7 +125,7 @@ def test_import_failure_rolls_back_applied_files(reviewed_output, tmp_path, monk
     assert all(after[name] == digest for name, digest in before.items())
     assert not list((out / '_auditoria/revisoes').rglob('*.json'))
     receipt = next((out / '_auditoria/intercambios').glob('*/importacao.json'))
-    assert json.loads(receipt.read_text())['status'] == 'rolled_back'
+    assert json.loads(receipt.read_text(encoding='utf-8'))['status'] == 'rolled_back'
 
 
 def test_interrupted_import_blocks_review_until_safe_recovery(reviewed_output):  # noqa: F811
@@ -135,11 +135,11 @@ def test_interrupted_import_blocks_review_until_safe_recovery(reviewed_output): 
     new = '_auditoria/notas/doc/new.json'
     path = out / new
     path.parent.mkdir(parents=True)
-    path.write_text('{}')
+    path.write_text('{}', encoding='utf-8')
     from crl_markdown.models import _sha256
     receipt = journal / 'importacao.json'
     receipt.write_text(json.dumps({'schema': 1, 'status': 'prepared', 'files': {new: _sha256(path)},
-                                  'previous': {new: None}}))
+                                  'previous': {new: None}}), encoding='utf-8')
     with pytest.raises(ValueError, match='importação foi interrompida'):
         _load(out)
     assert recover_imports(out) == [str(receipt)]
@@ -151,9 +151,9 @@ def test_receipt_with_path_traversal_is_refused(reviewed_output, tmp_path):  # n
     out = reviewed_output
     branch = export_review(out, tmp_path / 'pessoa-b', reviewer='Pessoa B')
     meta = branch / '_auditoria/intercambio.json'
-    data = json.loads(meta.read_text())
+    data = json.loads(meta.read_text(encoding='utf-8'))
     data['base_files']['../../escape'] = 'a' * 64
-    meta.write_text(json.dumps(data))
+    meta.write_text(json.dumps(data), encoding='utf-8')
     with pytest.raises(ValueError, match='Inventário de base inválido'):
         plan_merge(out, branch)
 
@@ -164,7 +164,7 @@ def test_audited_correction_and_approval_return_to_main_corpus(damaged_output, t
     branch = export_review(out, tmp_path / 'pessoa-b', reviewer='Pessoa B')
     revision = create_revision(branch, 'source.pdf', 'Pessoa B')
     draft = revision / 'correcao.md'
-    draft.write_text(draft.read_text().replace('125,00', '-125,00'), encoding='utf-8')
+    draft.write_text(draft.read_text(encoding='utf-8').replace('125,00', '-125,00'), encoding='utf-8')
     audit_revision(revision)
     approve(branch, 'source.pdf', 'Pessoa B')
     result = merge_review(out, branch, reviewer='Coordenador')
@@ -172,10 +172,10 @@ def test_audited_correction_and_approval_return_to_main_corpus(damaged_output, t
     document = _load(out)['documents'][0]
     target, _, report = _verified(out, document)
     assert target.is_relative_to(out)
-    assert '-125,00' in target.read_text()
+    assert '-125,00' in target.read_text(encoding='utf-8')
     assert report['revision']['reviewer'] == 'Pessoa B'
     delivered = deliver(out, tmp_path / 'entrega-corrigida')
-    assert '-125,00' in (delivered.parent / 'documentos/source.md').read_text()
+    assert '-125,00' in (delivered.parent / 'documentos/source.md').read_text(encoding='utf-8')
     assert merge_review(out, branch, reviewer='Coordenador')['imported'] == 0
 
 
