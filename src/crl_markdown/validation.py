@@ -13,10 +13,16 @@ from .models import _sha256
 from .pipeline import atomic_write, previous_report
 from .report import escaped
 
+_UNSPECIFIED = object()
+
 
 def _load(output: Path):
+    from .review_exchange import ensure_complete_imports
+    from .review_history import load_history
+
+    ensure_complete_imports(output)
     try:
-        manifest = json.loads((output / '_auditoria/manifest.json').read_text(encoding='utf-8'))
+        manifest = load_history(output)
     except FileNotFoundError as error:
         raise ValueError('Ainda não há um lote convertido nesta pasta de saída. '
                          'Execute Construir Markdown ou selecione a saída de uma conversão existente. '
@@ -43,7 +49,8 @@ def _verified(output: Path, document: dict):
         raise ValueError('Caminho de documento fora da pasta de saída.')
     audit = output / '_auditoria/documentos' / relative.parent
     report_path = audit / (target.stem + '.qualidade.json')
-    report = previous_report(Path(document['source']), target, audit)
+    from .review_sources import resolve_source
+    report = previous_report(resolve_source(output, document), target, audit)
     if report is None:
         raise ValueError(f'{relative}: o PDF ou a extração mudou ou está incompleto. Volte a converter e rever.')
     if report.get('markdown_sha256') != document.get('markdown_sha256'):
@@ -51,17 +58,73 @@ def _verified(output: Path, document: dict):
     return target, report_path, report
 
 
+def decision_branches(output, relative_source):
+    files = sorted((Path(output) / '_auditoria/revisoes' / _key(relative_source)).glob('*.json'))
+    records = {_sha256(path): json.loads(path.read_text(encoding='utf-8')) for path in files}
+    legacy = [key for key, record in records.items() if 'previous_decision' not in record]
+    candidates = {key for key, record in records.items() if 'previous_decision' in record}
+    if legacy:
+        candidates.add(legacy[-1])
+    parents = {r['previous_decision'] for r in records.values() if r.get('previous_decision')}
+    parents.update(parent for r in records.values() for parent in r.get('previous_decisions', []))
+    if not parents.issubset(records):
+        raise ValueError('O histórico de decisões está incompleto. Conserve as revisões e peça reconciliação.')
+    leaves = candidates - parents
+    if records and not leaves:
+        raise ValueError('O histórico de decisões é inválido. Conserve as revisões e peça apoio.')
+    seen, pending = set(legacy), list(leaves)
+    while pending:
+        key = pending.pop()
+        if key in seen:
+            continue
+        seen.add(key)
+        record = records[key]
+        pending.extend(record.get('previous_decisions', []))
+        if record.get('previous_decision'):
+            pending.append(record['previous_decision'])
+    if seen != set(records):
+        raise ValueError('O histórico de decisões contém ramos inválidos. Conserve as revisões e peça apoio.')
+    return {key: records[key] for key in sorted(leaves)}
+
+
+def _latest_decision(output, relative_source):
+    branches = decision_branches(output, relative_source)
+    if len(branches) > 1:
+        raise ValueError('Há decisões humanas concorrentes sobre este documento. '
+                         'Conserve as duas versões e reconcilie antes de aprovar ou entregar.')
+    head = next(iter(branches), None)
+    return head, branches.get(head)
+
+
+def review_head(output, relative_source):
+    return _latest_decision(output, relative_source)[0]
+
+
 def decide(output: Path, relative_source: str, *, reviewer: str, decision: str,
-           scope: str, notes: str = '', expected: dict | None = None) -> Path:
+           scope: str, notes: str = '', expected: dict | None = None,
+           expected_decision=_UNSPECIFIED, reconcile_heads=None) -> Path:
     if not reviewer.strip() or decision not in {'aprovado', 'rejeitado'}:
         raise ValueError('Indique o nome de quem reviu e a decisão aprovado/rejeitado.')
     if scope not in {'integral', 'amostra'}:
         raise ValueError('Indique se conferiu o documento integral ou apenas uma amostra.')
+    if expected_decision is _UNSPECIFIED and reconcile_heads is None:
+        expected_decision = review_head(output, relative_source)
     with exclusive(output / '_auditoria/.operacao.lock'):
         manifest = _load(output)
         matches = [d for d in manifest['documents'] if d['relative_source'] == relative_source]
         if len(matches) != 1:
             raise ValueError('Documento não encontrado de forma única no relatório deste lote.')
+        if reconcile_heads is not None:
+            branches = decision_branches(output, relative_source)
+            if len(branches) < 2 or set(branches) != set(reconcile_heads) or not notes.strip():
+                raise ValueError('A reconciliação exige os ramos atuais e notas da nova conferência. '
+                                 'Reabra as decisões concorrentes.')
+            previous_decision = None
+        else:
+            previous_decision = review_head(output, relative_source)
+        if expected_decision is not _UNSPECIFIED and previous_decision != expected_decision:
+            raise ValueError('Outra pessoa já registou uma decisão desde que abriu a conferência. '
+                             'Reabra o documento e confira a decisão atual antes de continuar.')
         _, report_path, report = _verified(output, matches[0])
         current = {key: report[key] for key in ('source_sha256', 'markdown_sha256')}
         current['report_sha256'] = _sha256(report_path)
@@ -78,11 +141,15 @@ def decide(output: Path, relative_source: str, *, reviewer: str, decision: str,
             'schema_version': 1, 'decision_id': uuid4().hex,
             'reviewer': reviewer.strip(), 'decision': decision, 'scope': scope,
             'notes': notes.strip(), 'date_utc': datetime.now(timezone.utc).isoformat(),
-            'relative_source': relative_source, 'run_id': manifest['run_id'],
+            'relative_source': relative_source, 'run_id': matches[0].get('review_run_id', manifest['run_id']),
             'source_sha256': report['source_sha256'],
             'markdown_sha256': report['markdown_sha256'],
             'report_sha256': _sha256(report_path),
+            'previous_decision': previous_decision,
         }
+        if reconcile_heads is not None:
+            record['previous_decisions'] = sorted(reconcile_heads)
+            record['reconciliation'] = True
         folder = output / '_auditoria/revisoes' / _key(relative_source)
         target = folder / (record['date_utc'].replace(':', '-') + '-' + record['decision_id'] + '.json')
         atomic_write(target, json.dumps(record, ensure_ascii=False, indent=2) + '\n')
@@ -90,11 +157,9 @@ def decide(output: Path, relative_source: str, *, reviewer: str, decision: str,
 
 
 def _decision(output: Path, document: dict, report_path: Path):
-    folder = output / '_auditoria/revisoes' / _key(document['relative_source'])
-    files = sorted(folder.glob('*.json'))
-    if not files:
+    _, record = _latest_decision(output, document['relative_source'])
+    if not record:
         return None
-    record = json.loads(files[-1].read_text(encoding='utf-8'))
     current = json.loads(report_path.read_text(encoding='utf-8'))
     if (record.get('markdown_sha256') != current.get('markdown_sha256')
             or record.get('source_sha256') != current.get('source_sha256')
@@ -135,8 +200,10 @@ def deliver(output: Path, destination: Path) -> Path:
                     raise ValueError('A extração mudou durante a entrega. Repita a operação.')
                 records.append({'document': relative.as_posix(), 'source_sha256': report['source_sha256'],
                                 'markdown_sha256': report['markdown_sha256'], 'quality': report,
-                                'human_review': decision})
+                                'human_review': decision,
+                                'source_run_id': doc.get('review_run_id', manifest['run_id'])})
             data = {'schema_version': 1, 'run_id': manifest['run_id'],
+                    'source_runs': manifest.get('review_runs', [manifest['run_id']]),
                     'generated_utc': datetime.now(timezone.utc).isoformat(),
                     'documents': records, 'excluded': excluded,
                     'maxqda_import': 'Não verificada por esta operação; registar ensaio na versão da equipa.'}

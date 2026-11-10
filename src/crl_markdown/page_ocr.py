@@ -46,7 +46,13 @@ class PageOCRConverter:
     def convert(self, pdf):
         from docling_core.types.doc import DoclingDocument
 
-        base = CachedConverter(Path(self.options.cache_directory))
+        cache = Path(self.options.cache_directory)
+        paths = list(cache.glob('*.docling.json'))
+        if len(paths) != 1:
+            raise ValueError('A cache do OCR dirigido não identifica uma única extração de base.')
+        stem = paths[0].name.removesuffix('.docling.json')
+        stored = json.loads((cache / (stem + '.qualidade.json')).read_text(encoding='utf-8'))
+        base = CachedConverter(cache, records=[{**stored, 'source': str(pdf), 'relative_source': stem + '.pdf'}])
         original = base.convert(pdf).document
         pages = sorted(original.pages)
         selected = set(self.options.selected_pages)
@@ -129,9 +135,11 @@ def reextract_pages(output, relative_source, reviewer, models, pages, *, progres
         options = PageOCROptions(ocr=True, models=Path(models), offline=True,
                                  selected_pages=tuple(sorted(set(pages))), cache_directory=str(revision / 'cache'))
         relative_md = Path(relative_source).with_suffix('.md')
-        reports = run(Path(document['source']), publication, options,
+        from .review_sources import resolve_source
+        source = resolve_source(output, document)
+        reports = run(source, publication, options,
                       converter_factory=make_page_ocr_converter, progress=progress,
-                      entries_override=[(Path(document['source']), relative_md)])
+                      entries_override=[(source, relative_md)], relative_sources=[relative_source])
         updated = reports[0]
         if updated.get('state') == 'falhou':
             raise RuntimeError(updated['error'])
@@ -156,4 +164,6 @@ def reextract_pages(output, relative_source, reviewer, models, pages, *, progres
                    'quality_status': updated['quality_status'],
                    'identity': _identity(publication / relative_md, saved_report, updated)}
         atomic_write(current_pointer(output, relative_source), json.dumps(pointer, ensure_ascii=False, indent=2) + '\n')
+        from .occurrences import record_version
+        record_version(output, relative_source, updated, origin='page_ocr')
         return publication, updated

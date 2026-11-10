@@ -54,6 +54,52 @@ def load(path=None):
     return validate(data.get("paths"))
 
 
+def recent_reviews(workspace, path=None):
+    path = path or user_folder() / 'revisoes-recentes.json'
+    if not path.exists():
+        return []
+    data = json.loads(path.read_text(encoding='utf-8'))
+    if not isinstance(data, dict) or data.get('schema') != 1 or not isinstance(data.get('folders'), list):
+        raise ValueError('O índice de lotes recentes não é reconhecido; os dados dos lotes não foram alterados.')
+    if any(not isinstance(record, dict) or not isinstance(record.get('folder'), str)
+           or not isinstance(record.get('workspace'), str) for record in data['folders']):
+        raise ValueError('O índice de lotes recentes contém entradas inválidas; conserve-o para apoio.')
+    return [record for record in data['folders'] if record.get('workspace') == str(workspace)]
+
+
+def remember_review(folder, workspace, path=None):
+    """Preferência local; não altera as cinco pastas principais nem os dados do corpus."""
+    from datetime import datetime, timezone
+
+    from .diagnostics import atomic_write
+    from .locking import exclusive
+
+    folder = Path(folder).absolute()
+    if not (folder / '_auditoria/manifest.json').is_file():
+        return
+    path = path or user_folder() / 'revisoes-recentes.json'
+    with exclusive(path.with_suffix('.lock')):
+        if path.exists():
+            data = json.loads(path.read_text(encoding='utf-8'))
+            if not isinstance(data, dict) or data.get('schema') != 1 or not isinstance(data.get('folders'), list):
+                raise ValueError('O índice de lotes recentes não é reconhecido; conserve-o para apoio.')
+            recent_reviews(workspace, path)  # Validar antes de reescrever o índice.
+        else:
+            data = {'schema': 1, 'folders': []}
+        records = [r for r in data['folders']
+                   if not (r.get('workspace') == str(workspace) and r.get('folder') == str(folder))]
+        records.append({'workspace': str(workspace), 'folder': str(folder),
+                        'opened_at_utc': datetime.now(timezone.utc).isoformat()})
+        atomic_write(path, json.dumps({'schema': 1, 'folders': records}, ensure_ascii=False, indent=2) + '\n')
+
+
+def last_review(workspace, path=None):
+    recent = recent_reviews(workspace, path)
+    if recent and Path(recent[-1]['folder']).is_dir():
+        return recent[-1]['folder']
+    return None
+
+
 def save(values, path=None):
     values = validate(values)
     path = path or user_folder() / "pastas.json"
