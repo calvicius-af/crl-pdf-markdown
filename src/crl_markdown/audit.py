@@ -13,6 +13,8 @@ AMOUNT = re.compile(r"(?<![\d.,])(?:[-−–—+][ \t\u00a0]*)?(?:\d{1,3}(?:[ .\
 SIGNED = re.compile(
     r"(?<![\w.,])[-−–—+][ \t\u00a0]*(?:\d{1,3}(?:[ .\u00a0]\d{3})+|\d+)(?:[.,]\d+)?"
 )
+CLOCK = re.compile(r'(?:[01]?\d|2[0-3])h[0-5]\dm?(?:[;,.])?')
+CLOCK_BULLET = re.compile(r'[-–—][ \t\u00a0]+(?:[01]?\d|2[0-3])h[0-5]\dm?(?=$|[\s;,.])')
 
 
 def canonical_number(value: str) -> str:
@@ -21,7 +23,16 @@ def canonical_number(value: str) -> str:
 
 
 def signed_values(text: str) -> Counter:
-    return Counter(canonical_number(v) for v in SIGNED.findall(text))
+    values = Counter()
+    for match in SIGNED.finditer(text):
+        line_start = text.rfind('\n', 0, match.start()) + 1
+        # Horários em listas («– 9h00m às 12h30m») não são números negativos.
+        # Exigir início de linha, separação e hora válida; o sinal matemático
+        # «−», sinais colados e operadores em prosa continuam a ser conferidos.
+        if not text[line_start:match.start()].strip() and CLOCK_BULLET.match(text, match.start()):
+            continue
+        values[canonical_number(match.group())] += 1
+    return values
 
 
 def amounts(text: str) -> Counter:
@@ -86,6 +97,13 @@ def _pdf_numeric_tokens(pdf: Path, document=None):
                                and word['x0'] < page.width * .3
                                and 0 <= word['top'] - previous['bottom'] <= previous['height'])
                     sign = bool(re.search(r'[-−–—+]$', tokens[-1])) and re.match(r"^\d", value)
+                    clock_bullet = (previous['text'] in {'-', '–', '—'} and CLOCK.fullmatch(value)
+                                    and direction == 'ltr' and aligned
+                                    and not any(abs(other['top'] - previous['top']) < 2
+                                                and other['x1'] <= previous['x0']
+                                                for other in words[:index-1]))
+                    if clock_bullet:
+                        sign = False
                     numeric_tail = re.search(r'(?<![\w.,])[-−–—+]?\d+$', tokens[-1])
                     leading_group = numeric_tail and len(re.sub(r'\D', '', numeric_tail.group())) <= 3
                     thousands = (numeric_tail and (grouped[-1] or leading_group)

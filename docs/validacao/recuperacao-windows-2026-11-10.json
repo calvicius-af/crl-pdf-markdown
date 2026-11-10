@@ -1,0 +1,57 @@
+{
+  "schema": 1,
+  "date": "2026-11-10",
+  "candidate": "0.4.0rc3",
+  "archive": {
+    "name": "texto.zip",
+    "sha256": "700eb31b303da00ee5ded01cb45d8801a3ef1737cd7080e77cb6f57e89911c09",
+    "files": 1655,
+    "original_extraction_unchanged": true
+  },
+  "recovery": {
+    "original_batch_documents": 324,
+    "history_documents": 326,
+    "verified_current_documents": 326,
+    "active_index_in_working_copy": 324,
+    "states": {
+      "passed": 179,
+      "review": 79,
+      "blocked": 68
+    },
+    "human_corrections_found": 0,
+    "human_decisions_found": 0,
+    "original_batch_occurrences": 1044,
+    "official_pdfs_downloaded_with_matching_hash": 325,
+    "historical_docling_hashes_changed_between_large_runs": 108
+  },
+  "numeric_comparison": {
+    "documents": 30,
+    "compatible_baselines": 30,
+    "critical_alerts_removed": 1,
+    "critical_alerts_remaining": 29,
+    "case": "convencoes/APU/2026_BTE_11_APU_114_ACT_ACEP15-2026_FreguesiaNossa-STAL.pdf",
+    "case_pdf_sha256": "468cb96f9eb1f91dbdea202e2e69dc970fe08f957c92bbc5e8e62f8e5519663c",
+    "before_state": "blocked",
+    "after_state": "review",
+    "markdown_unchanged": true,
+    "current_rules": [
+      "LIST_MARKER"
+    ],
+    "history_states": {
+      "pending": 1,
+      "absent_unconfirmed": 1
+    }
+  },
+  "release": {
+    "installer_built": false,
+    "windows_station_acceptance": false
+  },
+  "local_validation": {
+    "pytest_passed": 667,
+    "pytest_skipped": 36,
+    "explicit_tk_tests_passed": 10,
+    "ruff": "passed",
+    "markdownlint": "passed",
+    "windows_candidate_ci_run": false
+  }
+}

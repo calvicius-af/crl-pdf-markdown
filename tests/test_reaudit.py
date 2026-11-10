@@ -177,6 +177,10 @@ def test_filtered_reaudit_keeps_all_checks_and_archives_selection(tmp_path, conv
         text = (folder / 'diagnostico.md').read_text(encoding='utf-8')
         assert '2 de 3' in text and 'OLD' in text and 'todos os controlos atuais' in text
     assert {p: p.read_bytes() for p in output.rglob('*') if p.is_file()} == original
+    from crl_markdown.occurrences import history
+    historical = history(destination, 'convencoes/PRI/a.pdf')
+    assert any(row['finding']['rule'] == 'OLD_RULE' and row['status'] == 'absent_unconfirmed'
+               for row in historical['occurrences'])
 
 
 @pytest.mark.parametrize('jobs', [1, 2])

@@ -164,7 +164,8 @@ def diagnostic(manifest, parent, *, detailed=True):
             f"Selecionados: **{len(origin['selected_documents'])} de {origin['total_documents']}**.", '',
             link(origin['manifest'], parent, 'Manifesto de origem') + '  ',
             f"SHA-256: `{origin['manifest_sha256']}`", '',
-            'Critérios aplicados ao retrato da corrida anterior; cada documento selecionado '
+            ('Critérios aplicados ao inventário histórico; ' if origin.get('selection_basis') == 'review_inventory'
+             else 'Critérios aplicados ao retrato da corrida anterior; ') + 'cada documento selecionado '
             'recebe todos os controlos atuais. A seleção não concede aprovação humana.', '',
         ]
         for label, value in [('Documento', filters['document']),
@@ -362,7 +363,7 @@ def diagnostic(manifest, parent, *, detailed=True):
     return normalize("\n".join(lines))
 
 
-def new_manifest(source: Path, output: Path, entries, options):
+def new_manifest(source: Path, output: Path, entries, options, *, relative_sources=None):
     started = datetime.now(timezone.utc)
     return {
         "schema_version": 1,
@@ -375,12 +376,13 @@ def new_manifest(source: Path, output: Path, entries, options):
             {
                 "source": str(pdf.resolve()),
                 "relative_source": (
+                    Path(relative_sources[index]) if relative_sources is not None else
                     pdf.relative_to(source) if source.is_dir() else Path(pdf.name)
                 ).as_posix(),
                 "output": str((output / relative).resolve()),
                 "state": "nao_processado",
             }
-            for pdf, relative in entries
+            for index, (pdf, relative) in enumerate(entries)
         ],
     }
 

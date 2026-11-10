@@ -84,7 +84,8 @@ def _trabalhador(ligacao, options, factory, registo_falhas):
                 ligacao.send(("arranque", type(exc).__name__, str(exc), traceback.format_exc()))
                 break
         try:
-            report = convert_pdf(pdf, target, converter, options, overwrite, audit_dir=audit_dir)
+            report = convert_pdf(pdf, target, converter, options, overwrite, audit_dir=audit_dir,
+                                 logical_name=target.stem)
             ligacao.send(("ok", report))
         except Exception as exc:
             ligacao.send(("erro", type(exc).__name__, str(exc), traceback.format_exc()))

@@ -80,6 +80,7 @@ def main(argv=None):
     audit_again.add_argument('--dry-run', action='store_true',
                              help='Listar a seleção em JSON sem criar saídas nem carregar modelos')
     audit_again.add_argument('--jobs', type=int, choices=[1, 2], default=2)
+    audit_again.add_argument('--history', action='store_true', help='Selecionar também documentos de corridas anteriores')
     revision = commands.add_parser('revise', help='Criar uma correção separada do original')
     revision.add_argument('--out', type=Path, required=True)
     revision.add_argument('--document', required=True)
@@ -98,8 +99,52 @@ def main(argv=None):
     evaluation.add_argument('--candidate', type=Path, required=True)
     evaluation.add_argument('--out', type=Path, required=True)
     evaluation.add_argument('--reference', type=Path)
+    occurrence_history = commands.add_parser('occurrences', help='Consultar o histórico de ocorrências de um documento')
+    occurrence_history.add_argument('--out', type=Path, required=True)
+    occurrence_history.add_argument('--document', required=True)
+    confirmation = commands.add_parser('confirm-absence', help='Registar conferência de ocorrência histórica ausente')
+    confirmation.add_argument('--out', type=Path, required=True)
+    confirmation.add_argument('--document', required=True)
+    confirmation.add_argument('--occurrence', required=True)
+    confirmation.add_argument('--version', required=True)
+    confirmation.add_argument('--reviewer', required=True)
+    confirmation.add_argument('--notes', required=True)
+    export = commands.add_parser('export-review', help='Preparar uma cópia completa para revisão noutra máquina')
+    export.add_argument('--out', type=Path, required=True)
+    export.add_argument('--destination', type=Path, required=True)
+    export.add_argument('--reviewer', required=True)
+    merge = commands.add_parser('merge-review', help='Incorporar revisão recebida sem sobrepor alterações concorrentes')
+    merge.add_argument('--out', type=Path, required=True)
+    merge.add_argument('--from', dest='branch', type=Path, required=True)
+    merge.add_argument('--reviewer')
+    merge.add_argument('--dry-run', action='store_true')
+    recovery = commands.add_parser('recover-review-import', help='Recuperar uma importação de revisão interrompida')
+    recovery.add_argument('--out', type=Path, required=True)
     args = parser.parse_args(argv)
     try:
+        if args.command == 'recover-review-import':
+            from .review_exchange import recover_imports
+            print(json.dumps(recover_imports(args.out), ensure_ascii=False, indent=2))
+            return 0
+        if args.command == 'export-review':
+            from .review_exchange import export_review
+            print(export_review(args.out, args.destination, reviewer=args.reviewer))
+            return 0
+        if args.command == 'merge-review':
+            from .review_exchange import merge_review, plan_merge
+            result = (plan_merge(args.out, args.branch) if args.dry_run else
+                      merge_review(args.out, args.branch, reviewer=args.reviewer or ''))
+            print(json.dumps(result, ensure_ascii=False, indent=2))
+            return int(bool(result.get('conflicts') or result.get('conflicted_documents')))
+        if args.command == 'occurrences':
+            from .occurrences import history
+            print(json.dumps(history(args.out, args.document), ensure_ascii=False, indent=2))
+            return 0
+        if args.command == 'confirm-absence':
+            from .occurrences import confirm_absence
+            print(confirm_absence(args.out, args.document, args.occurrence,
+                                 reviewer=args.reviewer, notes=args.notes, expected_version=args.version))
+            return 0
         if args.command == 'evaluate':
             from .evaluation import evaluate
             data = evaluate(args.baseline, args.candidate, args.out, reference=args.reference)
@@ -128,7 +173,7 @@ def main(argv=None):
         if args.command == 'reaudit':
             from .reaudit import plan_reaudit, reaudit
             filters = dict(relative_source=args.document, families=args.family,
-                           rules=args.rule, statuses=args.status)
+                           rules=args.rule, statuses=args.status, include_history=args.history)
             if args.dry_run:
                 _, _, selection = plan_reaudit(args.out, **filters)
                 print(json.dumps(selection, ensure_ascii=False, indent=2))
@@ -204,7 +249,7 @@ def main(argv=None):
             return 2
         return 0
     except (ValueError, OSError, ImportError, RuntimeError) as exc:
-        if args.command == 'reaudit' and args.dry_run:
+        if args.command in {'reaudit', 'merge-review'} and args.dry_run:
             print(f'Erro: {exc}', file=sys.stderr)
             return 1
         from tempfile import gettempdir

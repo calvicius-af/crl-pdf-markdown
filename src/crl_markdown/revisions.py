@@ -87,7 +87,8 @@ def active_version(output, document):
     target = base / relative
     audit = base / '_auditoria/documentos' / relative.parent
     report_path = audit / (relative.stem + '.qualidade.json')
-    report = previous_report(Path(document['source']), target, audit)
+    from .review_sources import resolve_source
+    report = previous_report(resolve_source(output, document), target, audit)
     if (report is None or report['source_sha256'] != document['source_sha256']
             or _identity(target, report_path, report) != data['identity']):
         raise ValueError('A versão corrigida mudou ou perdeu integridade. Reaudite e confira de novo.')
@@ -121,6 +122,20 @@ def create_revision(output, relative_source, reviewer):
                 'revision_id': revision.name}
         atomic_write(revision / 'revision.json', json.dumps(meta, ensure_ascii=False, indent=2) + '\n')
         return revision
+
+
+def pending_revisions(output, relative_source, reviewer, identity):
+    """Rascunhos retomáveis da mesma pessoa/base, sem os publicar automaticamente."""
+    from .validation import _key
+
+    found = []
+    for path in (Path(output) / '_auditoria/correcoes' / _key(relative_source)).glob('*/revision.json'):
+        meta = json.loads(path.read_text(encoding='utf-8'))
+        if (meta.get('relative_source') == relative_source
+                and meta.get('reviewer') == reviewer.strip() and meta.get('parent') == identity
+                and (path.parent / 'correcao.md').is_file()):
+            found.append((meta['created_at_utc'], path.parent))
+    return [path for _, path in sorted(found)]
 
 
 def _apply_resolutions(report, resolutions, reviewer, changed):
@@ -160,7 +175,11 @@ def audit_revision(revision, *, resolutions=()):
 
     revision = Path(revision).resolve()
     meta = json.loads((revision / 'revision.json').read_text(encoding='utf-8'))
-    output = Path(meta['origin_output']).resolve()
+    # A pasta completa pode ter sido transferida para outra máquina. A origem
+    # registada conserva a proveniência; a operação usa a localização atual.
+    if revision.parents[1].name != 'correcoes' or revision.parents[2].name != '_auditoria':
+        raise ValueError('Rascunho fora da pasta de correções.')
+    output = revision.parents[3]
     if not revision.is_relative_to((output / '_auditoria/correcoes').resolve()):
         raise ValueError('Rascunho fora da pasta de correções.')
     relative = meta['relative_source']
@@ -184,13 +203,16 @@ def audit_revision(revision, *, resolutions=()):
         cache_path = (revision / meta.get('extraction_cache', 'cache')).resolve()
         if not cache_path.is_relative_to(revision):
             raise ValueError('Cache de correção fora da pasta da revisão.')
-        cache = CachedConverter(cache_path)
+        from .review_sources import resolve_source
+        source = resolve_source(output, document)
+        cache = CachedConverter(cache_path, records=[{
+            **report, 'source': str(source), 'relative_source': Path(relative).name}])
         options_data = report.get('options', {})
         options = Options(ocr=bool(options_data.get('ocr')), offline=bool(options_data.get('offline')),
                           models=Path(options_data['models']) if options_data.get('models') else None)
-        updated = convert_pdf(Path(document['source']), publication / relative_md, cache, options,
+        updated = convert_pdf(source, publication / relative_md, cache, options,
                               audit_dir=audit, markdown_override=draft,
-                              generated_headings_override=meta['generated_headings'])
+                              generated_headings_override=meta['generated_headings'], logical_name=relative_md.stem)
         updated['revision'] = meta
         if _sha256(revision / 'correcao.md') != draft_digest:
             raise ValueError('O rascunho mudou durante a auditoria. Guarde e reaudite de novo.')
@@ -214,4 +236,6 @@ def audit_revision(revision, *, resolutions=()):
                 'quality_status': updated['quality_status'],
                 'identity': _identity(publication / relative_md, saved_report, updated)}
         atomic_write(pointer, json.dumps(data, ensure_ascii=False, indent=2) + '\n')
+        from .occurrences import record_version
+        record_version(output, relative, updated, origin='human_revision')
         return publication, updated
