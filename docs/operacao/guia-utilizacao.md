@@ -77,6 +77,119 @@ pasta. Prefira uma saída nova por lote. Uma cache Docling verificada permite
 reaplicar regras mais depressa, mas uma nova extração é necessária quando o erro
 está no reconhecimento dos itens.
 
+## Retomar trabalho anterior e transferir uma revisão
+
+A conferência e a entrega consultam os documentos do histórico da pasta de saída,
+incluindo as corridas anteriores em `_auditoria/corridas`. Converter um documento
+isolado na mesma pasta não deve retirar os documentos anteriores da conferência.
+O relatório do último lote continua a representar apenas essa execução.
+Ao reabrir a aplicação, é retomada a última pasta de revisão desse projeto.
+**Lotes recentes…** dá acesso às pastas anteriores e à principal configurada,
+sem alterar a configuração das cinco pastas nem apagar resultados indisponíveis.
+Se a última tentativa de um documento falhou, a conferência pode apresentar a
+versão anterior, identificada como tal, desde que a sua integridade seja válida.
+
+Para voltar a uma pasta usada anteriormente, clique em **Retomar revisão noutra
+pasta…** e escolha a pasta Markdown que contém `_auditoria`. Não escolha uma
+subpasta de `corridas`: os respetivos manifestos referem-se aos artefactos da
+pasta de saída original.
+
+Para procurar trabalho que deixou de aparecer numa versão anterior:
+
+1. Na máquina onde trabalhou, conserve a pasta original e faça uma cópia completa
+   da saída Markdown, incluindo a pasta `_auditoria` e todas as suas subpastas.
+2. Em `_auditoria/corridas/*/manifest.json` ficam os índices das corridas
+   anteriores. Os relatórios `documentos/*.qualidade.json` guardam as ocorrências;
+   `correcoes` guarda os rascunhos/publicações, `versoes` as referências ativas e
+   `revisoes` as decisões humanas. Algumas subpastas só existem se foram usadas.
+3. Copie também os PDFs originais, caso estejam noutra localização. Não altere
+   ficheiros JSON para corrigir caminhos nem reconverta sobre a única cópia.
+4. Na máquina de destino, abra a cópia por **Retomar revisão noutra pasta…**.
+   Se os originais não forem encontrados, escolha a saída no campo respetivo e
+   use **Localizar PDFs do lote…**, indicando a pasta com os PDFs copiados.
+5. A associação confirma o conteúdo por SHA-256 e guarda referências locais por
+   máquina. Reabra a conferência. Os relatórios e as aprovações anteriores não
+   são reescritos para alterar os caminhos.
+
+Ao fechar um editor ou a janela de conferência/aplicação, as alterações por guardar
+pedem Guardar, Descartar ou Cancelar. Guardar uma correção ou notas não equivale
+a aprovar o documento. Notas recuperadas não assinalam conferência integral.
+Para retomar uma correção ainda não publicada, indique o mesmo responsável e
+use **Criar / editar correção**; a aplicação oferece o rascunho da mesma base.
+
+Uma gravação de rascunho recusa alterações concorrentes que detete, conservando
+o texto no editor. Copie esse texto antes de fechar para reconciliar as versões.
+Uma nova extração com substituição é recusada quando o documento tem correções
+ou decisões humanas; use uma saída nova.
+
+## Rever em máquinas diferentes e incorporar o trabalho
+
+Conserve uma pasta principal do corpus. Na conferência dessa pasta:
+
+1. Indique o responsável e use **Preparar cópia para outra pessoa…**. Guarde as
+   edições antes de continuar. É criada uma pasta nova com os documentos,
+   auditorias, correções, decisões e PDFs verificados. Entregue a pasta completa;
+   não é preciso instalar modelos para conferir ou editar texto já extraído.
+2. A outra pessoa abre a cópia por **Retomar revisão noutra pasta…**, identifica-se
+   no campo de responsável e trabalha normalmente. A recuperação de notas mostra
+   o autor anterior, mas não atribui esse nome à pessoa que abre a aplicação.
+3. Para distribuir trabalho em paralelo, atribua documentos diferentes a cada
+   pessoa. As cópias podem partir da mesma base. Não substitua a pasta principal
+   por uma das cópias nem use o Explorador para sobrepor ficheiros de duas revisões.
+4. Depois de fechar a aplicação na máquina de revisão, devolva a pasta completa.
+   Na pasta principal, use **Importar revisão recebida…**. As alterações são
+   comparadas com a base de onde a cópia partiu, conservando autoria e histórico.
+5. Alterações em documentos diferentes podem ser incorporadas. Revisões
+   incompatíveis do mesmo documento são recusadas; conserve ambas as pastas,
+   compare os textos e crie uma nova correção na principal com a reconciliação
+   descrita nas notas. Não escolha uma versão apenas pela data do ficheiro.
+
+Uma cópia de revisão destina-se à conferência, correção e OCR dirigido. Se for
+usada para uma nova conversão que substitua o corpus base, a importação é recusada.
+Uma atualização das regras na pasta principal pode exigir nova cópia de revisão.
+Os modelos para OCR dirigido têm de ser selecionados na máquina que o executa;
+o pacote de revisão não inclui modelos nem Python.
+
+As decisões têm uma cadeia de proveniência. Uma decisão registada depois de
+abrir a conferência exige reabrir o documento antes de registar outro parecer.
+Se uma sobreposição manual/sincronização originar dois ramos de decisão, a entrega
+é bloqueada. **Reconciliar decisões…** permite uma nova decisão identificada,
+com notas e conferência da versão atual, conservando os pareceres anteriores.
+
+A importação conserva um registo e os ficheiros anteriores. Uma falha tratável
+repõe as alterações aplicadas. Se houver interrupção do processo, use **Recuperar
+importação interrompida…** na janela principal, com a pasta de saída selecionada.
+A recuperação recusa-se a substituir alterações posteriores que detete.
+
+Este mecanismo não depende de escrita simultânea numa partilha. Uma pasta
+sincronizada não garante bloqueios entre computadores; use as cópias de revisão
+e a importação explícita. O comportamento de partilhas Windows reais continua
+a precisar de ensaio na infraestrutura do CRL.
+
+## Histórico das ocorrências
+
+**Histórico de ocorrências…** conserva as observações por versão, mesmo quando
+uma regra deixa de emitir o alerta. As situações são distintas:
+
+- **Pendente:** o alerta existe na versão atual.
+- **Resolvida por conferência humana:** há uma resolução registada para a versão.
+- **Ausente na versão atual — por confirmar:** a reauditoria deixou de emitir o
+  alerta; isto não o dá automaticamente como resolvido.
+- **Fonte alterada — exige nova conferência:** o PDF mudou, invalidando a
+  confirmação anterior para essa fonte.
+- **Versão atual por verificar:** faltam originais ou há uma falha de integridade;
+  o histórico continua visível, mas não pode ser confirmado como atual.
+
+Para uma ocorrência ausente, **Confirmar resolução histórica…** exige responsável
+e evidência da conferência atual. Não permite dispensar um erro que continue na
+auditoria atual. Uma alteração posterior da versão exige reconfirmação.
+Na reauditoria para uma pasta nova, o histórico é transportado e as evidências
+humanas anteriores ficam separadas; não se ativam aprovações antigas automaticamente.
+
+A reauditoria pela GUI considera o inventário histórico. Na CLI, acrescente
+`--history` para selecionar também documentos de corridas anteriores. A opção
+`--dry-run` conserva a simulação e a proveniência da seleção.
+
 ## Reauditar uma seleção pela linha de comandos
 
 Para investigar um padrão sem repetir o lote inteiro, selecione os documentos

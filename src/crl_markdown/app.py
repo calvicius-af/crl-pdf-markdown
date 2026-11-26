@@ -58,6 +58,12 @@ def main(argv=None):
 
     if configured:
         apply_settings(configured)
+        try:
+            previous_review = settings.last_review(configured['workspace'])
+            if previous_review:
+                output.set(previous_review)
+        except (ValueError, OSError) as error:
+            startup_error = error
 
     def configure():
         if running.is_set():
@@ -198,6 +204,9 @@ def main(argv=None):
             "com a mesma pasta de saída continua a partir deles. Fechar?",
         ):
             return
+        if not all(guard() for guard in getattr(root, 'review_close_guards', [])):
+            return
+        remember_review_folder(output.get())
         reaudit_cancel.set()
         root.destroy()
 
@@ -268,6 +277,7 @@ def main(argv=None):
                     if (path.exists() and current_manifest.exists()
                             and current_manifest.read_bytes() != previous_run):
                         events.put(("report", path))
+                        events.put(("review_folder", args[1]))
                 except OSError:
                     events.put(("log", "Não foi possível abrir o relatório do lote. "
                                 "Use Guardar relatório para o apoio."))
@@ -401,8 +411,90 @@ def main(argv=None):
         from .review_app import ReviewWindow
         try:
             ReviewWindow(root, Path(output.get()))
+            remember_review_folder(output.get())
         except (ValueError, OSError) as error:
             messagebox.showinfo("Ainda não é possível conferir", str(error))
+
+    def remember_review_folder(folder):
+        try:
+            settings.remember_review(Path(folder), workspace_path.get())
+        except (ValueError, OSError, RuntimeError) as error:
+            events.put(('log', f'Não foi possível atualizar os lotes recentes: {error}. '
+                        'A pasta de trabalho e as revisões foram conservadas.'))
+
+    def recent_review_folders():
+        if running.is_set():
+            return
+        try:
+            records = settings.recent_reviews(workspace_path.get())
+        except (ValueError, OSError) as error:
+            messagebox.showerror('Lotes recentes', str(error))
+            return
+        folders = list(dict.fromkeys([r['folder'] for r in reversed(records)]
+                                    + ([configured['markdown']] if configured else [])))
+        window = tk.Toplevel(root)
+        window.title('Retomar um lote recente')
+        window.geometry('750x320')
+        ttk.Label(window, text='Escolha a pasta de revisão. A pasta principal configurada também está incluída.').pack(padx=12, pady=8)
+        choices = tk.Listbox(window, height=10)
+        choices.pack(fill='both', expand=True, padx=12)
+        for folder in folders:
+            choices.insert('end', folder + ('' if Path(folder).is_dir() else ' — indisponível'))
+
+        def open_selected(_event=None):
+            if choices.curselection():
+                output.set(folders[choices.curselection()[0]])
+                window.destroy()
+                review_document()
+        choices.bind('<Double-Button-1>', open_selected)
+        ttk.Button(window, text='Abrir conferência', command=open_selected).pack(pady=8)
+
+    ttk.Button(toolbar, text='Lotes recentes…', command=recent_review_folders).pack(side='left', padx=8)
+
+    def resume_review():
+        if running.is_set():
+            return
+        folder = filedialog.askdirectory(title="Pasta Markdown com o histórico a conferir")
+        if folder:
+            output.set(folder)
+            review_document()
+
+    def locate_review_sources():
+        if running.is_set() or not output.get().strip():
+            return
+        folder = filedialog.askdirectory(title="Pasta com os PDFs originais deste lote")
+        if not folder:
+            return
+        from .review_sources import locate_sources
+        begin_operation("A localizar os PDFs originais pelos hashes")
+        destination = Path(output.get())
+        def worker():
+            try:
+                result = locate_sources(destination, Path(folder))
+                events.put(("log", f"Fontes localizadas: {result['found']}; em falta: {result['missing']}. "
+                            "Reabra Conferir / aprovar para retomar a revisão."))
+            except Exception as error:
+                events.put(("failure", error))
+            finally:
+                events.put(("done", ""))
+        threading.Thread(target=worker, daemon=True).start()
+
+    def recover_review_import():
+        if running.is_set() or not output.get().strip():
+            return
+        from .review_exchange import recover_imports
+        destination = Path(output.get())
+        begin_operation("A recuperar importações interrompidas")
+        def worker():
+            try:
+                receipts = recover_imports(destination)
+                events.put(("log", f"Importações recuperadas: {len(receipts)}. "
+                            "Reabra a conferência para continuar."))
+            except Exception as error:
+                events.put(("failure", error))
+            finally:
+                events.put(("done", ""))
+        threading.Thread(target=worker, daemon=True).start()
 
     def reaudit_batch():
         if running.is_set():
@@ -419,7 +511,7 @@ def main(argv=None):
                 reporter = ProgressReporter(lambda line: events.put(("log", line)),
                                             lambda event: events.put(("progress", event)))
                 destination, reports = reaudit(current_output, progress=reporter,
-                                               cancel_event=reaudit_cancel)
+                                               cancel_event=reaudit_cancel, include_history=True)
                 events.put(("output", str(destination)))
                 events.put(("report", destination / "_auditoria/diagnostico.md"))
                 events.put(("log", f"Reauditoria terminada: {len(reports)} documentos. Nova saída: {destination}"))
@@ -449,6 +541,9 @@ def main(argv=None):
         ("Recolher PDFs (usa internet)", collect_workspace, "Segue as ligações dos índices Excel no site do BTE."),
         ("Organizar PDFs (sem rede)", organize_workspace, "Atribui os nomes RNC e conserva os originais."),
         ("Conferir / aprovar…", review_document, "Revê alertas e regista a decisão sobre cada documento."),
+        ("Retomar revisão noutra pasta…", resume_review, "Abre documentos e revisões de um lote anterior."),
+        ("Localizar PDFs do lote…", locate_review_sources, "Associa os originais nesta máquina, sem alterar as revisões."),
+        ("Recuperar importação interrompida…", recover_review_import, "Repõe o estado anterior a uma importação incompleta."),
         ("Entregar aprovados…", deliver_approved, "Cria uma entrega dos documentos já aprovados."),
         ("Reauditar lote (sem nova extração)", reaudit_batch, "Aplica os controlos atuais ao Markdown existente."),
     )
@@ -472,6 +567,9 @@ def main(argv=None):
                 operation.update(text)
             elif kind == "output":
                 output.set(text)
+                remember_review_folder(text)
+            elif kind == "review_folder":
+                remember_review_folder(text)
             elif kind == "report":
                 report_path = text
                 report_button.configure(state="normal")

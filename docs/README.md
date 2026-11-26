@@ -34,6 +34,18 @@ defeitos do auditor e regista a reauditoria das 18 convenções selecionadas.
 Para a linha 0.4, consulte o [instalador Windows completo](operacao/instalacao-windows.md)
 e a [construção e aceitação da distribuição](desenvolvimento/distribuicao-windows.md).
 
+A [revisão de preparação da primeira release de 10/11](revisoes/preparacao-primeira-release-2026-11-10.md)
+avalia funcionalidades, riscos operacionais, desinstalação, atualização e manual,
+com prioridades e critérios de aceitação propostos.
+
+A [intervenção de preservação das revisões de 10/11](desenvolvimento/revisao-persistente-2026-11-10.md)
+regista o diagnóstico, a implementação de revisão entre máquinas e os limites
+da validação, incluindo a redução medida de falsos positivos.
+
+A [recuperação do lote Windows recebido em 10/11](validacao/recuperacao-windows-2026-11-10.md)
+confirma a conservação dos 324 documentos, a reconstrução do inventário e a
+verificação dos originais por hash, distinguindo recuperação de aprovação humana.
+
 A [revisão e consolidação de 27/10](revisoes/revisao-consolidacao-2026-10-27.md)
 regista o achado de integridade corrigido, a relação entre PRs e as referências
 históricas preservadas.

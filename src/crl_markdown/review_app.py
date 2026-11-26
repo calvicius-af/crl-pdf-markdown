@@ -10,7 +10,9 @@ from tkinter import filedialog, messagebox, ttk
 
 from .models import _sha256
 from .pipeline import atomic_write
-from .validation import _load, _verified, decide
+from .report import STATUS
+from .ui_labels import FAMILIES, PROFILES, family, rule_label
+from .validation import _load, _verified, decide, review_head
 
 
 def load_document(output, document):
@@ -20,27 +22,50 @@ def load_document(output, document):
     return target, report_path, report, expected
 
 
+def current_inventory(output):
+    """Atualiza filtros pelas publicações ativas sem alterar o manifesto de execução."""
+    from .revisions import current_pointer
+    output = Path(output)
+    manifest = _load(output)
+    for document in manifest['documents']:
+        pointer = current_pointer(output, document['relative_source'])
+        if not pointer.exists():
+            continue
+        data = json.loads(pointer.read_text(encoding='utf-8'))
+        publication = (output / data['publication']).resolve()
+        if not publication.is_relative_to((output / '_auditoria/correcoes').resolve()):
+            raise ValueError('Publicação ativa fora da pasta de correções.')
+        relative = Path(document['relative_source'])
+        path = publication / '_auditoria/documentos' / relative.parent / (relative.stem + '.qualidade.json')
+        if _sha256(path) != data['identity']['report_sha256']:
+            raise ValueError('O relatório da versão ativa perdeu integridade.')
+        report = json.loads(path.read_text(encoding='utf-8'))
+        document.update(quality_status=report['quality_status'], findings=report.get('findings', []))
+    return manifest
+
+
 class ReviewWindow:
     def __init__(self, root, output):
         self.output = Path(output)
-        self.manifest = _load(self.output)
+        self.manifest = current_inventory(self.output)
         self.documents = self.manifest['documents']
-        from .revisions import current_pointer
-        for document in self.documents:
-            pointer = current_pointer(self.output, document['relative_source'])
-            if pointer.exists():
-                data = json.loads(pointer.read_text(encoding='utf-8'))
-                document['quality_status'] = data.get('quality_status', document.get('quality_status'))
         self.current = None
         self.revision = None
         self.busy = False
         self.events = queue.Queue()
+        self.editors = {}
+        self.shown_document = ''
+        self.saved_notes = ''
+        self.decision_head = None
         self.window = tk.Toplevel(root)
         self.window.title('Conferir, corrigir e reauditar')
         self.window.geometry('1100x800')
         self.window.minsize(950, 700)
         self.window.transient(root)
         self.window.protocol('WM_DELETE_WINDOW', self.close)
+        guards = getattr(root, 'review_close_guards', [])
+        guards.append(self.can_close)
+        root.review_close_guards = guards
         frame = ttk.Frame(self.window, padding=12)
         frame.pack(fill='both', expand=True)
         filters = ttk.Frame(frame)
@@ -48,16 +73,20 @@ class ReviewWindow:
         self.state = tk.StringVar(value='Todos')
         self.family = tk.StringVar(value='Todas')
         self.rule = tk.StringVar(value='Todas')
-        families = sorted({Path(d['relative_source']).parts[0] for d in self.documents})
+        families = sorted({family(d) for d in self.documents})
         rules = sorted({f['rule'] for d in self.documents for f in d.get('findings', [])})
+        self.family_values = {FAMILIES.get(code, code.replace('_', ' ').capitalize()): code for code in families}
+        self.rule_values = {rule_label(code): code for code in rules}
+        self.filter_boxes = {}
         for label, variable, choices in [
-            ('Estado', self.state, ['Todos', 'blocked', 'review', 'passed', 'falhou']),
-            ('Família', self.family, ['Todas', *families]),
-            ('Regra', self.rule, ['Todas', *rules]),
+            ('Estado', self.state, ['Todos', *(STATUS[k] for k in ('blocked', 'review', 'passed', 'falhou'))]),
+            ('Família', self.family, ['Todas', *self.family_values]),
+            ('Regra', self.rule, ['Todas', *self.rule_values]),
         ]:
             ttk.Label(filters, text=label).pack(side='left', padx=(0, 4))
             box = ttk.Combobox(filters, textvariable=variable, values=choices, state='readonly', width=18)
             box.pack(side='left', padx=(0, 12))
+            self.filter_boxes[label] = box
             box.bind('<<ComboboxSelected>>', self.filter_documents)
         self.selected = tk.StringVar()
         self.choices = ttk.Combobox(frame, textvariable=self.selected, state='readonly')
@@ -108,37 +137,109 @@ class ReviewWindow:
         self.approve = ttk.Button(decisions, text='Registar aprovação', command=lambda: self.record('aprovado'))
         self.approve.pack(side='left')
         ttk.Button(decisions, text='Registar rejeição', command=lambda: self.record('rejeitado')).pack(side='left', padx=6)
+        ttk.Button(decisions, text='Histórico de ocorrências…', command=self.open_history).pack(side='left', padx=6)
+        exchange = ttk.Frame(frame)
+        exchange.pack(fill='x', pady=4)
+        ttk.Button(exchange, text='Preparar cópia para outra pessoa…', command=self.export_copy).pack(side='left')
+        ttk.Button(exchange, text='Importar revisão recebida…', command=self.import_copy).pack(side='left', padx=8)
+        ttk.Button(exchange, text='Reconciliar decisões…', command=self.reconcile).pack(side='left')
         self.filter_documents()
         self.window.after(100, self.poll)
 
     def close(self):
-        if self.busy:
-            messagebox.showinfo('Auditoria em curso', 'Aguarde a conclusão antes de fechar.', parent=self.window)
-        else:
+        if self.can_close():
             self.window.destroy()
 
+    def can_close(self):
+        if not self.window.winfo_exists():
+            return True
+        if self.busy:
+            messagebox.showinfo('Auditoria em curso', 'Aguarde a conclusão antes de fechar.', parent=self.window)
+            return False
+        return all(guard() for window, guard in list(self.editors.values())
+                   if window.winfo_exists()) and self.check_notes()
+
+    def save_notes(self):
+        import json
+        from datetime import datetime, timezone
+        from uuid import uuid4
+
+        from .validation import _key
+        if not self.shown_document or not self.current:
+            return True
+        if not self.reviewer.get().strip():
+            messagebox.showerror('Responsável pelas notas',
+                                 'Indique quem está a rever antes de guardar as notas.', parent=self.window)
+            return False
+        text = self.notes.get('1.0', 'end-1c')
+        data = {'document': self.shown_document, 'identity': self.current[3],
+                'reviewer': self.reviewer.get(), 'notes': text,
+                'integral': self.integral.get(), 'at_utc': datetime.now(timezone.utc).isoformat(),
+                'kind': 'rascunho_notas_nao_e_aprovacao'}
+        target = self.output / '_auditoria/notas' / _key(self.shown_document) / (uuid4().hex + '.json')
+        try:
+            from .locking import exclusive
+            with exclusive(self.output / '_auditoria/.operacao.lock'):
+                atomic_write(target, json.dumps(data, ensure_ascii=False, indent=2) + '\n')
+        except (OSError, RuntimeError) as error:
+            messagebox.showerror('Não foi possível guardar as notas', str(error), parent=self.window)
+            return False
+        self.saved_notes = text
+        return True
+
+    def check_notes(self):
+        from .drafts import confirm_discard_or_save
+        return confirm_discard_or_save(self.window,
+                                       self.notes.get('1.0', 'end-1c') != self.saved_notes,
+                                       self.save_notes)
+
     def filter_documents(self, _event=None):
+        if self.busy or not self.check_notes():
+            return
+        try:
+            self.manifest = current_inventory(self.output)
+        except (ValueError, OSError) as error:
+            messagebox.showerror('Não foi possível atualizar a conferência', str(error), parent=self.window)
+            return
+        self.documents = self.manifest['documents']
+        self.family_values = {FAMILIES.get(code, code.replace('_', ' ').capitalize()): code
+                              for code in sorted({family(d) for d in self.documents})}
+        self.rule_values = {rule_label(code): code for code in sorted({f['rule'] for d in self.documents
+                                                                      for f in d.get('findings', [])})}
+        for label, variable, values in [('Família', self.family, self.family_values),
+                                         ('Regra', self.rule, self.rule_values)]:
+            self.filter_boxes[label]['values'] = ['Todas', *values]
+            if variable.get() != 'Todas' and variable.get() not in values:
+                variable.set('Todas')
         choices = []
         for d in self.documents:
-            if self.family.get() != 'Todas' and Path(d['relative_source']).parts[0] != self.family.get():
+            if self.family.get() != 'Todas' and family(d) != self.family_values.get(self.family.get()):
                 continue
-            if self.state.get() != 'Todos' and d.get('quality_status', d.get('state', 'review')) != self.state.get():
+            if (self.state.get() != 'Todos'
+                    and STATUS.get(d.get('quality_status', d.get('state', 'review'))) != self.state.get()):
                 continue
-            if self.rule.get() != 'Todas' and not any(f['rule'] == self.rule.get() for f in d.get('findings', [])):
+            if (self.rule.get() != 'Todas' and not any(f['rule'] == self.rule_values.get(self.rule.get())
+                                                      for f in d.get('findings', []))):
                 continue
             choices.append(d['relative_source'])
         self.choices['values'] = choices
-        self.selected.set(choices[0] if choices else '')
+        self.selected.set(self.selected.get() if self.selected.get() in choices else choices[0] if choices else '')
+        self.saved_notes = self.notes.get('1.0', 'end-1c')
         self.refresh()
 
     def refresh(self, _event=None):
         if self.busy:
+            return
+        if not self.check_notes():
+            self.selected.set(self.shown_document)
             return
         self.current = None
         self.revision = None
         self.integral.set(False)
         self.page.set('')
         self.notes.delete('1.0', 'end')
+        self.saved_notes = ''
+        self.shown_document = self.selected.get()
         self.findings.delete(*self.findings.get_children())
         self.approve.configure(state='disabled')
         if not self.selected.get():
@@ -147,6 +248,7 @@ class ReviewWindow:
         document = next(d for d in self.documents if d['relative_source'] == self.selected.get())
         try:
             self.current = load_document(self.output, document)
+            self.decision_head = review_head(self.output, document['relative_source'])
         except (ValueError, OSError) as error:
             self.status.set(str(error))
             return
@@ -155,19 +257,39 @@ class ReviewWindow:
         if report.get('revision'):
             self.revision = target.parents[len(Path(document['relative_source']).parts) - 1].parent.parent
         state = report['quality_status']
-        self.status.set(f'{state} · Perfil: {report.get("document_profile", "não indicado")} · '
+        profile = PROFILES.get(report.get('document_profile'), 'Não identificado')
+        self.status.set(f'{STATUS.get(state, state)} · Perfil: {profile} · '
                         + ('Resolva as ocorrências de erro antes de aprovar.' if state == 'blocked'
                            else 'Confira esta versão e registe a decisão.'))
+        if document.get('latest_attempt'):
+            self.status.set(self.status.get() + ' · A última tentativa não terminou; '
+                            'está a conferir a versão anterior verificada.')
         self.approve.configure(state='disabled' if state == 'blocked' else 'normal')
         for i, finding in enumerate(report.get('findings', [])):
-            self.findings.insert('', 'end', iid=str(i), values=(finding['severity'], finding['rule'],
+            severity = {'error': 'Erro', 'warning': 'Aviso', 'info': 'Informação'}
+            self.findings.insert('', 'end', iid=str(i), values=(severity.get(finding['severity'], finding['severity']), rule_label(finding['rule']),
                                  finding.get('page', '—'), finding.get('message', '')))
+        from .validation import _key
+        drafts = []
+        for path in (self.output / '_auditoria/notas' / _key(self.shown_document)).glob('*.json'):
+            data = json.loads(path.read_text(encoding='utf-8'))
+            if data.get('identity') == self.current[3]:
+                drafts.append(data)
+        if drafts:
+            draft = max(drafts, key=lambda d: d['at_utc'])
+            self.notes.insert('1.0', draft['notes'])
+            self.saved_notes = draft['notes']
+            # Uma nota recuperada nunca equivale a uma nova conferência integral.
+            self.status.set(self.status.get() + f" · Notas de {draft['reviewer']} recuperadas (não é aprovação). "
+                            'Indique quem está a rever.')
 
     def open_pdf(self):
         if self.current:
+            from .review_sources import resolve_source
+            document = next(d for d in self.documents if d['relative_source'] == self.selected.get())
             page = self.page.get().strip()
             suffix = '#page=' + page if page.isdigit() else ''
-            webbrowser.open(Path(self.current[2]['source']).resolve().as_uri() + suffix)
+            webbrowser.open(resolve_source(self.output, document).resolve().as_uri() + suffix)
 
     def open_markdown(self):
         if self.current:
@@ -182,6 +304,142 @@ class ReviewWindow:
         path = self.output / '_auditoria/consulta' / (_key(self.selected.get()) + '.md')
         atomic_write(path, diagnostic(manifest, path.parent))
         webbrowser.open(path.resolve().as_uri())
+
+    def open_history(self):
+        if not self.selected.get() or self.busy:
+            return
+        from tkinter import simpledialog
+
+        from .occurrences import confirm_absence, history
+        relative = self.selected.get()
+        window = tk.Toplevel(self.window)
+        window.title('Histórico de ocorrências — ' + relative)
+        window.geometry('1050x650')
+        frame = ttk.Frame(window, padding=12)
+        frame.pack(fill='both', expand=True)
+        ttk.Label(frame, text='Uma ocorrência ausente após reauditoria mantém-se por confirmar. '
+                  'A confirmação histórica não dispensa erros atuais.', wraplength=950).pack(anchor='w')
+        tree = ttk.Treeview(frame, columns=('status', 'rule', 'message'), show='headings', height=12)
+        for key, label, width in [('status', 'Situação', 330), ('rule', 'Regra', 160),
+                                  ('message', 'Ocorrência', 450)]:
+            tree.heading(key, text=label)
+            tree.column(key, width=width)
+        tree.pack(fill='both', expand=True, pady=8)
+        detail = tk.Text(frame, height=12, wrap='word', state='disabled')
+        detail.pack(fill='both', expand=True)
+        data = {}
+
+        def refresh():
+            nonlocal data
+            try:
+                data = history(self.output, relative)
+            except (ValueError, OSError, RuntimeError) as error:
+                messagebox.showerror('Histórico indisponível', str(error), parent=window)
+                return
+            tree.delete(*tree.get_children())
+            for row in data['occurrences']:
+                finding = row['finding']
+                tree.insert('', 'end', iid=row['occurrence_id'], values=(row['status_label'],
+                            rule_label(finding['rule']), finding.get('message', '')))
+
+        def selected(_event=None):
+            if not tree.selection():
+                return
+            row = next(r for r in data['occurrences'] if r['occurrence_id'] == tree.selection()[0])
+            detail.configure(state='normal')
+            detail.delete('1.0', 'end')
+            finding = row['finding']
+            lines = [row['status_label'], '', finding.get('message', ''),
+                     f"Página: {finding.get('page') or 'não indicada'}", '', 'Observações conservadas:']
+            for observation in row['observations']:
+                f = observation['finding']
+                lines.append(f"• {observation['recorded_at_utc']} — {f.get('message', '')}")
+                if f.get('resolution'):
+                    resolution = f['resolution']
+                    lines.append(f"  Conferência por {resolution.get('reviewer', 'não indicado')}: "
+                                 + resolution.get('notes', ''))
+            for confirmation in row['confirmations']:
+                lines.append(f"• Confirmação por {confirmation['reviewer']} em {confirmation['at_utc']}: "
+                             + confirmation['notes'])
+            detail.insert('1.0', '\n'.join(lines))
+            detail.configure(state='disabled')
+
+        def confirm():
+            if not tree.selection():
+                return
+            notes = simpledialog.askstring('Confirmar ocorrência histórica',
+                'Descreva o que conferiu na versão atual e a evidência da resolução:', parent=window)
+            if notes is None:
+                return
+            try:
+                confirm_absence(self.output, relative, tree.selection()[0], reviewer=self.reviewer.get(),
+                                notes=notes, expected_version=data['current_version_id'])
+            except (ValueError, OSError, RuntimeError) as error:
+                messagebox.showerror('Confirmação não registada', str(error), parent=window)
+                return
+            refresh()
+
+        tree.bind('<<TreeviewSelect>>', selected)
+        ttk.Button(frame, text='Confirmar resolução histórica…', command=confirm).pack(anchor='w', pady=8)
+        refresh()
+
+    def export_copy(self):
+        if not self.can_close():
+            return
+        parent = filedialog.askdirectory(parent=self.window, title='Onde guardar a nova cópia de revisão?')
+        if not parent:
+            return
+        from uuid import uuid4
+
+        from .review_exchange import export_review
+        destination = Path(parent) / ('revisao_' + uuid4().hex[:12])
+        reviewer = self.reviewer.get()
+        self.task(lambda: export_review(self.output, destination, reviewer=reviewer),
+                  lambda path: messagebox.showinfo('Cópia preparada',
+                    f'Entregue esta pasta completa à pessoa que vai rever:\n{path}\n\n'
+                    'Inclui PDFs, auditorias e revisões. Peça a devolução da cópia completa.', parent=self.window))
+
+    def import_copy(self):
+        if not self.can_close():
+            return
+        branch = filedialog.askdirectory(parent=self.window, title='Pasta completa de revisão recebida')
+        if not branch:
+            return
+        from .review_exchange import merge_review
+        reviewer = self.reviewer.get()
+
+        def done(result):
+            self.filter_documents()
+            messagebox.showinfo('Revisão importada', f"Ficheiros incorporados: {result['imported']}. "
+                                'O histórico e a origem da importação foram conservados.', parent=self.window)
+        self.task(lambda: merge_review(self.output, Path(branch), reviewer=reviewer), done)
+
+    def reconcile(self):
+        if not self.current or self.busy:
+            return
+        from tkinter import simpledialog
+
+        from .validation import decision_branches
+        try:
+            branches = decision_branches(self.output, self.selected.get())
+            if len(branches) < 2:
+                raise ValueError('Não há decisões concorrentes para reconciliar neste documento.')
+            summary = '\n'.join(f"{r['reviewer']}: {r['decision']} ({r['date_utc']}) — {r.get('notes', '')}"
+                                for r in branches.values())
+            choice = simpledialog.askstring('Reconciliar decisões concorrentes', summary + '\n\n'
+                'Depois de conferir esta versão, escreva aprovado ou rejeitado. '
+                'O responsável e as notas da nova conferência são os indicados na janela principal.',
+                parent=self.window)
+            if choice is None:
+                return
+            decide(self.output, self.selected.get(), reviewer=self.reviewer.get(),
+                   decision=choice.strip().lower(), scope='integral' if self.integral.get() else 'amostra',
+                   notes=self.notes.get('1.0', 'end').strip(), expected=self.current[3],
+                   reconcile_heads=list(branches))
+            self.saved_notes = self.notes.get('1.0', 'end-1c')
+            self.refresh()
+        except (ValueError, OSError, RuntimeError) as error:
+            messagebox.showerror('Reconciliação não registada', str(error), parent=self.window)
 
     def show_finding(self, _event=None):
         selected = self.findings.selection()
@@ -239,12 +497,31 @@ class ReviewWindow:
             return
         from .revisions import audit_revision, create_revision
         try:
+            self.check_revision_author()
             if self.revision is None:
-                self.revision = create_revision(self.output, self.selected.get(), self.reviewer.get())
+                from .revisions import pending_revisions
+                drafts = pending_revisions(self.output, self.selected.get(), self.reviewer.get(), self.current[3])
+                if drafts:
+                    answer = messagebox.askyesnocancel(
+                        'Correção guardada por concluir',
+                        'Existe um rascunho seu para esta versão. Quer retomá-lo?\n\n'
+                        'Sim: retomar o mais recente. Não: criar uma correção separada.',
+                        parent=self.window)
+                    if answer is None:
+                        return
+                    if answer:
+                        self.revision = drafts[-1]
+                if self.revision is None:
+                    self.revision = create_revision(self.output, self.selected.get(), self.reviewer.get())
         except (ValueError, OSError) as error:
             messagebox.showerror('Correção', str(error), parent=self.window)
             return
         revision = self.revision
+        if revision in self.editors and self.editors[revision][0].winfo_exists():
+            self.editors[revision][0].lift()
+            return
+        from .drafts import DraftSession, confirm_discard_or_save
+        session = DraftSession(revision / 'correcao.md')
         editor = tk.Toplevel(self.window)
         editor.title('Correção separada do original — guardar e reauditar')
         editor.geometry('1000x720')
@@ -259,17 +536,40 @@ class ReviewWindow:
         vertical.grid(row=0, column=1, sticky='ns')
         horizontal.grid(row=1, column=0, sticky='ew')
         text.configure(yscrollcommand=vertical.set, xscrollcommand=horizontal.set)
-        text.insert('1.0', (revision / 'correcao.md').read_text(encoding='utf-8'))
+        text.insert('1.0', session.text)
         def save():
-            atomic_write(revision / 'correcao.md', text.get('1.0', 'end-1c'))
+            try:
+                session.save(text.get('1.0', 'end-1c'))
+            except (ValueError, OSError, RuntimeError) as error:
+                messagebox.showerror('Não foi possível guardar a correção', str(error), parent=editor)
+                return False
+            return True
+        def can_close():
+            return confirm_discard_or_save(editor,
+                                          text.get('1.0', 'end-1c') != session.text, save)
+        def close():
+            if can_close():
+                editor.destroy()
+        self.editors[revision] = (editor, can_close)
+        editor.protocol('WM_DELETE_WINDOW', close)
         def audit():
-            save()
-            self.task(lambda: audit_revision(revision), lambda _result: self.refresh())
+            if not self.busy and save():
+                self.task(lambda: audit_revision(revision), lambda _result: self.refresh())
         controls = ttk.Frame(editor)
         controls.pack(fill='x', pady=8)
         ttk.Button(controls, text='Guardar rascunho', command=save).pack(side='left', padx=8)
         ttk.Button(controls, text='Reauditar correção guardada', command=audit).pack(side='left')
         ttk.Label(controls, text='Uma correção auditada precisa de nova conferência e decisão.').pack(side='left', padx=8)
+
+    def check_revision_author(self):
+        reviewer = self.reviewer.get().strip()
+        if not reviewer:
+            raise ValueError('Indique quem está a conferir ou corrigir este documento.')
+        if self.revision is not None:
+            meta = json.loads((self.revision / 'revision.json').read_text(encoding='utf-8'))
+            if meta.get('reviewer') != reviewer:
+                # Uma versão ativa de A é a base de B, não o rascunho de B.
+                self.revision = None
 
     def resolve(self):
         if not self.current or self.busy or not self.findings.selection():
@@ -277,6 +577,7 @@ class ReviewWindow:
         from .revisions import audit_revision, create_revision
         finding = self.current[2]['findings'][int(self.findings.selection()[0])]
         try:
+            self.check_revision_author()
             if not finding.get('id'):
                 raise ValueError('Esta auditoria é antiga. Use Reauditar lote antes de resolver ocorrências.')
             page = int(self.page.get())
@@ -339,7 +640,10 @@ class ReviewWindow:
         try:
             path = decide(self.output, self.selected.get(), reviewer=self.reviewer.get(), decision=decision,
                           scope='integral' if self.integral.get() else 'amostra',
-                          notes=self.notes.get('1.0', 'end').strip(), expected=self.current[3])
+                          notes=self.notes.get('1.0', 'end').strip(), expected=self.current[3],
+                          expected_decision=self.decision_head)
+            self.decision_head = review_head(self.output, self.selected.get())
+            self.saved_notes = self.notes.get('1.0', 'end-1c')
             messagebox.showinfo('Conferência registada', f'Decisão guardada: {path}', parent=self.window)
         except (ValueError, OSError) as error:
             messagebox.showerror('Conferência', str(error), parent=self.window)

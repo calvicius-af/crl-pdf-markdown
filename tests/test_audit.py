@@ -156,6 +156,27 @@ def test_wider_sign_gap_inside_same_drawn_cell_is_preserved(tmp_path):
     assert pdf_signed_values(pdf) == Counter({'-70': 1})
 
 
+def test_clock_list_bullets_do_not_become_negative_numbers(tmp_path):
+    from crl_markdown.audit import pdf_signed_values, signed_values
+    original = 'Horário:\n– 9h00m às 12h30m;\n– 14h00m às 17h30m.'
+    pdf = escrever_pdf(tmp_path / 'horarios.pdf', [pagina_bte(1, original.splitlines())])
+    assert pdf_signed_values(pdf) == Counter()
+    assert signed_values(original) == Counter()
+    doc, text = estruturar(original, 'horarios')
+    _, findings, _ = audit_pdf(pdf, text, doc, text, 0)
+    assert not any(f.rule == 'CRITICAL_SYMBOLS' for f in findings)
+
+
+def test_negative_durations_prose_formulas_and_mathematical_signs_remain_checked(tmp_path):
+    from crl_markdown.audit import pdf_signed_values, signed_values
+    # Não generalizar a supressão a negativos com unidades, a operadores em
+    # prosa nem ao verdadeiro sinal de menos matemático.
+    text = 'Saldo -9h00m; variação -25%; massa -9kg.\n− 9h00m\n-9h00m\n– 99h00m'
+    assert signed_values(text) == Counter({'-9': 4, '-25': 1, '-99': 1})
+    pdf = escrever_pdf(tmp_path / 'duracoes.pdf', [pagina_bte(1, text.replace('− 9h00m', 'Saldo - 9h00m').splitlines())])
+    assert pdf_signed_values(pdf)['-9'] == 4
+
+
 def test_dot_leaders_preserve_amounts_and_still_detect_a_changed_value(tmp_path):
     original = 'Almoço/jantar........8,50 EUR; total 1.250,00 EUR.'
     pdf = escrever_pdf(tmp_path / 'leaders.pdf', [pagina_bte(1, [original])])

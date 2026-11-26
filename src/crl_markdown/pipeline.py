@@ -227,6 +227,7 @@ def convert_pdf(
     audit_dir: Path | None = None,
     markdown_override: str | None = None,
     generated_headings_override=None,
+    logical_name=None,
 ) -> dict:
     raw_target, report_target = audit_paths(target, audit_dir)
     check_output_paths(target, audit_dir, overwrite=overwrite)
@@ -236,7 +237,8 @@ def convert_pdf(
     if status != "success":
         raise RuntimeError(f"Conversão incompleta ({status}): {pdf.name}")
     raw = result.document.export_to_markdown(image_placeholder="<!-- image -->")
-    subtype, profile_origin = profile_context(pdf)
+    doc_id = logical_name or pdf.stem
+    subtype, profile_origin = profile_context(pdf.with_name(doc_id + pdf.suffix))
     reference = None
     reference_words = []
     try:
@@ -253,7 +255,7 @@ def convert_pdf(
         table_repairs = recover_tables(pdf, result.document)
     except Exception:
         table_repairs = {}  # Conservar a extração e os seus bloqueios se não houver prova auxiliar.
-    prepared = prepare(result.document, pdf.stem, subtype=subtype, reference_words=reference_words,
+    prepared = prepare(result.document, doc_id, subtype=subtype, reference_words=reference_words,
                        table_repairs=table_repairs)
     markdown = prepared.markdown
     if markdown_override is not None:
@@ -262,7 +264,7 @@ def convert_pdf(
         markdown = normalize(markdown_override)
         prepared.generated_headings = list(generated_headings_override or ())
         prepared.structure, prepared.structured_text = correction_structure(
-            markdown, prepared.generated_headings, pdf.stem, subtype)
+            markdown, prepared.generated_headings, doc_id, subtype)
         prepared.tables = sum(t.type == 'table_open' for t in parser().parse(markdown))
         prepared.findings = [f for f in prepared.findings if f.rule != 'RENDER_CONTENT']
         prepared.transformations.append({'stage': 'correcao_humana',
@@ -271,7 +273,7 @@ def convert_pdf(
         token.type == "heading_open" and token.tag == "h1" for token in parser().parse(markdown)
     )
     if title_added:
-        title = pdf.stem.replace("_", " ")
+        title = doc_id.replace("_", " ")
         # Nome de ficheiro usado como texto, sem permitir sintaxe Markdown.
         for char in "\\`*_{}[]<>()#!|":
             title = title.replace(char, "\\" + char)
@@ -361,6 +363,7 @@ def _run(
     converter=None,
     converter_factory=None,
     entries_override=None,
+    relative_sources=None,
     report_provider=None,
     provenance=None,
 ) -> list[dict]:
@@ -374,12 +377,21 @@ def _run(
     entries = discover(source) if entries_override is None else entries_override
     if not entries:
         raise ValueError("Não foram encontrados PDFs.")
+    if relative_sources is not None and (
+            len(relative_sources) != len(entries)
+            or any(Path(name).is_absolute() or '..' in Path(name).parts
+                   or Path(name).with_suffix('.md') != relative
+                   for name, (_, relative) in zip(relative_sources, entries))):
+        raise ValueError('As identidades documentais não correspondem às saídas da seleção.')
     # Detecta colisões também em volumes Windows/macOS que ignoram maiúsculas.
     names = [str(relative).casefold() for _, relative in entries]
     if len(names) != len(set(names)):
         raise ValueError("PDFs com nomes que colidem na saída Markdown.")
     if any("_auditoria" in relative.parts for _, relative in entries):
         raise ValueError("O nome _auditoria está reservado para os relatórios.")
+    from .review_history import archive_legacy_manifest, protect_reviewed_outputs
+    protect_reviewed_outputs(output, entries, overwrite=overwrite)
+    archive_legacy_manifest(output)
     manifest = new_manifest(
         source,
         output,
@@ -389,6 +401,7 @@ def _run(
             "models": str(options.models) if options.models else None,
             "overwrite": overwrite,
         },
+        relative_sources=relative_sources,
     )
     if provenance is not None:
         manifest['provenance'] = provenance
@@ -453,7 +466,8 @@ def _run(
                     report = isolated.convert_pdf(pdf, target, overwrite, audit_dir)
                 else:
                     report = convert_pdf(
-                        pdf, target, converter, options, overwrite, audit_dir=audit_dir
+                        pdf, target, converter, options, overwrite, audit_dir=audit_dir,
+                        logical_name=relative.stem if relative_sources is not None else None,
                     )
             except Exception as exc:
                 if isinstance(exc, FalhaArranque):
@@ -468,6 +482,8 @@ def _run(
                     "traceback": getattr(exc, "remote_traceback", "") or "".join(traceback.format_exception(exc)),
                 }
             report = {**manifest["documents"][index - 1], **report}
+            from .occurrences import record_version
+            record_version(output, report['relative_source'], report)
             manifest["documents"][index - 1] = report
             reports.append(report)
             progress(
@@ -502,4 +518,6 @@ def run(source: Path, output: Path, options: Options, **kwargs) -> list[dict]:
     from .locking import exclusive
 
     with exclusive(output / "_auditoria" / ".operacao.lock"):
+        from .review_exchange import ensure_complete_imports
+        ensure_complete_imports(output)
         return _run(source, output, options, **kwargs)

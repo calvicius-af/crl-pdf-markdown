@@ -40,7 +40,8 @@ class CachedConverter:
         path = self.sources.get(identity) or self.documents.get(pdf.stem)
         if path is None:
             raise ValueError(f"Extração Docling em cache não encontrada: {pdf.name}")
-        metadata = json.loads(path.with_name(pdf.stem + ".qualidade.json").read_text("utf-8"))
+        stem = path.name.removesuffix('.docling.json')
+        metadata = json.loads(path.with_name(stem + ".qualidade.json").read_text("utf-8"))
         for key, expected in self.manifest_hashes.get(identity, {}).items():
             if expected != metadata.get(key):
                 raise ValueError(f'A cache não corresponde ao manifesto selecionado ({key}): {pdf.name}. '
