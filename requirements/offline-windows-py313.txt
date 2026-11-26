@@ -61,7 +61,7 @@ packaging==26.3
 pandas==3.1.0
 pdfminer.six==20260107
 pdfplumber==0.11.10
-pillow==12.3.0
+pillow==13.0.0
 pip==26.2.2
 pluggy==1.7.0
 polyfactory==3.5.0
@@ -95,7 +95,7 @@ setuptools==84.2.1
 shapely==2.2.0
 shellingham==1.5.4
 six==1.17.0
-soupsieve==3.0.4
+soupsieve==4.0
 sympy==1.14.0
 tabulate==0.10.0
 tokenizers==0.23.3
