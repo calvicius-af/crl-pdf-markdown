@@ -2,7 +2,7 @@
   "name": "crl-pdf-markdown-quality",
   "private": true,
   "scripts": {
-    "lint:md": "markdownlint-cli2 README.md VALIDACAO.md \"examples/**/*.md\" \"docs/copilot/**/*.md\""
+    "lint:md": "markdownlint-cli2 README.md VALIDACAO.md \"examples/**/*.md\" \"docs/copilot/**/*.md\" docs/README.md \"docs/operacao/**/*.md\" \"docs/validacao/fecho*.md\" \"docs/validacao/*2026-10-16.md\" \"docs/desenvolvimento/**/*.md\" \"docs/revisoes/**/*.md\" docs/organizacao-rnc.md \"src/crl_markdown/vocabularios/*.md\" \"specs/**/*.md\" vocabularios/README.md"
   },
   "devDependencies": {
     "markdownlint-cli2": "0.23.3"

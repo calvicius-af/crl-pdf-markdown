@@ -32,3 +32,6 @@ transformers==5.18.0
 huggingface-hub==1.33.0
 pdfminer.six==20260107
 pypdfium2==5.14.0
+
+# Docling 2.134 usa o registo PP_OCRV6_LANGS, removido no RapidOCR 3.10.
+rapidocr==3.9.1

@@ -55,3 +55,47 @@ def test_empty_independent_reference_never_certifies_completeness(tmp_path):
     doc, text = estruturar("Texto proveniente de OCR.", "teste")
     result, findings, _ = audit_pdf(pdf, text, doc, text, 0)
     assert any(f.rule == "REFERENCE_EMPTY" and f.severity == "error" for f in findings)
+
+
+def test_percent_sign_and_negative_amount_cannot_disappear(tmp_path):
+    for number, original, changed in (
+        (1, 'O acréscimo é de 25% do total.', 'O acréscimo é de 25 do total.'),
+        (2, 'O saldo é -125,00 euros.', 'O saldo é 125,00 euros.'),
+        (3, 'A variação é -25%.', 'A variação é 25%.'),
+        (4, 'O saldo é - 125,00 euros.', 'O saldo é 125,00 euros.'),
+        (5, 'O prazo é < 25 dias.', 'O prazo é > 25 dias.'),
+        (6, 'O saldo é –125,00 euros.', 'O saldo é 125,00 euros.'),
+        (7, 'O saldo é —125,00 euros.', 'O saldo é 125,00 euros.'),
+    ):
+        pdf = escrever_pdf(tmp_path / f'simbolos{number}.pdf', [pagina_bte(1, [original])])
+        doc, text = estruturar(original, 'teste')
+        _, findings, _ = audit_pdf(pdf, changed, doc, text, 0)
+        assert any(f.severity == 'error' and f.rule in {'CRITICAL_SYMBOLS', 'AMOUNTS'}
+                   for f in findings)
+
+
+def test_dash_in_another_table_cell_is_not_a_negative_number(tmp_path):
+    pdf = escrever_pdf(tmp_path / 'cells.pdf', [[(50,700,'-'),(250,700,'1')]])
+    doc, text = estruturar('- | 1', 'teste')
+    _, findings, _ = audit_pdf(pdf, '- | 1', doc, text, 0)
+    assert not any(f.rule == 'CRITICAL_SYMBOLS' for f in findings)
+
+
+def test_same_line_table_dash_requires_geometric_proximity(tmp_path):
+    # PDFium pode pôr as células na mesma linha, embora estejam muito afastadas.
+    pdf = escrever_pdf(tmp_path / 'row.pdf', [[(50,700,'-'),(250,700,'1')]])
+    doc, text = estruturar('- | 1', 'teste')
+    _, findings, _ = audit_pdf(pdf, '- | 1', doc, text, 0, reference=(['- 1'], []))
+    assert not any(f.rule == 'CRITICAL_SYMBOLS' for f in findings)
+
+
+def test_negative_amount_spacing_normalization_remains_faithful(tmp_path):
+    for index, source in enumerate(('- 125,00', '-1 250,00', '- 1 250,00')):
+        normalized = source.replace(' ', '')
+        original = f'O saldo é {source} euros.'
+        pdf = escrever_pdf(tmp_path / f'negative{index}.pdf', [pagina_bte(1, [original])])
+        doc, text = estruturar(original, 'teste')
+        _, findings, _ = audit_pdf(pdf, f'O saldo é {normalized} euros.', doc, text, 0)
+        assert not any(f.rule in {'AMOUNTS', 'CRITICAL_SYMBOLS'} for f in findings)
+        _, findings, _ = audit_pdf(pdf, f'O saldo é {normalized[1:]} euros.', doc, text, 0)
+        assert any(f.rule in {'AMOUNTS', 'CRITICAL_SYMBOLS'} for f in findings)

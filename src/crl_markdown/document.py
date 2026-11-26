@@ -3,7 +3,7 @@
 import html
 import re
 from collections import Counter
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from .legacy import extractor as rules
 from .legacy import extractor_docling as docling_rules
@@ -22,6 +22,7 @@ class Prepared:
     generated_headings: list[str]
     reordered: bool
     tables: int
+    transformations: list[dict] = field(default_factory=list)
 
 
 def escape_text(text: str) -> str:
@@ -122,18 +123,20 @@ def item_text(item, findings, reference_words=()) -> str | None:
         cleaned = re.sub(r"^[-•]\s+(?=\d+(?:\s*[-–—.)]|[A-ZÀ-Ú])|[a-zà-ú]\))", "", cleaned)
         if docling_rules.RE_NUMERO_COLADO_LISTA.match(cleaned):
             cleaned = docling_rules.RE_NUMERO_COLADO_LISTA.sub(r"\1- ", cleaned)
-        elif not docling_rules.RE_MARCADOR_PROPRIO.match(cleaned):
+        elif not (docling_rules.RE_MARCADOR_PROPRIO.match(cleaned)
+                  or re.match(r"^\d+\s+a\s+\d+\s*[-–—.)]", cleaned)):
             original = html.unescape(getattr(item, "orig", "") or "").strip()
             match = re.match(r"^(\d+\s*[-–—.)]|[a-zà-ú]\)|[ivxl]+\))\s*", original)
             marker = match.group(1) if match else (getattr(item, "marker", "") or "").strip()
-            if not marker:
+            if not re.fullmatch(r"\d+\s*[-–—.)]|[a-zà-ú]\)|[ivxl]+\)", marker):
                 findings.append(
                     Finding(
                         "LIST_MARKER", 0, "Item de lista sem marcador recuperável; conferir no PDF."
                     )
                 )
-                marker = "-"
-            cleaned = marker + " " + cleaned
+                marker = ""
+            if marker:
+                cleaned = marker + " " + cleaned
     return cleaned
 
 
@@ -178,12 +181,13 @@ def prepare(document, doc_id: str, *, subtype="desconhecido", reference_words=()
     original = [item for item, _ in document.iterate_items()]
     reordered = [id(item) for item in ordered] != [id(item) for item in original]
     stream, table_data = [], {}
+    transformations = []
     for item in ordered:
         if isinstance(item, PictureItem):
             if is_bte_margin_picture(item, document):
                 continue
             page = item.prov[0].page_no if item.prov else "?"
-            findings.append(Finding("IMAGE", 0, f"Página {page}: figura sem transcrição textual."))
+            findings.append(Finding("IMAGE", 0, f"Página {page}: figura sem transcrição textual.", "error"))
         elif isinstance(item, TableItem):
             rows = table_rows(item, findings, reference_words)
             if not rows or not any(cell for row in rows for cell in row):
@@ -223,6 +227,14 @@ def prepare(document, doc_id: str, *, subtype="desconhecido", reference_words=()
                 )
         elif isinstance(item, TextItem):
             text = item_text(item, findings, reference_words)
+            before = item.text or ""
+            if before != (text or ""):
+                transformations.append({
+                    "stage": "normalizacao_item", "node": str(getattr(item, "self_ref", "")),
+                    "pages": sorted({p.page_no for p in item.prov}),
+                    "before": before, "after": text,
+                    "reason": "mobiliario/lista/translineacao; comparar antes/depois e PDF",
+                })
             if text:
                 stream.extend(text.splitlines())
     if not stream:
@@ -286,5 +298,6 @@ def prepare(document, doc_id: str, *, subtype="desconhecido", reference_words=()
             )
         )
     return Prepared(
-        markdown, plain, structure, structured_text, findings, generated, reordered, len(table_data)
+        markdown, plain, structure, structured_text, findings, generated, reordered, len(table_data),
+        transformations
     )

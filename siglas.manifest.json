@@ -1,0 +1,31 @@
+{
+  "fontes": [
+    {
+      "ficheiro": "siglas_organizacoes.csv",
+      "sha256": "5795f247ad8ea52ff735ef42be2d01137b90eb44953cc5b60c6d2de300e4ff4b"
+    },
+    {
+      "ficheiro": "BTE31_2026_CRL.xlsx",
+      "sha256": "89488596956f11b68af7d632761027bbd1b929c6a2958d3c9c7fd26832350329"
+    },
+    {
+      "ficheiro": "BTE_2026_01_10_CRL_b.xlsx",
+      "sha256": "324aa74fccc7664da10a440d8766af9e5f3eaf66e1cfbcd4afd96c2bc0da2492"
+    },
+    {
+      "ficheiro": "data-export_2026-08-28-12_22_25 (1).xlsx",
+      "sha256": "ed02321ef9ea4baebc3bd639cc656a344dd7a3de80ab7d8e69ef8b48e9cadb16"
+    },
+    {
+      "ficheiro": "Convenc_2025_Temas(LISTAS).csv",
+      "sha256": "3ff3df6fc004e4d19a5906e8854a5091eff40e117434aa07b876e4801d107d98"
+    }
+  ],
+  "linhas": 3648,
+  "estados": {
+    "ambigua": 154,
+    "documentada": 1740,
+    "por_confirmar": 1754
+  },
+  "sha256_saida": "0e82abf8981dba3f677287b87c0111e028dd39e44f0b969767d808f79f5de365"
+}

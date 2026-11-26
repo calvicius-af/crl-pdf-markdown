@@ -1,0 +1,74 @@
+name: Ensaio de pacote offline Windows
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/offline.yml'
+      - 'scripts/*offline*'
+      - 'scripts/Instalar_CRL.bat'
+      - 'requirements/**'
+      - 'src/crl_markdown/models.py'
+      - 'pyproject.toml'
+permissions:
+  contents: read
+jobs:
+  offline:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: pip
+          cache-dependency-path: requirements/runtime.txt
+      - name: Preparar runtime e modelos com rede
+        run: |
+          python -m pip install . -c requirements/runtime.txt
+          python -m crl_markdown models download --dest "$env:RUNNER_TEMP\Modelos CRL"
+      - name: Preparar pacote completo com versões e hashes
+        run: |
+          python scripts/preparar_offline.py --saida "$env:RUNNER_TEMP\Pacote CRL com espaços" --modelos "$env:RUNNER_TEMP\Modelos CRL"
+      - name: Instalar de pacote só de leitura e executar conversão sem sockets
+        run: |
+          $package = "$env:RUNNER_TEMP\Pacote CRL com espaços"
+          $destination = "$env:RUNNER_TEMP\Instalação CRL com espaços"
+          # W inclui SYNCHRONIZE, necessário também para abrir em leitura.
+          # Negar apenas escrita/apagamento conserva a leitura do instalador.
+          icacls $package /deny "$($env:USERNAME):(OI)(CI)(WD,AD,WEA,WA,DE,DC)"
+          if ($LASTEXITCODE -ne 0) { throw "Não foi possível tornar o pacote só de leitura" }
+          $probe = @'
+          import sys
+          from pathlib import Path
+          package = Path(sys.argv[1])
+          (package / 'instalar_offline.py').read_bytes()
+          for name, mode in [('prova-escrita.tmp', 'xb'), ('pacote.json', 'ab')]:
+              try:
+                  with (package / name).open(mode):
+                      pass
+              except PermissionError:
+                  continue
+              raise RuntimeError('A pasta de ensaio permite escrita: ' + name)
+          print('Pacote legível; criação e alteração de ficheiros recusadas.')
+          '@
+          $probe | python - $package
+          if ($LASTEXITCODE -ne 0) { throw "A proteção de leitura do pacote não ficou demonstrada" }
+          python "$package\instalar_offline.py" --destination $destination
+          if ($LASTEXITCODE -ne 0) { throw "A instalação offline falhou" }
+          $config = Get-Content "$destination\instalacao.json" -Raw | ConvertFrom-Json
+          & $config.python -m crl_markdown doctor --models $config.models --out "$destination\assistencia\doctor"
+          if ($LASTEXITCODE -ne 0) { throw "Doctor encontrou problemas na instalação" }
+          if (-not $config.ocr_tested) { throw "Este ensaio exige modelos OCR completos" }
+      - name: Guardar evidência pequena do ensaio
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: evidencia-offline-windows-py313
+          if-no-files-found: warn
+          path: |
+            ${{ runner.temp }}/Instalação CRL com espaços/assistencia/**
+            ${{ runner.temp }}/Instalação CRL com espaços/instalacao.json
+            ${{ runner.temp }}/Pacote CRL com espaços/pacote.json
+            ${{ runner.temp }}/Pacote CRL com espaços/requirements.install.txt
+            ${{ runner.temp }}/Pacote CRL com espaços/preparacao.txt
+            ${{ runner.temp }}/Pacote CRL com espaços/falha.txt

@@ -1,0 +1,171 @@
+{
+  "schema_version": 1,
+  "run_id": "20261016T113033004084Z-2471d135",
+  "started_at_utc": "2026-10-16T11:30:33.004084+00:00",
+  "finished_at_utc": "2026-10-16T13:13:25.582686+00:00",
+  "evidence": {
+    "detalhes.md": {
+      "bytes": 1746555,
+      "sha256": "3d1c0c4be759ce9ed940b92dbb78acd0b950d7a2fa8e494ef4e06018bf32bfe3"
+    },
+    "diagnostico.md": {
+      "bytes": 234938,
+      "sha256": "b8788919b2036766bcb92a356a5914ac5e081efe5c98820356c3ee44d825e26e"
+    },
+    "manifest.json": {
+      "bytes": 62934340,
+      "sha256": "a08655aa0afc6aca4c0c47dec79be027488d3c643b0f85fd3fd208e3357b78ea"
+    },
+    "relatorio.txt": {
+      "bytes": 235910,
+      "sha256": "a16a118579d0bd089b440ccdd7b3d4f2329750597b99930336c889a5559b9ed5"
+    }
+  },
+  "counts": {
+    "blocked": 105,
+    "review": 230,
+    "passed": 76
+  },
+  "findings_by_severity": {
+    "error": 217,
+    "warning": 1601,
+    "info": 23
+  },
+  "quality_by_family": {
+    "acordaos": {
+      "blocked": 1
+    },
+    "acordos_adesao": {
+      "review": 9
+    },
+    "cessacoes_vigencia": {
+      "passed": 1,
+      "review": 1
+    },
+    "convencoes/APU": {
+      "passed": 36,
+      "review": 16,
+      "blocked": 3
+    },
+    "convencoes/PRI": {
+      "blocked": 83,
+      "review": 92,
+      "passed": 38
+    },
+    "convencoes/SPE": {
+      "blocked": 18,
+      "passed": 1,
+      "review": 2
+    },
+    "portarias_extensao": {
+      "review": 110
+    }
+  },
+  "findings_by_rule": {
+    "AMOUNTS": {
+      "occurrences": 57,
+      "documents": 57,
+      "severity": {
+        "error": 57
+      }
+    },
+    "CLAUSE_TITLE_SPLIT": {
+      "occurrences": 2,
+      "documents": 2,
+      "severity": {
+        "warning": 2
+      }
+    },
+    "COMPLETENESS": {
+      "occurrences": 53,
+      "documents": 53,
+      "severity": {
+        "warning": 51,
+        "error": 2
+      }
+    },
+    "CRITICAL_SYMBOLS": {
+      "occurrences": 45,
+      "documents": 45,
+      "severity": {
+        "error": 45
+      }
+    },
+    "IMAGE": {
+      "occurrences": 22,
+      "documents": 11,
+      "severity": {
+        "error": 22
+      }
+    },
+    "LEGAL_LIST_BULLET": {
+      "occurrences": 4,
+      "documents": 2,
+      "severity": {
+        "error": 4
+      }
+    },
+    "LIST_MARKER": {
+      "occurrences": 566,
+      "documents": 71,
+      "severity": {
+        "warning": 566
+      }
+    },
+    "RENDER_CONTENT": {
+      "occurrences": 1,
+      "documents": 1,
+      "severity": {
+        "error": 1
+      }
+    },
+    "STRUCTURE": {
+      "occurrences": 178,
+      "documents": 173,
+      "severity": {
+        "warning": 162,
+        "info": 16
+      }
+    },
+    "TABLE_AS_TEXT": {
+      "occurrences": 7,
+      "documents": 7,
+      "severity": {
+        "info": 7
+      }
+    },
+    "TABLE_EMPTY": {
+      "occurrences": 28,
+      "documents": 14,
+      "severity": {
+        "error": 28
+      }
+    },
+    "TABLE_OVERLAP": {
+      "occurrences": 58,
+      "documents": 32,
+      "severity": {
+        "error": 58
+      }
+    },
+    "TABLE_SPAN": {
+      "occurrences": 651,
+      "documents": 141,
+      "severity": {
+        "warning": 651
+      }
+    },
+    "TABLE_WIDE": {
+      "occurrences": 169,
+      "documents": 54,
+      "severity": {
+        "warning": 169
+      }
+    }
+  },
+  "only_structure_candidates": {
+    "acordos_adesao": 9,
+    "portarias_extensao": 107
+  },
+  "interpretation": "Contagens da auditoria original. Candidatos a regras inadequadas não equivalem a documentos corrigidos, aprovados ou reauditados."
+}

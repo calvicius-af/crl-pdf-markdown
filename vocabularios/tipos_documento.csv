@@ -1,0 +1,21 @@
+# familia decide a pasta em 1_fontes/irct/ e o que entra no pipeline.
+# Só a familia 'convencao' é codificada. Ver docs/adr/0018-familias-documentais-em-pastas-separadas.md
+tipo;designacao;familia;altera_outro;observacoes
+CCT;Contrato coletivo de trabalho;convencao;nao;convenção entre associação de empregadores e sindicatos
+CCT-ALT;Contrato coletivo de trabalho - alteração;convencao;sim;
+CCT-RECT;Contrato coletivo de trabalho - retificação;convencao;sim;o campo de outorgantes vem vazio, as partes leem-se do título
+CCT-ALT-RECT;Contrato coletivo de trabalho - retificação de alteração;convencao;sim;idem
+ACT;Acordo coletivo de trabalho;convencao;nao;art. 2.º do Código do Trabalho, vários empregadores; não confundir com o ACT da LTFP
+ACT-ALT;Acordo coletivo de trabalho - alteração;convencao;sim;
+ACTV;Acordo coletivo de trabalho verticalizado;convencao;nao;designação usada em índices antigos
+AE;Acordo de empresa;convencao;nao;um só empregador
+AE-ALT;Acordo de empresa - alteração;convencao;sim;
+AE-RECT;Acordo de empresa - retificação;convencao;sim;outorgantes vazios; leem-se do título
+AE-ALT-RECT;Acordo de empresa - retificação de alteração;convencao;sim;outorgantes vazios; leem-se do título
+ACEP;Acordo coletivo de empregador público;convencao;nao;LTFP, depositado na DGAEP. Família convencao, âmbito APU: não processável pelo âmbito, não pela família
+PE;Portaria de extensão;extensao;nao;acto do Governo. Estende a convenção a quem não está filiado nas partes. Relacao=estende
+PCT;Portaria de condições de trabalho;extensao;nao;
+PRT;Portaria de regulamentação do trabalho;extensao;nao;designação histórica
+AA;Acordo de adesão;adesao;nao;uma parte adere a convenção de que não era outorgante. Relacao=adere
+DA;Decisão arbitral;convencao;nao;arbitragem obrigatória ou necessária. Substitui a convenção e tem cláusulas como ela
+AVISO;Aviso;aviso;nao;projeto de portaria, denúncia, caducidade. Relacao=refere

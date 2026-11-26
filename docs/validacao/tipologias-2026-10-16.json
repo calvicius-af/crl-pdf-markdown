@@ -1,0 +1,561 @@
+{
+  "data_utc": "20261016T111927Z",
+  "documentos_organizados": 411,
+  "novos_documentos": 11,
+  "nomes_anteriores_preservados": 400,
+  "hashes_verificados": 411,
+  "pendentes": 0,
+  "copia_catalogo": "/Volumes/Documentos_Casa/Casa_Documentos/400_Casa_Claude/RNC_2026/0_gestao/catalogo/copias_seguranca/antes_tipologias_20261016T111927Z",
+  "destinos": {
+    "acordaos": 1,
+    "acordos_adesao": 9,
+    "cessacoes_vigencia": 2,
+    "convencoes/APU": 55,
+    "convencoes/PRI": 213,
+    "convencoes/SPE": 21,
+    "portarias_extensao": 110
+  },
+  "documentos": [
+    {
+      "chave": "2026/15/00370048",
+      "id_dgert": "154/2026",
+      "tipo": "AVISO",
+      "tipo_documental": "ACEP-ALT",
+      "familia": "convencao",
+      "ambito_documental": "APU",
+      "referencia_acordo_base": "66/2015",
+      "processo_irct": "APU:ACEP:66/2015",
+      "regra_tipologia": "aviso_acep_alteracao",
+      "outorgantes_origem": null,
+      "relacoes_documentais": [
+        {
+          "relacao": "altera",
+          "referencia": "Acordo Coletivo de Trabalho n.º 66/2015 - Diário da República n.º 188/2015, Série II de 2015-09-25",
+          "origem": "DocAlteradosPorEste",
+          "id_publicacao": "",
+          "estado": "fora_do_lote"
+        },
+        {
+          "relacao": "acordo_base",
+          "referencia": "66/2015",
+          "processo_irct": "APU:ACEP:66/2015",
+          "origem": "metadados_indice",
+          "estado": "fora_do_lote"
+        }
+      ],
+      "nomeacao": {
+        "nome": "2026_BTE_15_APU_154_ACEP-ALT_ACEP66-2015_MunicipioObidos-SINTAP",
+        "doc_id": "2026_BTE_15_APU_154_ACEP-ALT_ACEP66-2015_MunicipioObidos-SINTAP",
+        "estado": "nomeado",
+        "caminho": "/Volumes/Documentos_Casa/Casa_Documentos/400_Casa_Claude/RNC_2026/1_fontes/irct/convencoes/APU/2026_BTE_15_APU_154_ACEP-ALT_ACEP66-2015_MunicipioObidos-SINTAP.pdf",
+        "sha256": "46784690a81159ebb8b06745457c43de4f7534c07d03fea45f342ffd9f632f9f",
+        "ambito": "APU",
+        "ambito_origem": "metadados:aviso_acep_alteracao",
+        "avisos": [
+          "INFORMAÇÃO: rótulo documental derivado de «Município de Óbidos»; não é uma sigla oficial confirmada"
+        ],
+        "esquema": "adr0022"
+      }
+    },
+    {
+      "chave": "2026/15/00490050",
+      "id_dgert": "155/2026",
+      "tipo": "AVISO",
+      "tipo_documental": "ACCE-ALT",
+      "familia": "convencao",
+      "ambito_documental": "APU",
+      "referencia_acordo_base": "57/2025",
+      "processo_irct": "APU:ACCE:57/2025",
+      "regra_tipologia": "aviso_acce_alteracao",
+      "outorgantes_origem": null,
+      "relacoes_documentais": [
+        {
+          "relacao": "altera",
+          "referencia": "Acordo Colectivo de Trabalho n.º 57/2025",
+          "origem": "DocAlteradosPorEste",
+          "id_publicacao": "",
+          "estado": "fora_do_lote"
+        },
+        {
+          "relacao": "acordo_base",
+          "referencia": "57/2025",
+          "processo_irct": "APU:ACCE:57/2025",
+          "origem": "metadados_indice",
+          "estado": "fora_do_lote"
+        }
+      ],
+      "nomeacao": {
+        "nome": "2026_BTE_15_APU_155_ACCE-ALT_ACCE57-2025_Entidades-SIM",
+        "doc_id": "2026_BTE_15_APU_155_ACCE-ALT_ACCE57-2025_Entidades-SIM",
+        "estado": "nomeado",
+        "caminho": "/Volumes/Documentos_Casa/Casa_Documentos/400_Casa_Claude/RNC_2026/1_fontes/irct/convencoes/APU/2026_BTE_15_APU_155_ACCE-ALT_ACCE57-2025_Entidades-SIM.pdf",
+        "sha256": "63c795dc48434df978eb0efa1613ebbc0bd9f9ebf1d688c2695656a6114b9205",
+        "ambito": "APU",
+        "ambito_origem": "metadados:aviso_acce_alteracao",
+        "avisos": [
+          "INFORMAÇÃO: rótulo documental derivado de «Entidades Empregadoras Públicas»; não é uma sigla oficial confirmada"
+        ],
+        "esquema": "adr0022"
+      }
+    },
+    {
+      "chave": "2026/24/00260027",
+      "id_dgert": "270/2026",
+      "tipo": "AVISO",
+      "tipo_documental": "ACEP-DELI",
+      "familia": "convencao",
+      "ambito_documental": "APU",
+      "referencia_acordo_base": "50/2022",
+      "processo_irct": "APU:ACEP:50/2022",
+      "regra_tipologia": "aviso_acep_deliberacao",
+      "outorgantes_origem": null,
+      "relacoes_documentais": [
+        {
+          "relacao": "delibera_sobre",
+          "referencia": "Acordo Coletivo de Trabalho n.º 50/2022 - Diário da República n.º 241/2022, Série II de 2022-12-16",
+          "origem": "DocAlteradosPorEste",
+          "id_publicacao": "",
+          "estado": "fora_do_lote"
+        },
+        {
+          "relacao": "acordo_base",
+          "referencia": "50/2022",
+          "processo_irct": "APU:ACEP:50/2022",
+          "origem": "metadados_indice",
+          "estado": "fora_do_lote"
+        }
+      ],
+      "nomeacao": {
+        "nome": "2026_BTE_24_APU_270_ACEP-DELI_ACEP50-2022_MunicipioC-SINTAP",
+        "doc_id": "2026_BTE_24_APU_270_ACEP-DELI_ACEP50-2022_MunicipioC-SINTAP",
+        "estado": "nomeado",
+        "caminho": "/Volumes/Documentos_Casa/Casa_Documentos/400_Casa_Claude/RNC_2026/1_fontes/irct/convencoes/APU/2026_BTE_24_APU_270_ACEP-DELI_ACEP50-2022_MunicipioC-SINTAP.pdf",
+        "sha256": "1fb5c2de8e0de958ca970835089742edd0f6326e83a3e03485652bb743e0a077",
+        "ambito": "APU",
+        "ambito_origem": "metadados:aviso_acep_deliberacao",
+        "avisos": [
+          "INFORMAÇÃO: rótulo documental derivado de «Município de Condeixa-a-Nova»; não é uma sigla oficial confirmada",
+          "INFORMAÇÃO: rótulos encurtados para caber em 63 caracteres"
+        ],
+        "esquema": "adr0022"
+      }
+    },
+    {
+      "chave": "2026/26/00530054",
+      "id_dgert": "296/2026",
+      "tipo": "AVISO",
+      "tipo_documental": "ACEP-ALT",
+      "familia": "convencao",
+      "ambito_documental": "APU",
+      "referencia_acordo_base": "101/2023",
+      "processo_irct": "APU:ACEP:101/2023",
+      "regra_tipologia": "aviso_acep_alteracao",
+      "outorgantes_origem": null,
+      "relacoes_documentais": [
+        {
+          "relacao": "altera",
+          "referencia": "Aviso n.º 2/2024",
+          "origem": "DocAlteradosPorEste",
+          "id_publicacao": "",
+          "estado": "fora_do_lote"
+        },
+        {
+          "relacao": "acordo_base",
+          "referencia": "101/2023",
+          "processo_irct": "APU:ACEP:101/2023",
+          "origem": "metadados_indice",
+          "estado": "fora_do_lote"
+        }
+      ],
+      "nomeacao": {
+        "nome": "2026_BTE_26_APU_296_ACEP-ALT_ACEP101-2023_MunicipioS-SINTAP",
+        "doc_id": "2026_BTE_26_APU_296_ACEP-ALT_ACEP101-2023_MunicipioS-SINTAP",
+        "estado": "nomeado",
+        "caminho": "/Volumes/Documentos_Casa/Casa_Documentos/400_Casa_Claude/RNC_2026/1_fontes/irct/convencoes/APU/2026_BTE_26_APU_296_ACEP-ALT_ACEP101-2023_MunicipioS-SINTAP.pdf",
+        "sha256": "0eb47b0d788dc4b5471912f687894b18d61f22fcf184d983c8a3e68f33ddc558",
+        "ambito": "APU",
+        "ambito_origem": "metadados:aviso_acep_alteracao",
+        "avisos": [
+          "INFORMAÇÃO: rótulo documental derivado de «Município de São Pedro do Sul»; não é uma sigla oficial confirmada",
+          "INFORMAÇÃO: rótulos encurtados para caber em 63 caracteres"
+        ],
+        "esquema": "adr0022"
+      }
+    },
+    {
+      "chave": "2026/27/04060406",
+      "id_dgert": "331/2026",
+      "tipo": "AV-CES-VIG",
+      "tipo_documental": "CES-VIG",
+      "familia": "cessacao",
+      "ambito_documental": "",
+      "referencia_acordo_base": "",
+      "processo_irct": "DGERT:25859",
+      "regra_tipologia": "cessacao_vigencia",
+      "outorgantes_origem": "titulo_partes_explicitas",
+      "relacoes_documentais": [
+        {
+          "relacao": "cessa_vigencia_de",
+          "referencia": "CCT.20050111.9/2005",
+          "origem": "DocAlteradosPorEste",
+          "id_publicacao": "9/2005",
+          "estado": "fora_do_lote"
+        },
+        {
+          "relacao": "cessa_vigencia_de",
+          "referencia": "CCT-ALT.20060315.72/2006",
+          "origem": "DocAlteradosPorEste",
+          "id_publicacao": "72/2006",
+          "estado": "fora_do_lote"
+        },
+        {
+          "relacao": "cessa_vigencia_de",
+          "referencia": "CCT-ALT.20070222.48/2007",
+          "origem": "DocAlteradosPorEste",
+          "id_publicacao": "48/2007",
+          "estado": "fora_do_lote"
+        },
+        {
+          "relacao": "cessa_vigencia_de",
+          "referencia": "CCT-ALT.20080229.81/2008",
+          "origem": "DocAlteradosPorEste",
+          "id_publicacao": "81/2008",
+          "estado": "fora_do_lote"
+        },
+        {
+          "relacao": "cessa_vigencia_de",
+          "referencia": "CCT-ALT.20090529.187/2009",
+          "origem": "DocAlteradosPorEste",
+          "id_publicacao": "187/2009",
+          "estado": "fora_do_lote"
+        }
+      ],
+      "nomeacao": {
+        "nome": "2026_BTE_27_CES-VIG_331_25859_APAT-FETESE",
+        "doc_id": "2026_BTE_27_CES-VIG_331_25859_APAT-FETESE",
+        "estado": "nomeado",
+        "caminho": "/Volumes/Documentos_Casa/Casa_Documentos/400_Casa_Claude/RNC_2026/1_fontes/irct/cessacoes_vigencia/2026_BTE_27_CES-VIG_331_25859_APAT-FETESE.pdf",
+        "sha256": "2e6868566f70becd1f00175918881555528ef9ade1965f7ec4f1668c9e4e4b63",
+        "ambito": "PRI",
+        "ambito_origem": "omissao",
+        "avisos": [],
+        "esquema": "adr0022"
+      }
+    },
+    {
+      "chave": "2026/27/04070407",
+      "id_dgert": "332/2026",
+      "tipo": "AV-CES-VIG",
+      "tipo_documental": "CES-VIG",
+      "familia": "cessacao",
+      "ambito_documental": "",
+      "referencia_acordo_base": "",
+      "processo_irct": "DGERT:25858",
+      "regra_tipologia": "cessacao_vigencia",
+      "outorgantes_origem": "titulo_partes_explicitas",
+      "relacoes_documentais": [
+        {
+          "relacao": "cessa_vigencia_de",
+          "referencia": "CCT.20050111.8/2005",
+          "origem": "DocAlteradosPorEste",
+          "id_publicacao": "8/2005",
+          "estado": "fora_do_lote"
+        },
+        {
+          "relacao": "cessa_vigencia_de",
+          "referencia": "CCT-ALT.20060315.73/2006",
+          "origem": "DocAlteradosPorEste",
+          "id_publicacao": "73/2006",
+          "estado": "fora_do_lote"
+        },
+        {
+          "relacao": "cessa_vigencia_de",
+          "referencia": "CCT-ALT.20070222.47/2007",
+          "origem": "DocAlteradosPorEste",
+          "id_publicacao": "47/2007",
+          "estado": "fora_do_lote"
+        },
+        {
+          "relacao": "cessa_vigencia_de",
+          "referencia": "CCT-ALT. 15/02/2008.39/2008",
+          "origem": "DocAlteradosPorEste",
+          "id_publicacao": "39/2008",
+          "estado": "fora_do_lote"
+        },
+        {
+          "relacao": "cessa_vigencia_de",
+          "referencia": "CCT-ALT.20090522.170/2009",
+          "origem": "DocAlteradosPorEste",
+          "id_publicacao": "170/2009",
+          "estado": "fora_do_lote"
+        }
+      ],
+      "nomeacao": {
+        "nome": "2026_BTE_27_CES-VIG_332_25858_APAT-SIMAMEVIP",
+        "doc_id": "2026_BTE_27_CES-VIG_332_25858_APAT-SIMAMEVIP",
+        "estado": "nomeado",
+        "caminho": "/Volumes/Documentos_Casa/Casa_Documentos/400_Casa_Claude/RNC_2026/1_fontes/irct/cessacoes_vigencia/2026_BTE_27_CES-VIG_332_25858_APAT-SIMAMEVIP.pdf",
+        "sha256": "2ff5b806c9b7a7feb00b298070b86b1af87b13fe1d59d5ba8a4ccf65ac1ab2f9",
+        "ambito": "PRI",
+        "ambito_origem": "omissao",
+        "avisos": [],
+        "esquema": "adr0022"
+      }
+    },
+    {
+      "chave": "2026/29/00220023",
+      "id_dgert": "350/2026",
+      "tipo": "AVISO",
+      "tipo_documental": "ACEP-ALT",
+      "familia": "convencao",
+      "ambito_documental": "APU",
+      "referencia_acordo_base": "53/2022",
+      "processo_irct": "APU:ACEP:53/2022",
+      "regra_tipologia": "aviso_acep_alteracao",
+      "outorgantes_origem": null,
+      "relacoes_documentais": [
+        {
+          "relacao": "altera",
+          "referencia": "Acordo Coletivo de Trabalho n.º 53/2022 - Diário da República n.º 241/2022, Série II de 2022-12-16",
+          "origem": "DocAlteradosPorEste",
+          "id_publicacao": "",
+          "estado": "fora_do_lote"
+        },
+        {
+          "relacao": "acordo_base",
+          "referencia": "53/2022",
+          "processo_irct": "APU:ACEP:53/2022",
+          "origem": "metadados_indice",
+          "estado": "fora_do_lote"
+        }
+      ],
+      "nomeacao": {
+        "nome": "2026_BTE_29_APU_350_ACEP-ALT_ACEP53-2022_MunicipioBeja-STFPSSRA",
+        "doc_id": "2026_BTE_29_APU_350_ACEP-ALT_ACEP53-2022_MunicipioBeja-STFPSSRA",
+        "estado": "nomeado",
+        "caminho": "/Volumes/Documentos_Casa/Casa_Documentos/400_Casa_Claude/RNC_2026/1_fontes/irct/convencoes/APU/2026_BTE_29_APU_350_ACEP-ALT_ACEP53-2022_MunicipioBeja-STFPSSRA.pdf",
+        "sha256": "914c332ecc5d971c40f2e0a79c823a4c29c3974096fea40e3efac6315469cbbb",
+        "ambito": "APU",
+        "ambito_origem": "metadados:aviso_acep_alteracao",
+        "avisos": [
+          "INFORMAÇÃO: rótulo documental derivado de «Município de Beja»; não é uma sigla oficial confirmada"
+        ],
+        "esquema": "adr0022"
+      }
+    },
+    {
+      "chave": "2026/30/00190020",
+      "id_dgert": "367/2026",
+      "tipo": "AVISO",
+      "tipo_documental": "ACEP-ALT",
+      "familia": "convencao",
+      "ambito_documental": "APU",
+      "referencia_acordo_base": "43/2025",
+      "processo_irct": "APU:ACEP:43/2025",
+      "regra_tipologia": "aviso_acep_alteracao",
+      "outorgantes_origem": null,
+      "relacoes_documentais": [
+        {
+          "relacao": "altera",
+          "referencia": "Acordo Colectivo de Trabalho n.º 43/2025",
+          "origem": "DocAlteradosPorEste",
+          "id_publicacao": "",
+          "estado": "fora_do_lote"
+        },
+        {
+          "relacao": "acordo_base",
+          "referencia": "43/2025",
+          "processo_irct": "APU:ACEP:43/2025",
+          "origem": "metadados_indice",
+          "estado": "fora_do_lote"
+        }
+      ],
+      "nomeacao": {
+        "nome": "2026_BTE_30_APU_367_ACEP-ALT_ACEP43-2025_MunicipioA-SINTAP",
+        "doc_id": "2026_BTE_30_APU_367_ACEP-ALT_ACEP43-2025_MunicipioA-SINTAP",
+        "estado": "nomeado",
+        "caminho": "/Volumes/Documentos_Casa/Casa_Documentos/400_Casa_Claude/RNC_2026/1_fontes/irct/convencoes/APU/2026_BTE_30_APU_367_ACEP-ALT_ACEP43-2025_MunicipioA-SINTAP.pdf",
+        "sha256": "f6a8b1467da699489cdecf62df0baa69a86b145fc7c5ebea68d273788c1ee15c",
+        "ambito": "APU",
+        "ambito_origem": "metadados:aviso_acep_alteracao",
+        "avisos": [
+          "INFORMAÇÃO: rótulo documental derivado de «Município de Alfândega da Fé»; não é uma sigla oficial confirmada",
+          "INFORMAÇÃO: rótulos encurtados para caber em 63 caracteres"
+        ],
+        "esquema": "adr0022"
+      }
+    },
+    {
+      "chave": "2026/4/00040015",
+      "id_dgert": "39/2026",
+      "tipo": "AVISO",
+      "tipo_documental": "ACEP-ALT",
+      "familia": "convencao",
+      "ambito_documental": "APU",
+      "referencia_acordo_base": "53/2016",
+      "processo_irct": "APU:ACEP:53/2016",
+      "regra_tipologia": "aviso_acep_alteracao",
+      "outorgantes_origem": null,
+      "relacoes_documentais": [
+        {
+          "relacao": "altera",
+          "referencia": "Acordo Coletivo de Trabalho n.º 53/2016 - Diário da República n.º 7/2016, Série II de 2016-01-12",
+          "origem": "DocAlteradosPorEste",
+          "id_publicacao": "",
+          "estado": "fora_do_lote"
+        },
+        {
+          "relacao": "acordo_base",
+          "referencia": "53/2016",
+          "processo_irct": "APU:ACEP:53/2016",
+          "origem": "metadados_indice",
+          "estado": "fora_do_lote"
+        }
+      ],
+      "nomeacao": {
+        "nome": "2026_BTE_04_APU_039_ACEP-ALT_ACEP53-2016_MunicipioF-SINTAP",
+        "doc_id": "2026_BTE_04_APU_039_ACEP-ALT_ACEP53-2016_MunicipioF-SINTAP",
+        "estado": "nomeado",
+        "caminho": "/Volumes/Documentos_Casa/Casa_Documentos/400_Casa_Claude/RNC_2026/1_fontes/irct/convencoes/APU/2026_BTE_04_APU_039_ACEP-ALT_ACEP53-2016_MunicipioF-SINTAP.pdf",
+        "sha256": "4e2304ec2cf0d9e0c53f2193b362984cfc1eb344bf4cdb2e058e2fce7080175d",
+        "ambito": "APU",
+        "ambito_origem": "metadados:aviso_acep_alteracao",
+        "avisos": [
+          "INFORMAÇÃO: rótulo documental derivado de «Município de Figueiró dos Vinhos»; não é uma sigla oficial confirmada",
+          "INFORMAÇÃO: rótulos encurtados para caber em 63 caracteres"
+        ],
+        "esquema": "adr0022"
+      }
+    },
+    {
+      "chave": "2026/9/00670069",
+      "id_dgert": "92/2026",
+      "tipo": "AVISO",
+      "tipo_documental": "ACEP-ALT",
+      "familia": "convencao",
+      "ambito_documental": "APU",
+      "referencia_acordo_base": "322/2015",
+      "processo_irct": "APU:ACEP:322/2015",
+      "regra_tipologia": "aviso_acep_alteracao",
+      "outorgantes_origem": null,
+      "relacoes_documentais": [
+        {
+          "relacao": "altera",
+          "referencia": "Aviso n.º 5356/2018 - Diário da República n.º 77/2018, Série II de 2018-04-19",
+          "origem": "DocAlteradosPorEste",
+          "id_publicacao": "",
+          "estado": "fora_do_lote"
+        },
+        {
+          "relacao": "acordo_base",
+          "referencia": "322/2015",
+          "processo_irct": "APU:ACEP:322/2015",
+          "origem": "metadados_indice",
+          "estado": "fora_do_lote"
+        }
+      ],
+      "nomeacao": {
+        "nome": "2026_BTE_09_APU_092_ACEP-ALT_ACEP322-2015_MunicipioA-STFPSSRA",
+        "doc_id": "2026_BTE_09_APU_092_ACEP-ALT_ACEP322-2015_MunicipioA-STFPSSRA",
+        "estado": "nomeado",
+        "caminho": "/Volumes/Documentos_Casa/Casa_Documentos/400_Casa_Claude/RNC_2026/1_fontes/irct/convencoes/APU/2026_BTE_09_APU_092_ACEP-ALT_ACEP322-2015_MunicipioA-STFPSSRA.pdf",
+        "sha256": "fac99eb0edef55a7005b74d54e8a9da6869aaf98e541d4c8a7733109469251f2",
+        "ambito": "APU",
+        "ambito_origem": "metadados:aviso_acep_alteracao",
+        "avisos": [
+          "INFORMAÇÃO: rótulo documental derivado de «Município de Alpiarça»; não é uma sigla oficial confirmada",
+          "INFORMAÇÃO: rótulos encurtados para caber em 63 caracteres"
+        ],
+        "esquema": "adr0022"
+      }
+    },
+    {
+      "chave": "2026/9/00700082",
+      "id_dgert": "93/2026",
+      "tipo": "AVISO",
+      "tipo_documental": "ACEP-ALT",
+      "familia": "convencao",
+      "ambito_documental": "APU",
+      "referencia_acordo_base": "74/2015",
+      "processo_irct": "APU:ACEP:74/2015",
+      "regra_tipologia": "aviso_acep_alteracao",
+      "outorgantes_origem": null,
+      "relacoes_documentais": [
+        {
+          "relacao": "altera",
+          "referencia": "Acordo Coletivo de Trabalho n.º 74/2015 - Diário da República n.º 194/2015, Série II de 2015-10-05",
+          "origem": "DocAlteradosPorEste",
+          "id_publicacao": "",
+          "estado": "fora_do_lote"
+        },
+        {
+          "relacao": "acordo_base",
+          "referencia": "74/2015",
+          "processo_irct": "APU:ACEP:74/2015",
+          "origem": "metadados_indice",
+          "estado": "fora_do_lote"
+        }
+      ],
+      "nomeacao": {
+        "nome": "2026_BTE_09_APU_093_ACEP-ALT_ACEP74-2015_MunicipioA-SINTAP",
+        "doc_id": "2026_BTE_09_APU_093_ACEP-ALT_ACEP74-2015_MunicipioA-SINTAP",
+        "estado": "nomeado",
+        "caminho": "/Volumes/Documentos_Casa/Casa_Documentos/400_Casa_Claude/RNC_2026/1_fontes/irct/convencoes/APU/2026_BTE_09_APU_093_ACEP-ALT_ACEP74-2015_MunicipioA-SINTAP.pdf",
+        "sha256": "940924be7e0bda6740b73748510de855c4dce89ec37aaf6abbbe79bbdcdd907a",
+        "ambito": "APU",
+        "ambito_origem": "metadados:aviso_acep_alteracao",
+        "avisos": [
+          "INFORMAÇÃO: rótulo documental derivado de «Município de Alvaiázere»; não é uma sigla oficial confirmada",
+          "INFORMAÇÃO: rótulos encurtados para caber em 63 caracteres"
+        ],
+        "esquema": "adr0022"
+      }
+    }
+  ],
+  "conversoes_experimentais": {
+    "modo": "Docling local offline; auditoria final reaplicada à cache de extração com hashes verificados",
+    "documentos": [
+      {
+        "documento": "2026_BTE_04_APU_039_ACEP-ALT_ACEP53-2016_MunicipioF-SINTAP",
+        "perfil": "desconhecido",
+        "estado": "review",
+        "cobertura": 0.999838865613922,
+        "avisos": [
+          {
+            "rule": "STRUCTURE",
+            "line": 0,
+            "message": "4 cláusula(s)/artigo(s) sem corpo válido: Artigo 1.º - São alteradas as seguintes cláusulas:: sem conteúdo; Cláusula 15.ª: corpo sem frase terminada em ponto; Cláusula 16.ª - (Eliminar): sem conteúdo; Artigo 2.º - São aditadas as seguintes cláusulas:: sem conteúdo",
+            "severity": "warning"
+          }
+        ]
+      },
+      {
+        "documento": "2026_BTE_15_APU_155_ACCE-ALT_ACCE57-2025_Entidades-SIM",
+        "perfil": "desconhecido",
+        "estado": "passed",
+        "cobertura": 1.0,
+        "avisos": []
+      },
+      {
+        "documento": "2026_BTE_24_APU_270_ACEP-DELI_ACEP50-2022_MunicipioC-SINTAP",
+        "perfil": "deliberacao_comissao_paritaria",
+        "estado": "passed",
+        "cobertura": 1.0,
+        "avisos": []
+      },
+      {
+        "documento": "2026_BTE_27_CES-VIG_331_25859_APAT-FETESE",
+        "perfil": "cessacao_vigencia",
+        "estado": "passed",
+        "cobertura": 1.0,
+        "avisos": []
+      }
+    ],
+    "total": 4,
+    "falhas": 0
+  },
+  "reexecucao_final_sem_duplicados": true,
+  "testes_passaram": 528,
+  "testes_ignorados": 22,
+  "gui_macOS": "Seleção de cessações e instalação de recursos verificadas com janela oculta"
+}

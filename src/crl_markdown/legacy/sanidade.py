@@ -159,6 +159,8 @@ def deposito_no_fim(texto: str, e_retificacao: bool = False) -> str | None:
 
 AVISO_RETIFICACAO_SEM_ARTICULADO = (
     "retificação sem articulado próprio: zero cláusulas é o esperado")
+AVISO_DECLARATIVO_SEM_ARTICULADO = (
+    "documento declarativo sem articulado próprio: zero cláusulas é compatível com a tipologia")
 AVISO_SEM_ESTRUTURA = (
     "nenhuma cláusula ou artigo reconhecido: estrutura não reconhecida pelo "
     "extrator, ou documento sem articulado — verificar o PDF")
@@ -239,6 +241,8 @@ def sem_articulado(doc: dict, texto: str = "") -> str | None:
         return None
     if e_retificacao(doc, texto):
         return AVISO_RETIFICACAO_SEM_ARTICULADO
+    if doc.get("subtipo") in {"cessacao_vigencia", "deliberacao_comissao_paritaria"}:
+        return AVISO_DECLARATIVO_SEM_ARTICULADO
     if alteracao_salarial_sem_articulado(texto):
         return AVISO_ALTERACAO_SALARIAL_SEM_ARTICULADO
     return AVISO_SEM_ESTRUTURA
@@ -258,9 +262,10 @@ def verificar(doc: dict, texto: str, referencia: list[str] | None = None,
     aviso = sem_articulado(doc, texto)
     if aviso:
         avisos.append(aviso)
-    aviso = deposito_no_fim(texto, e_retificacao=e_retificacao(doc, texto))
-    if aviso:
-        avisos.append(aviso)
+    if doc.get("subtipo") not in {"cessacao_vigencia", "deliberacao_comissao_paritaria"}:
+        aviso = deposito_no_fim(texto, e_retificacao=e_retificacao(doc, texto))
+        if aviso:
+            avisos.append(aviso)
     vazias = clausulas_sem_corpo(doc, texto, referencia)
     if vazias:
         avisos.append(f"{len(vazias)} cláusula(s)/artigo(s) sem corpo válido: "
