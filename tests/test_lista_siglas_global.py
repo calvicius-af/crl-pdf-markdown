@@ -107,4 +107,6 @@ def test_siglas_csv_e_derivado_da_lista_global(derivado, tmp_path):
     linhas, _ = modulo.converter(modulo.ler_lista(lista), lista.name)
     esperado = tmp_path / "esperado.csv"
     modulo.escrever(linhas, esperado)
-    assert (RAIZ / derivado).read_bytes() == esperado.read_bytes()
+    # Compara linhas: no Windows o checkout pode converter LF em CRLF.
+    ler = lambda p: p.read_text(encoding="utf-8").splitlines()  # noqa: E731
+    assert ler(RAIZ / derivado) == ler(esperado)
