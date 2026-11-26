@@ -77,12 +77,59 @@ def test_siglas_que_so_diferem_no_hifen_ficam_ambiguas():
     assert rel["colisoes_de_sigla"] == {"jfagualonga": ["INE-1", "INE-2"]}
 
 
-def test_nome_com_duas_siglas_e_relatado():
-    _, rel = _modulo().converter(_lista(
-        _linha("ML", "Metropolitano de Lisboa, E.P.E.", ident="INE-1"),
-        _linha("METROLISBOA", "Metropolitano de Lisboa, EPE", ident="CRL-1"),
+INE = "Administração pública (INE S.13 2025)"
+CRL = "Empregador (CRL 2025)"
+
+
+def test_prioridade_dgert_ine_crl_no_mesmo_nome():
+    linhas, rel = _modulo().converter(_lista(
+        _linha("ML", "Metropolitano de Lisboa, E.P.E.", ident="INE-1", fonte=INE),
+        _linha("METRO-LISBOA", "Metropolitano de Lisboa, EPE", ident="CRL-1", fonte=CRL),
+        _linha("AE-BAIAO", "Associação Empresarial de Baião", ident="CRL-2", fonte=CRL),
+        _linha("AEB", "ASSOCIAÇÃO EMPRESARIAL DE BAIÃO", ident="DGERT-5.357"),
     ))
-    assert rel["nomes_com_siglas_diferentes"] == {"metropolitanodelisboaepe": ["METROLISBOA", "ML"]}
+    assert sorted(linha["sigla"] for linha in linhas) == ["AEB", "ML"]
+    assert {(p["sigla"], p["fica_fonte"]) for p in rel["preteridas_por_prioridade"]} == {
+        ("METRO-LISBOA", "INE"), ("AE-BAIAO", "DGERT")}
+    assert rel["nomes_com_siglas_diferentes"] == {}
+
+
+def test_freguesias_que_so_diferem_num_acento_coexistem(tmp_path):
+    modulo = _modulo()
+    linhas, rel = modulo.converter(_lista(
+        _linha("JF-LOUSA", "Freguesia de Lousa", ident="INE-1", fonte=INE),
+        _linha("JF-LOUSA-2", "Freguesia de Lousã", ident="INE-2", fonte=INE),
+        _linha("JF-TABUA", "Freguesia de Tabua", ident="INE-3", fonte=INE),
+        _linha("JF-TABUA-2", "Freguesia de Tábua", ident="INE-4", fonte=INE),
+    ))
+    assert {linha["estado"] for linha in linhas} == {"documentada"}
+    assert len(rel["distinguidas_por_grafia"]) == 2
+    destino = tmp_path / "siglas.csv"
+    modulo.escrever(linhas, destino)
+    tabela = nomeacao.carregar_siglas(destino)
+    assert nomeacao.sigla("Freguesia de Lousa", tabela) == ("JFLOUSA", None)
+    assert nomeacao.sigla("Freguesia de Lousã", tabela) == ("JFLOUSA2", None)
+    assert nomeacao.sigla("FREGUESIA DE TÁBUA", tabela) == ("JFTABUA2", None)
+    assert nomeacao.sigla("Freguesia de Tabua", tabela) == ("JFTABUA", None)
+    # Outra grafia do mesmo nome não se resolve por aproximação.
+    valor, aviso = nomeacao.sigla("Freguesia de Lóusa", tabela)
+    assert aviso and "pendente" in aviso
+
+
+def test_organizacoes_com_o_mesmo_nome_na_mesma_fonte_ficam_ambiguas(tmp_path):
+    modulo = _modulo()
+    linhas, rel = modulo.converter(_lista(
+        _linha("FPP", "FEDERAÇAO PORTUGUESA DE PROFESSORES", ident="DGERT-2.59"),
+        _linha("PROFESSORES", "FEDERAÇÃO PORTUGUESA DE PROFESSORES", ident="DGERT-2.49"),
+    ))
+    # Numa organização, a diferença de acento é erro de registo, não outra entidade.
+    assert {linha["estado"] for linha in linhas} == {"ambigua"}
+    assert rel["nomes_com_siglas_diferentes"] == {
+        "federacaoportuguesadeprofessores": ["FPP", "PROFESSORES"]}
+    destino = tmp_path / "siglas.csv"
+    modulo.escrever(linhas, destino)
+    tabela = nomeacao.carregar_siglas(destino)
+    assert nomeacao.sigla("FEDERAÇÃO PORTUGUESA DE PROFESSORES", tabela)[1]
 
 
 def test_coluna_em_falta_interrompe(tmp_path):

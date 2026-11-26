@@ -28,9 +28,18 @@ Regras da conversão:
    mesma sigla;
 2. uma entidade com pendentes na coluna `revisao` fica `por_confirmar`, e a
    nomeação não usa a sigla dela;
-3. duas entidades cuja sigla fica igual depois de a nomeação retirar hífenes e
-   acentos ficam `ambigua`;
-4. o mesmo nome com duas siglas diferentes também bloqueia a nomeação.
+3. o mesmo nome com siglas diferentes em fontes diferentes fica com a sigla da
+   fonte com prioridade: primeiro a DGERT, depois o INE, por fim o CRL. As
+   linhas das outras fontes para esse nome saem (decisão de 2026-11-26);
+4. freguesias e outras entidades do INE cujos nomes só diferem num acento ou num
+   espaço são entidades diferentes e coexistem: Lousa e Lousã, Tabua e Tábua,
+   Agualonga e Água Longa. A nomeação distingue-as pela grafia exata do nome
+   (`chave_grafia`), e uma terceira grafia do mesmo nome fica pendente;
+5. o mesmo nome com siglas diferentes na mesma fonte fica `ambigua` e bloqueia a
+   nomeação. Numa organização, uma diferença de acento é um erro de registo, não
+   outra entidade;
+6. duas entidades cuja sigla fica igual depois de a nomeação retirar hífenes e
+   acentos ficam `ambigua`.
 
 Na árvore de dados do RNC, o `siglas.csv` gerado é o que vai para
 `0_gestao/vocabularios/`.

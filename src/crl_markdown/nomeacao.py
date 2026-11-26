@@ -19,6 +19,7 @@ explicitamente recusadas continuam `por_confirmar`.
 
 import csv
 import re
+import unicodedata
 from pathlib import Path
 
 from . import ambito as mod_ambito
@@ -144,6 +145,17 @@ def chave_entidade(nome: str) -> str:
     return "".join(c.lower() for c in sem_acentos(nome or "") if c.isalnum())
 
 
+def chave_grafia(nome: str) -> str:
+    """Chave que conserva acentos e espaços entre palavras.
+
+    Serve só para separar entidades que a `chave_entidade` junta: topónimos que
+    diferem num acento ou num espaço (Lousa e Lousã, Agualonga e Água Longa)
+    são freguesias diferentes. Os pontos desaparecem («E.P.E.» = «EPE»); a
+    restante pontuação e os hífenes contam como espaço."""
+    texto = unicodedata.normalize("NFC", nome or "").casefold().replace(".", "")
+    return " ".join("".join(c if c.isalnum() else " " for c in texto).split())
+
+
 class TabelaSiglas(dict):
     """Valores seguros e identidades recusadas, para não reabrir um fallback literal."""
 
@@ -154,6 +166,9 @@ class TabelaSiglas(dict):
         self.rotulos = {}
         self.permitir_rotulos = False
         self.siglas_recusadas = set()
+        # Nomes cuja chave_entidade colide mas cuja grafia exata distingue a
+        # entidade: {chave_grafia: sigla}.
+        self.por_grafia = {}
 
 
 def informacao(texto):
@@ -194,6 +209,9 @@ def sigla(nome: str, tabela: dict[str, str] | None = None) -> tuple[str, str | N
         chave = chave_entidade(nome)
         if chave in tabela:
             return tabela[chave], None
+        grafia = chave_grafia(nome)
+        if grafia in getattr(tabela, "por_grafia", {}):
+            return tabela.por_grafia[grafia], None
         if chave in getattr(tabela, "rotulos", {}):
             return tabela.rotulos[chave], informacao(
                 f"rótulo documental derivado de «{nome}»; não é uma sigla oficial confirmada")
@@ -325,6 +343,7 @@ def carregar_siglas(caminho: Path) -> dict[str, str]:
         linhas = linhas[1:]
     i_estado = cabecalho.index("estado") if tem_cabecalho and "estado" in cabecalho else None
     claims = {}
+    grafias = {}
     i_origem = (
         cabecalho.index(COLUNA_ORIGEM) if tem_cabecalho and COLUNA_ORIGEM in cabecalho else None
     )
@@ -350,6 +369,7 @@ def carregar_siglas(caminho: Path) -> dict[str, str]:
         if (origem in {"indice_literal", "registo", "derivada", "correspondencia_exata", "nome_completo_exato"}
                 and estado in {"documentada", "ambigua"} and valor and automatica):
             claims.setdefault(nome, set()).add(valor)
+            grafias.setdefault(nome, {}).setdefault(chave_grafia(linha[i_nome]), set()).add(valor)
             continue
         if i_estado is not None and (i_estado >= len(linha) or linha[i_estado].strip().lower() not in {"confirmada", "documentada"}):
             tabela.nomes_pendentes.add(nome)
@@ -361,9 +381,17 @@ def carregar_siglas(caminho: Path) -> dict[str, str]:
             continue
         if nome and valor:
             claims.setdefault(nome, set()).add(valor)
+            grafias.setdefault(nome, {}).setdefault(chave_grafia(linha[i_nome]), set()).add(valor)
     for nome, valores in claims.items():
         if len(valores) != 1:
             tabela.nomes_pendentes.add(nome)
+            por_grafia = grafias.get(nome, {})
+            # Grafias diferentes, cada uma com uma só sigla: entidades distintas
+            # (freguesias homónimas a menos de um acento). A grafia exata decide;
+            # outra grafia do mesmo nome continua pendente.
+            if len(por_grafia) == len(valores) and all(len(v) == 1 for v in por_grafia.values()):
+                tabela.por_grafia.update({g: next(iter(v)) for g, v in por_grafia.items()})
+                continue
             tabela.siglas_pendentes.update(valor.casefold() for valor in valores)
         elif nome not in tabela.nomes_pendentes:
             tabela[nome] = next(iter(valores))
@@ -388,6 +416,8 @@ def tabela_de_siglas(caminhos=(), *, equipa: Path = SIGLAS_EQUIPA, dgert: bool =
         tabela.siglas_pendentes.update(carregada.siglas_pendentes)
         tabela.siglas_recusadas.update(carregada.siglas_recusadas)
         tabela.permitir_rotulos |= carregada.permitir_rotulos
+        for grafia, valor in carregada.por_grafia.items():
+            tabela.por_grafia.setdefault(grafia, valor)
         tabela.rotulos.update({nome: valor for nome, valor in carregada.rotulos.items()
                               if nome not in tabela.nomes_pendentes and nome not in tabela})
         for nome, valor in carregada.items():

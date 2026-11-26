@@ -1,9 +1,9 @@
 nome;sigla;codigo_dgert;lado;estado;origem_sigla;fonte;responsavel;data
 ASSOCIAÇÃO DOS AGRICULTORES DO CONCELHO DE SERPA;AGRICULTORESCONSerpa;5.368;empregadores;por_confirmar;lista_global;lista_siglas_global.csv/linha 2/DGERT-5.368;;2026-11-25
-ASSOCIAÇÃO DE AGRICULTORES AO SUL DO TEJO;AGRICULTORESSULEvora;5.404;empregadores;por_confirmar;lista_global;lista_siglas_global.csv/linha 3/DGERT-5.404;;2026-11-25
+ASSOCIAÇÃO DE AGRICULTORES AO SUL DO TEJO;AGRICULTORESSULEvora;5.404;empregadores;ambigua;lista_global;lista_siglas_global.csv/linha 3/DGERT-5.404;;2026-11-25
 ASSOCIAÇÃO INDUSTRIAL DE CRISTALARIA;AICristalaria;5.473;empregadores;por_confirmar;lista_global;lista_siglas_global.csv/linha 4/DGERT-5.473;;2026-11-25
 ASSOCIAÇÃO DOS INDÚSTRIAIS DE MOAGEM;AIMoagem;5.329;empregadores;por_confirmar;lista_global;lista_siglas_global.csv/linha 5/DGERT-5.329;;2026-11-25
-ASSOCIAÇÃO DOS INDÚSTRIAIS DE TOMATE;AITomate;5.55;empregadores;por_confirmar;lista_global;lista_siglas_global.csv/linha 6/DGERT-5.55;;2026-11-25
+ASSOCIAÇÃO DOS INDÚSTRIAIS DE TOMATE;AITomate;5.55;empregadores;ambigua;lista_global;lista_siglas_global.csv/linha 6/DGERT-5.55;;2026-11-25
 ASSOCIAÇÃO EMPRESARIAL DOS PROFISSIONAIS INDEPENDENTES;ANEPIEmpresarial;5.574;empregadores;por_confirmar;lista_global;lista_siglas_global.csv/linha 7/DGERT-5.574;;2026-11-25
 ASSOCIAÇÃO NACIONAL DE ARMAZENISTAS E IMPORTADORES DE BANANAS;ANIBArmazenistas;5.350;empregadores;por_confirmar;lista_global;lista_siglas_global.csv/linha 8/DGERT-5.350;;2026-11-25
 ASSOCIAÇÃO NACIONAL DOS INDÚSTRIAIS DE PIMENTÃO;ANIPimentao;5.373;empregadores;por_confirmar;lista_global;lista_siglas_global.csv/linha 9/DGERT-5.373;;2026-11-25
@@ -20,7 +20,7 @@ ASSOCIAÇÃO DAS CASAS DE PASTO E DE VINHOS DOS CONCELHOS DO PORTO, MATOSINHOS, 
 FEDERAÇAO DOS SINDICATOS DAS INDÚSTRIA DE CERÂMICA, CIMENTO E VIDRO DE PORTUGAL;INDUSTRIACERAMLisboa;2.12;trabalhadores;por_confirmar;lista_global;lista_siglas_global.csv/linha 19/DGERT-2.12;;2026-11-25
 FEDERAÇAO DOS SINDICATOS DAS INDÚSTRIAS DE MADEIRA;INDUSTRIIndustriasMa;2.1;trabalhadores;por_confirmar;lista_global;lista_siglas_global.csv/linha 20/DGERT-2.1;;2026-11-25
 FEDERAÇAO DOS SINDICATOS DOS OPERÁRIOS DA CONSTRUÇÃO CIVIL DO NORTE;OPERARIOSCONSTRPorto;2.8;trabalhadores;por_confirmar;lista_global;lista_siglas_global.csv/linha 21/DGERT-2.8;;2026-11-25
-FEDERAÇAO DOS SINDICATOS DOS TRABALHADORES AGRICOLAS DO SUL;AGRICOLASSUAgricolas;2.38;trabalhadores;por_confirmar;lista_global;lista_siglas_global.csv/linha 22/DGERT-2.38;;2026-11-25
+FEDERAÇAO DOS SINDICATOS DOS TRABALHADORES AGRICOLAS DO SUL;AGRICOLASSUAgricolas;2.38;trabalhadores;ambigua;lista_global;lista_siglas_global.csv/linha 22/DGERT-2.38;;2026-11-25
 ASSOCIAÇÃO COMERCIAL DOS CONCELHOS DE OVAR E S.JOÃO DA MADEIRA;COMERCIALCONCELHOvar;5.164;empregadores;por_confirmar;lista_global;lista_siglas_global.csv/linha 23/DGERT-5.164;;2026-11-25
 ASSOCIAÇÃO COMERCIAL E INDUSTRIAL DE ALIJÓ;COMERCIALINDUSTAlijo;5.479;empregadores;por_confirmar;lista_global;lista_siglas_global.csv/linha 24/DGERT-5.479;;2026-11-25
 ASSOCIAÇÃO COMERCIAL E INDUSTRIAL DO CONCELHO DE VALONGO;COMERCIALINDUValongo;5.189;empregadores;por_confirmar;lista_global;lista_siglas_global.csv/linha 25/DGERT-5.189;;2026-11-25
@@ -43,7 +43,7 @@ SINDICATO DA INDÚSTRIAS DE CALÇADO, MANUAL OU MECÂNICO, CORREEIROS, ALBARDEIR
 SINDICATO DAS INDÚSTRIAS DE OURIVESARIA, RELOJOARIA E CORRELATIVOS DO SUL;INDUSTRIASLisboa;1.100;trabalhadores;por_confirmar;lista_global;lista_siglas_global.csv/linha 42/DGERT-1.100;;2026-11-25
 SINDICATO DEMOCRATICO DOS TRABALHADORES DAS INDÚSTRIAS QUÍMICAS E AFINS DE PORTUGAL;DEMOCRATICIndustrias;1.355;trabalhadores;por_confirmar;lista_global;lista_siglas_global.csv/linha 43/DGERT-1.355;;2026-11-25
 ASSOCIAÇÃO DOS INDÚSTRIAIS DE CARTONAGENS E CORRELATIVOS DO NORTE;INDUSTRIACartonagens;5.28;empregadores;por_confirmar;lista_global;lista_siglas_global.csv/linha 44/DGERT-5.28;;2026-11-25
-SINDICATO DOS DESCARREGADORES DE MAR E TERRA DO DISTRITO DE SETÚBAL;DESCARREDescarregado;1.270;trabalhadores;por_confirmar;lista_global;lista_siglas_global.csv/linha 45/DGERT-1.270;;2026-11-25
+SINDICATO DOS DESCARREGADORES DE MAR E TERRA DO DISTRITO DE SETÚBAL;DESCARREDescarregado;1.270;trabalhadores;ambigua;lista_global;lista_siglas_global.csv/linha 45/DGERT-1.270;;2026-11-25
 ASSOCIAÇÃO DOS INDÚSTRIAIS DE AUTOMOVEIS;INDUSTRIAIAutomoveis;5.140;empregadores;por_confirmar;lista_global;lista_siglas_global.csv/linha 46/DGERT-5.140;;2026-11-25
 ASSOCIAÇÃO DOS INDÚSTRIAIS DE CHAPELARIA;INDUSTRIAIChapelaria;5.332;empregadores;por_confirmar;lista_global;lista_siglas_global.csv/linha 47/DGERT-5.332;;2026-11-25
 ASSOCIAÇÃO NACIONAL DOS INDÚSTRIAIS DE CUTELARIAS;INDUSTRIAICutelarias;5.33;empregadores;por_confirmar;lista_global;lista_siglas_global.csv/linha 48/DGERT-5.33;;2026-11-25
@@ -151,7 +151,7 @@ SINDICATO NACIONAL DOS OPERÁRIOS DA INDÚSTRIA DE CURTUMES E OFÍCIOS CORRELATI
 SINDICATO NACIONAL DOS OPERÁRIOS METALÚRGICOS DO DISTRITO DE BRAGANÇA;OPERARIOSBraganca;1.262;trabalhadores;por_confirmar;lista_global;lista_siglas_global.csv/linha 150/DGERT-1.262;;2026-11-25
 SINDICATO NACIONAL DOS TÉCNICOS DA SAÚDE;SINTESTecnicos;1.456;trabalhadores;por_confirmar;lista_global;lista_siglas_global.csv/linha 151/DGERT-1.456;;2026-11-25
 SINDICATO PORTUGUES DOS PSICOLOGOS;PSICOLOGOSPsicologos;1.547;trabalhadores;por_confirmar;lista_global;lista_siglas_global.csv/linha 152/DGERT-1.547;;2026-11-25
-UNIÃO DAS INSTITUIÇÕES PARTICULARES DE SOLIDARIEDADE SOCIAL;UIPSSInstituicoes;5.471;empregadores;por_confirmar;lista_global;lista_siglas_global.csv/linha 153/DGERT-5.471;;2026-11-25
+UNIÃO DAS INSTITUIÇÕES PARTICULARES DE SOLIDARIEDADE SOCIAL;UIPSSInstituicoes;5.471;empregadores;ambigua;lista_global;lista_siglas_global.csv/linha 153/DGERT-5.471;;2026-11-25
 UNIÃO DAS ASSOCIAÇÕES DA HOTELARIA E RESTAURAÇÃO DO NORTE DE PORTUGAL;UNIHSNORHotelaria;7.3;empregadores;por_confirmar;lista_global;lista_siglas_global.csv/linha 154/DGERT-7.3;;2026-11-25
 Freguesia de Agualonga;JF-AGUALONGA;;administração pública;ambigua;lista_global;lista_siglas_global.csv/linha 155/INE-0942;;2026-11-25
 Freguesia de Água Longa;JF-AGUA-LONGA;;administração pública;ambigua;lista_global;lista_siglas_global.csv/linha 156/INE-3243;;2026-11-25
@@ -399,10 +399,8 @@ ADAE - Associação de Desenvolvimento da Alta Estremadura;ADAE;;administração
 ASSOCIAÇÃO DAS EMPRESAS DE VINHO DO PORTO;AEVP;5.42;empregadores;documentada;lista_global;lista_siglas_global.csv/linha 352/DGERT-5.42;;2026-11-25
 AEVP;AEVP;5.42;empregadores;documentada;lista_global_rotulo;lista_siglas_global.csv/linha 352/DGERT-5.42/rótulo CRL;;2026-11-25
 AE_Vinho.Porto;AEVP;5.42;empregadores;documentada;lista_global_rotulo;lista_siglas_global.csv/linha 352/DGERT-5.42/rótulo CRL;;2026-11-25
-Associação das Empresas de Vinho do Porto;AEVP-ADMI;;empregadores;documentada;lista_global;lista_siglas_global.csv/linha 353/CRL-0378;;2026-11-25
 AEVP_Administ.;AEVP-ADMI;;empregadores;documentada;lista_global_rotulo;lista_siglas_global.csv/linha 353/CRL-0378/rótulo CRL;;2026-11-25
 AE_Vinho.Porto_Admin.;AEVP-ADMI;;empregadores;documentada;lista_global_rotulo;lista_siglas_global.csv/linha 353/CRL-0378/rótulo CRL;;2026-11-25
-Associação das Empresas de Vinho do Porto;AEVP-ARMA;;empregadores;documentada;lista_global;lista_siglas_global.csv/linha 354/CRL-0379;;2026-11-25
 AEVP_Armazem;AEVP-ARMA;;empregadores;documentada;lista_global_rotulo;lista_siglas_global.csv/linha 354/CRL-0379/rótulo CRL;;2026-11-25
 AE_Vinho.Porto_Armaz;AEVP-ARMA;;empregadores;documentada;lista_global_rotulo;lista_siglas_global.csv/linha 354/CRL-0379/rótulo CRL;;2026-11-25
 Agência de Desenvolvimento do Barlavento – Associação;ADBA;;administração pública;documentada;lista_global;lista_siglas_global.csv/linha 355/INE-4139;;2026-11-25
@@ -457,7 +455,7 @@ ASSOCIAÇÃO DE AGRICULTORES DO DISTRITO DE ÉVORA;AGRICULTORESDISTRITO;5.318;em
 ASSOCIAÇÃO DOS AGRICULTORES LIVRES DE ALJUSTREL;AGRICULTORESLIVRES;5.375;empregadores;documentada;lista_global;lista_siglas_global.csv/linha 399/DGERT-5.375;;2026-11-25
 Associação EPH - Escola de Hotelaria de Manteigas;AEEHM;;administração pública;documentada;lista_global;lista_siglas_global.csv/linha 400/INE-4147;;2026-11-25
 ASSOCIAÇÃO DOS AGRICULTORES DE MOURA;AGRICULTORESMOURA;5.365;empregadores;documentada;lista_global;lista_siglas_global.csv/linha 401/DGERT-5.365;;2026-11-25
-ASSOCIAÇÃO DE AGRICULTORES AO SUL DO TEJO;AGRICULTORESSULTEJO;5.376;empregadores;documentada;lista_global;lista_siglas_global.csv/linha 402/DGERT-5.376;;2026-11-25
+ASSOCIAÇÃO DE AGRICULTORES AO SUL DO TEJO;AGRICULTORESSULTEJO;5.376;empregadores;ambigua;lista_global;lista_siglas_global.csv/linha 402/DGERT-5.376;;2026-11-25
 AGIT - Agência para a Gestão do Sistema Intermodal da Região de Coimbra, E.I.M., S.A.;AGIT;;administração pública;documentada;lista_global;lista_siglas_global.csv/linha 403/INE-3909;;2026-11-25
 ÁGORA - Cultura e Desporto do Porto, E.M., S.A.;AGORA;;administração pública;documentada;lista_global;lista_siglas_global.csv/linha 404/INE-4108;;2026-11-25
 Águas de Coimbra, EM;AGUAS-DE-COIMBRA;;empregadores;documentada;lista_global;lista_siglas_global.csv/linha 405/CRL-0349;;2026-11-25
@@ -552,7 +550,7 @@ SINDICATO DOS AGENTES TÉCNICOS AGRÍCOLAS;AGENTESTECNICOS;1.260;trabalhadores;d
 ASSOCIAÇÃO DOS INDÚSTRIAIS DE SABÕES, DETERGENTES E PRODUTOS DE CONSERVAÇÃO E LIMPEZA;AISDPCL;5.40;empregadores;documentada;lista_global;lista_siglas_global.csv/linha 476/DGERT-5.40;;2026-11-25
 AISDPCL;AISDPCL;5.40;empregadores;documentada;lista_global_rotulo;lista_siglas_global.csv/linha 476/DGERT-5.40/rótulo CRL;;2026-11-25
 ASSOCIAÇÃO DOS INDÚSTRIAIS DE TERRAPLANAGENS DO BAIXO ALENTEJO;AIT;5.27;empregadores;documentada;lista_global;lista_siglas_global.csv/linha 477/DGERT-5.27;;2026-11-25
-ASSOCIAÇÃO DOS INDÚSTRIAIS DE TOMATE;AIT-LISBOA;5.619;empregadores;documentada;lista_global;lista_siglas_global.csv/linha 478/DGERT-5.619;;2026-11-25
+ASSOCIAÇÃO DOS INDÚSTRIAIS DE TOMATE;AIT-LISBOA;5.619;empregadores;ambigua;lista_global;lista_siglas_global.csv/linha 478/DGERT-5.619;;2026-11-25
 Águas de Gaia, EM, SA;AGUAS-DE-GAIA;;empregadores;documentada;lista_global;lista_siglas_global.csv/linha 479/CRL-0351;;2026-11-25
 Águas de Gaia;AGUAS-DE-GAIA;;empregadores;documentada;lista_global_rotulo;lista_siglas_global.csv/linha 479/CRL-0351/rótulo CRL;;2026-11-25
 Águas do Norte;AGUAS-DO-NORTE;;empregadores;documentada;lista_global;lista_siglas_global.csv/linha 480/CRL-0352;;2026-11-25
@@ -560,7 +558,7 @@ ASSOCIAÇÃO DOS INDÚSTRIAIS TRANSFORMADORES DE VIDRO PLANO DE PORTUGAL;AITVPP;
 AITVPP;AITVPP;5.261;empregadores;documentada;lista_global_rotulo;lista_siglas_global.csv/linha 481/DGERT-5.261/rótulo CRL;;2026-11-25
 SINDICATO DOS TRABALHADORES AGRÍCOLAS DO MINHO;AGRICOLASMINHO;1.305;trabalhadores;documentada;lista_global;lista_siglas_global.csv/linha 482/DGERT-1.305;;2026-11-25
 SINDICATO DOS TRABALHADORES AGRÍCOLAS, PECUÁRIA E SILVICULTURA;AGRICOLASPECUARIA;1.246;trabalhadores;documentada;lista_global;lista_siglas_global.csv/linha 483/DGERT-1.246;;2026-11-25
-FEDERAÇAO DOS SINDICATOS DOS TRABALHADORES AGRÍCOLAS DO SUL;AGRICOLASSUL;2.24;trabalhadores;documentada;lista_global;lista_siglas_global.csv/linha 484/DGERT-2.24;;2026-11-25
+FEDERAÇAO DOS SINDICATOS DOS TRABALHADORES AGRÍCOLAS DO SUL;AGRICOLASSUL;2.24;trabalhadores;ambigua;lista_global;lista_siglas_global.csv/linha 484/DGERT-2.24;;2026-11-25
 SINDICATO DOS TRABALHADORES DA AGRICULTURA DO DISTRITO DE PORTALEGRE;AGRICULTURADISTRITO;1.97;trabalhadores;documentada;lista_global;lista_siglas_global.csv/linha 485/DGERT-1.97;;2026-11-25
 SINDICATO DOS TRABALHADORES DE ALFAIATARIA, COSTURA E SIMILARES DE VISEU;ALFAIATARIACOSTURA;1.69;trabalhadores;documentada;lista_global;lista_siglas_global.csv/linha 486/DGERT-1.69;;2026-11-25
 UNIÃO DOS SINDICATOS DA AMADORA;AMADORA;3.25;trabalhadores;documentada;lista_global;lista_siglas_global.csv/linha 487/DGERT-3.25;;2026-11-25
@@ -607,7 +605,7 @@ ASSOCIAÇÃO NORDESTE AGRÁRIA;ANA;5.400;empregadores;documentada;lista_global;l
 ANA;ANA;5.400;empregadores;documentada;lista_global_rotulo;lista_siglas_global.csv/linha 524/DGERT-5.400/rótulo CRL;;2026-11-25
 ASSOCIAÇÃO NACIONAL DE CARDIOLOGISTAS;ANACARD;5.523;empregadores;documentada;lista_global;lista_siglas_global.csv/linha 525/DGERT-5.523;;2026-11-25
 ASSOCIAÇÃO NACIONAL DE COMERCIANTES DE PRODUTOS ALIMENTARES;ANACPA;5.491;empregadores;documentada;lista_global;lista_siglas_global.csv/linha 526/DGERT-5.491;;2026-11-25
-ASSOCIAÇÃO NACIONAL DE AGENTES E CORRETORES DE SEGUROS;ANACS;5.477;empregadores;documentada;lista_global;lista_siglas_global.csv/linha 527/DGERT-5.477;;2026-11-25
+ASSOCIAÇÃO NACIONAL DE AGENTES E CORRETORES DE SEGUROS;ANACS;5.477;empregadores;ambigua;lista_global;lista_siglas_global.csv/linha 527/DGERT-5.477;;2026-11-25
 ASSOCIAÇÃO NACIONAL DE CENTROS DE DIÁLISE;ANADIAL;5.385;empregadores;documentada;lista_global;lista_siglas_global.csv/linha 528/DGERT-5.385;;2026-11-25
 ASSOCIAÇÃO NACIONAL DAS AGÊNCIAS DE INFORMAÇÃO AUTOMOBILISTICA;ANAIA;5.381;empregadores;documentada;lista_global;lista_siglas_global.csv/linha 529/DGERT-5.381;;2026-11-25
 AIEL - Associação para a Inovação e Empreendedorismo de Lisboa;AIEL;;administração pública;documentada;lista_global;lista_siglas_global.csv/linha 530/INE-4119;;2026-11-25
@@ -934,7 +932,7 @@ APEQ;APQUIMICA;5.86;empregadores;documentada;lista_global_rotulo;lista_siglas_gl
 APQuímica;APQUIMICA;5.86;empregadores;documentada;lista_global_rotulo;lista_siglas_global.csv/linha 791/DGERT-5.86/rótulo CRL;;2026-11-25
 ASSOCIAÇÃO PORTUGUESA DE RADIODIFUSÃO;APR;5.502;empregadores;documentada;lista_global;lista_siglas_global.csv/linha 792/DGERT-5.502;;2026-11-25
 ASSOCIAÇÃO DOS PRODUTORES/REALIZADORES DE FILMES PUBLICITÁRIOS;APRFP;5.399;empregadores;documentada;lista_global;lista_siglas_global.csv/linha 793/DGERT-5.399;;2026-11-25
-ASSOCIAÇÃO NACIONAL DE AGENTES E CORRETORES DE SEGUROS;APROSE;5.273;empregadores;documentada;lista_global;lista_siglas_global.csv/linha 794/DGERT-5.273;;2026-11-25
+ASSOCIAÇÃO NACIONAL DE AGENTES E CORRETORES DE SEGUROS;APROSE;5.273;empregadores;ambigua;lista_global;lista_siglas_global.csv/linha 794/DGERT-5.273;;2026-11-25
 APROSE;APROSE;5.273;empregadores;documentada;lista_global_rotulo;lista_siglas_global.csv/linha 794/DGERT-5.273/rótulo CRL;;2026-11-25
 APROSE Corretores.Seguros;APROSE;5.273;empregadores;documentada;lista_global_rotulo;lista_siglas_global.csv/linha 794/DGERT-5.273/rótulo CRL;;2026-11-25
 ASSOCIAÇÃO PORTUGUESA DE SUINICULTORES;APS;5.295;empregadores;documentada;lista_global;lista_siglas_global.csv/linha 795/DGERT-5.295;;2026-11-25
@@ -1638,7 +1636,7 @@ FEDERAÇAO NACIONAL DOS SINDICATOS DA CONSTRUÇÃO CIVIL;CONSTRUCAOCIVIL2171;2.1
 FEDERAÇÃO EMPRESARIAL PARA O PEQUENO COMÉRCIO E SERVIÇOS PORTUGUES;FEP;6.29;empregadores;documentada;lista_global;lista_siglas_global.csv/linha 1426/DGERT-6.29;;2026-11-25
 FEDERAÇÃO PORTUGUESA DA INDÚSTRIA DA CONSTRUÇÃO E OBRAS PÚBLICAS;FEPICOP;6.20;empregadores;documentada;lista_global;lista_siglas_global.csv/linha 1427/DGERT-6.20;;2026-11-25
 FEDERAÇÃO DA RESTAURAÇÃO, CAFÉS, PASTELARIAS E SIMILARES DE PORTUGAL;FERECA;6.22;empregadores;documentada;lista_global;lista_siglas_global.csv/linha 1428/DGERT-6.22;;2026-11-25
-SINDICATO DOS TRABALHADORES DA CONSTRUÇÃO, MADEIRAS E MÁRMORES DO DISTRITO DE SANTARÉM;CONSTRUCAOMADEIRAS;1.67;trabalhadores;documentada;lista_global;lista_siglas_global.csv/linha 1429/DGERT-1.67;;2026-11-25
+SINDICATO DOS TRABALHADORES DA CONSTRUÇÃO, MADEIRAS E MÁRMORES DO DISTRITO DE SANTARÉM;CONSTRUCAOMADEIRAS;1.67;trabalhadores;ambigua;lista_global;lista_siglas_global.csv/linha 1429/DGERT-1.67;;2026-11-25
 SINDICATO DOS TRABALHADORES DA CONSTRUÇÃO, MÁRMORES, MADEIRAS E MATERIAIS DE CONSTRUÇÃO DO SUL;CONSTRUCAOMARMORES;1.287;trabalhadores;documentada;lista_global;lista_siglas_global.csv/linha 1430/DGERT-1.287;;2026-11-25
 SINDICATO DOS TRABALHADORES DA CONSTRUÇÃO E REPARAÇÃO NAVAL DOS DISTRITO DE AVEIRO E COIMBRA;CONSTRUCAOREPARACAO;1.80;trabalhadores;documentada;lista_global;lista_siglas_global.csv/linha 1431/DGERT-1.80;;2026-11-25
 Coliseu Micaelense - Sociedade de Promoção e Dinamização de Eventos Culturais, Sociais e Recreativos, S.A.;CMSPDECS;;administração pública;documentada;lista_global;lista_siglas_global.csv/linha 1432/INE-4014;;2026-11-25
@@ -1653,10 +1651,10 @@ Combanima - Espaços Municipais, E.M.;COMBANIMA;;administração pública;docume
 CONVENÇÃO SINDICAL INDEPENDENTE;CSI;4.4;trabalhadores;documentada;lista_global;lista_siglas_global.csv/linha 1439/DGERT-4.4;;2026-11-25
 SINDICATO DOS TRABALHADORES DAS DELEGAÇÕES DO INSTITUTO DO COMÉRCIO EXTERNO PORTUGUÊS NO ESTRANGEIRO;DELEGACOESINSTITUTO;1.364;trabalhadores;documentada;lista_global;lista_siglas_global.csv/linha 1440/DGERT-1.364;;2026-11-25
 SINDICATO DEMOCRATICO DAS INDÚSTRIAS DE PANIFICAÇÃO, ALIMENTARES E AFINS;DEMOCRATICO;1.301;trabalhadores;documentada;lista_global;lista_siglas_global.csv/linha 1441/DGERT-1.301;;2026-11-25
-SINDICATO DOS DESCARREGADORES DE MAR E TERRA DO DISTRITO DE SETÚBAL;DESCARREGADORESMAR;1.95;trabalhadores;documentada;lista_global;lista_siglas_global.csv/linha 1442/DGERT-1.95;;2026-11-25
+SINDICATO DOS DESCARREGADORES DE MAR E TERRA DO DISTRITO DE SETÚBAL;DESCARREGADORESMAR;1.95;trabalhadores;ambigua;lista_global;lista_siglas_global.csv/linha 1442/DGERT-1.95;;2026-11-25
 SINDICATO DISTRITAL DOS TRABALHADORES JUDICIAIS DO DISTRITO JUDICIAL DE COIMBRA;DISTRITALJUDICIAIS;1.314;trabalhadores;documentada;lista_global;lista_siglas_global.csv/linha 1443/DGERT-1.314;;2026-11-25
 SINDICATO DOS TRABALHADORES DO COMÉRCIO E SERVIÇOS (DISTRITO DE SANTARÉM);DISTRITODESANTAREM;1.132;trabalhadores;documentada;lista_global;lista_siglas_global.csv/linha 1444/DGERT-1.132;;2026-11-25
-UNIÃO DOS SINDICATOS DO DISTRITO DE LEIRIA;DISTRITOLEIRIA;3.2;trabalhadores;documentada;lista_global;lista_siglas_global.csv/linha 1445/DGERT-3.2;;2026-11-25
+UNIÃO DOS SINDICATOS DO DISTRITO DE LEIRIA;DISTRITOLEIRIA;3.2;trabalhadores;ambigua;lista_global;lista_siglas_global.csv/linha 1445/DGERT-3.2;;2026-11-25
 SINDICATO DOS ENCARREGADOS E AJUDANTES DE ENCARREGADO DE BIBLIOTECA DE PORTUGAL;ENCARREGADOS;1.358;trabalhadores;documentada;lista_global;lista_siglas_global.csv/linha 1446/DGERT-1.358;;2026-11-25
 SINDICATO DOS ENCARTADOS DE MESTRANÇA DAS PESCAS DE MATOSINHOS, AVEIRO E FIGUEIRA DA FOZ;ENCARTADOSMESTRANCA;1.330;trabalhadores;documentada;lista_global;lista_siglas_global.csv/linha 1447/DGERT-1.330;;2026-11-25
 SINDICATO DOS ENGENHEIROS DO NORTE;ENGENHEIROSNORTE;1.234;trabalhadores;documentada;lista_global;lista_siglas_global.csv/linha 1448/DGERT-1.234;;2026-11-25
@@ -1713,7 +1711,7 @@ Direção Executiva do Serviço Nacional de Saúde, I.P.;DESNS;;administração 
 FEDERAÇÃO PORTUGUESA DE ASSOCIAÇÕES DE SUINICULTORES;FPAS;6.15;empregadores;documentada;lista_global;lista_siglas_global.csv/linha 1491/DGERT-6.15;;2026-11-25
 FEDERAÇÃO PORTUGUESA DO TAXI;FPT;6.17;empregadores;documentada;lista_global;lista_siglas_global.csv/linha 1492/DGERT-6.17;;2026-11-25
 F-PT;FPT;6.17;empregadores;documentada;lista_global_rotulo;lista_siglas_global.csv/linha 1492/DGERT-6.17/rótulo CRL;;2026-11-25
-CONFEDERAÇAO DOS SINDICATOS MARITIMOS E PORTUARIOS;FEDPORMAR;4.10;trabalhadores;documentada;lista_global;lista_siglas_global.csv/linha 1493/DGERT-4.10;;2026-11-25
+CONFEDERAÇAO DOS SINDICATOS MARITIMOS E PORTUARIOS;FEDPORMAR;4.10;trabalhadores;ambigua;lista_global;lista_siglas_global.csv/linha 1493/DGERT-4.10;;2026-11-25
 FEDERAÇAO NACIONAL DO ENSINO E INVESTIGAÇAO;FENEI;2.41;trabalhadores;documentada;lista_global;lista_siglas_global.csv/linha 1494/DGERT-2.41;;2026-11-25
 FEDERAÇÃO NACIONAL DOS SINDICATOS DE POLICIA;FENPOL;2.53;trabalhadores;documentada;lista_global;lista_siglas_global.csv/linha 1495/DGERT-2.53;;2026-11-25
 FEDERAÇÃO PORTUGUESA DOS TRANSPORTADORES RODOVIÁRIOS;FPTR;6.25;empregadores;documentada;lista_global;lista_siglas_global.csv/linha 1496/DGERT-6.25;;2026-11-25
@@ -1977,7 +1975,7 @@ FEDERAÇAO NACIONAL DE SINDICATOS INDEPENDENTES DA ADMINISTRAÇAO PUBLICA E DE E
 FEDERAÇAO DOS SINDICATOS DOS TRABALHADORES DE ESCRITÓRIO E SERVIÇOS;FESINTES;2.2;trabalhadores;documentada;lista_global;lista_siglas_global.csv/linha 1735/DGERT-2.2;;2026-11-25
 FEDERAÇAO DE SINDICATOS DOS TRABALHADORES DO MAR;FESMAR;2.36;trabalhadores;documentada;lista_global;lista_siglas_global.csv/linha 1736/DGERT-2.36;;2026-11-25
 FESMAR;FESMAR;2.36;trabalhadores;documentada;lista_global_rotulo;lista_siglas_global.csv/linha 1736/DGERT-2.36/rótulo CRL;;2026-11-25
-CONFEDERAÇÃO DOS SINDICATOS MARÍTIMOS E PORTUÁRIOS;FESMARPOR;4.8;trabalhadores;documentada;lista_global;lista_siglas_global.csv/linha 1737/DGERT-4.8;;2026-11-25
+CONFEDERAÇÃO DOS SINDICATOS MARÍTIMOS E PORTUÁRIOS;FESMARPOR;4.8;trabalhadores;ambigua;lista_global;lista_siglas_global.csv/linha 1737/DGERT-4.8;;2026-11-25
 FEDERAÇAO DOS SINDICATOS DA POLICIA;FESPOL;2.61;trabalhadores;documentada;lista_global;lista_siglas_global.csv/linha 1738/DGERT-2.61;;2026-11-25
 FEDERAÇAO DOS SINDICATOS DE TRANSPORTES RODOVIÁRIOS E URBANOS/CGTP-IN;FESTRU;2.15;trabalhadores;documentada;lista_global;lista_siglas_global.csv/linha 1739/DGERT-2.15;;2026-11-25
 FESTRU;FESTRU;2.15;trabalhadores;documentada;lista_global_rotulo;lista_siglas_global.csv/linha 1739/DGERT-2.15/rótulo CRL;;2026-11-25
@@ -2009,7 +2007,7 @@ FEDERAÇÃO NACIONAL DOS SINDICATOS DOS TRABALHADORES EM FUNÇÕES PÚBLICAS E S
 FNSTFPS;FNSTFPS;2.25;trabalhadores;documentada;lista_global_rotulo;lista_siglas_global.csv/linha 1756/DGERT-2.25/rótulo CRL;;2026-11-25
 FEDERAÇAO NACIONAL DOS TRANSPORTES, INDÚSTRIA E ENERGIA;FNTIE;2.44;trabalhadores;documentada;lista_global;lista_siglas_global.csv/linha 1757/DGERT-2.44;;2026-11-25
 FEDERAÇAO PORTUGUESA DA EDUCAÇAO, DO ESTADO E DE ENTIDADES COM FINS PUBLICOS;FPE;2.60;trabalhadores;documentada;lista_global;lista_siglas_global.csv/linha 1758/DGERT-2.60;;2026-11-25
-FEDERAÇAO PORTUGUESA DE PROFESSORES;FPP;2.59;trabalhadores;documentada;lista_global;lista_siglas_global.csv/linha 1759/DGERT-2.59;;2026-11-25
+FEDERAÇAO PORTUGUESA DE PROFESSORES;FPP;2.59;trabalhadores;ambigua;lista_global;lista_siglas_global.csv/linha 1759/DGERT-2.59;;2026-11-25
 FEDERAÇAO PORTUGUESA DOS SINDICATO DAS INDÚSTRIAS DE CELULOSE, PAPEL, GRÁFICA E IMPRENSA;FPSICPGI;2.3;trabalhadores;documentada;lista_global;lista_siglas_global.csv/linha 1760/DGERT-2.3;;2026-11-25
 FEDERAÇAO DOS SINDICATOS DE AGRICULTURA, ALIMENTAÇAO, BEBIDAS, HOTELARIA E TURISMO DE PORTUGAL;FSAABHTP;2.58;trabalhadores;documentada;lista_global;lista_siglas_global.csv/linha 1761/DGERT-2.58;;2026-11-25
 FEDERAÇAO DOS SINDICATOS DOS TRABALHADORES DAS INDÚSTRIAS DE ALIMENTAÇÃO, BEBIDAS E TABACOS;FSIABTN;2.29;trabalhadores;documentada;lista_global;lista_siglas_global.csv/linha 1762/DGERT-2.29;;2026-11-25
@@ -2215,9 +2213,7 @@ Vidraria Laboratorial (equipamento de laboratório;NORMAX;;empregadores;document
 NORMAX;NORMAX;;empregadores;documentada;lista_global_rotulo;lista_siglas_global.csv/linha 1942/CRL-0228/rótulo CRL;;2026-11-25
 ASSOCIAÇÃO NACIONAL DOS IMPORTADORES /ARMAZENISTAS E RETALHISTAS DE PRODUTOS QUIMICOS E FARMACÊUTICOS;NORQUIFAR;5.195;empregadores;documentada;lista_global;lista_siglas_global.csv/linha 1943/DGERT-5.195;;2026-11-25
 NORQUIFAR;NORQUIFAR;5.195;empregadores;documentada;lista_global_rotulo;lista_siglas_global.csv/linha 1943/DGERT-5.195/rótulo CRL;;2026-11-25
-Associação Nacional dos Importadores/Armazenistas e Retalhistas de Produtos Químicos e Farmacêuticos;NORQUIFAR-FARM;;empregadores;documentada;lista_global;lista_siglas_global.csv/linha 1944/CRL-0405;;2026-11-25
 NORQUIFAR - Farmacêuticos;NORQUIFAR-FARM;;empregadores;documentada;lista_global_rotulo;lista_siglas_global.csv/linha 1944/CRL-0405/rótulo CRL;;2026-11-25
-Associação Nacional dos Importadores/Armazenistas e Retalhistas de Produtos Químicos e Farmacêuticos;NORQUIFAR-QUIM;;empregadores;documentada;lista_global;lista_siglas_global.csv/linha 1945/CRL-0406;;2026-11-25
 NORQUIFAR - Químicos;NORQUIFAR-QUIM;;empregadores;documentada;lista_global_rotulo;lista_siglas_global.csv/linha 1945/CRL-0406/rótulo CRL;;2026-11-25
 ASSOCIAÇÃO DO NORTE DOS ARMADORES DA PESCA DA SARDINHA;NORTEARMADORESPESCA;5.269;empregadores;documentada;lista_global;lista_siglas_global.csv/linha 1946/DGERT-5.269;;2026-11-25
 OGMA - Indústria Aeronáutica de Portugal, SA;OGMA;;empregadores;documentada;lista_global;lista_siglas_global.csv/linha 1947/CRL-0235;;2026-11-25
@@ -2279,7 +2275,7 @@ SINDICATO DOS TRABALHADORES PORTUÁRIOS DO DOURO E LEIXÕES;PORTUARIOSDOURO;1.47
 SINDICATO DOS TRABALHADORES PORTUÁRIOS DOS PORTOS DE SETÚBAL E SESIMBRA;PORTUARIOSPORTOS;1.45;trabalhadores;documentada;lista_global;lista_siglas_global.csv/linha 1996/DGERT-1.45;;2026-11-25
 SINDICATO DOS TRABALHADORES PORTUÁRIOS DE TRÁFEGO DO NORTE DE PORTUGAL;PORTUARIOSTRAFEGO;1.99;trabalhadores;documentada;lista_global;lista_siglas_global.csv/linha 1997/DGERT-1.99;;2026-11-25
 PROFISSIONAIS DOS REGISTOS ASSOCIAÇÃO SINDICAL;PRAS;1.685;trabalhadores;documentada;lista_global;lista_siglas_global.csv/linha 1998/DGERT-1.685;;2026-11-25
-FEDERAÇÃO PORTUGUESA DE PROFESSORES;PROFESSORES;2.49;trabalhadores;documentada;lista_global;lista_siglas_global.csv/linha 1999/DGERT-2.49;;2026-11-25
+FEDERAÇÃO PORTUGUESA DE PROFESSORES;PROFESSORES;2.49;trabalhadores;ambigua;lista_global;lista_siglas_global.csv/linha 1999/DGERT-2.49;;2026-11-25
 SINDICATO NACIONAL DOS PROFESSORES DO ENSINO SECUNDÁRIO;PROFESSORESENSINO;1.557;trabalhadores;documentada;lista_global;lista_siglas_global.csv/linha 2000/DGERT-1.557;;2026-11-25
 ASSOCIAÇÃO SINDICAL DOS PROFESSORES PRÓ-ORDEM;PROORDEM;1.494;trabalhadores;documentada;lista_global;lista_siglas_global.csv/linha 2001/DGERT-1.494;;2026-11-25
 SINDICATO 2013 DOS TRABALHADORES DOS TERMINAIS PORTUÁRIOS DE AVEIRO;S2013TTPA;1.602;trabalhadores;documentada;lista_global;lista_siglas_global.csv/linha 2002/DGERT-1.602;;2026-11-25
@@ -4855,9 +4851,8 @@ Melsport - Melgaço Desporto e Lazer, E.M.;MELSPORT;;administração pública;do
 UNIÃO EMPRESARIAL DO VALE DO MINHO;UEVM;5.341;empregadores;documentada;lista_global;lista_siglas_global.csv/linha 4529/DGERT-5.341;;2026-11-25
 Metro - Mondego, S.A.;METRO;;administração pública;documentada;lista_global;lista_siglas_global.csv/linha 4530/INE-0170;;2026-11-25
 Metro - Mondego;METRO;;administração pública;documentada;lista_global_rotulo;lista_siglas_global.csv/linha 4530/INE-0170/rótulo CRL;;2026-11-25
-Metropolitano de Lisboa, EPE;METRO-LISBOA;;empregadores;documentada;lista_global;lista_siglas_global.csv/linha 4531/CRL-0220;;2026-11-25
 Metro-Lisboa;METRO-LISBOA;;empregadores;documentada;lista_global_rotulo;lista_siglas_global.csv/linha 4531/CRL-0220/rótulo CRL;;2026-11-25
-UNIÃO DAS INSTITUIÇÕES PARTICULARES DE SOLIDARIEDADE SOCIAL;UIPSS;5.458;empregadores;documentada;lista_global;lista_siglas_global.csv/linha 4532/DGERT-5.458;;2026-11-25
+UNIÃO DAS INSTITUIÇÕES PARTICULARES DE SOLIDARIEDADE SOCIAL;UIPSS;5.458;empregadores;ambigua;lista_global;lista_siglas_global.csv/linha 4532/DGERT-5.458;;2026-11-25
 Matadouro Industrial do Cachão, S.A.;MIC;;administração pública;documentada;lista_global;lista_siglas_global.csv/linha 4533/INE-4069;;2026-11-25
 União das Misericórdias Portuguesas;UMP-MISERICORDIAS;;empregadores;documentada;lista_global;lista_siglas_global.csv/linha 4534/CRL-0333;;2026-11-25
 UMP - União das Misericórdias;UMP-MISERICORDIAS;;empregadores;documentada;lista_global_rotulo;lista_siglas_global.csv/linha 4534/CRL-0333/rótulo CRL;;2026-11-25
@@ -5031,8 +5026,8 @@ SINDICATO INDEPENDENTE DOS CORREIOS DE PORTUGAL;SINCOR;1.533;trabalhadores;docum
 SINCOR;SINCOR;1.533;trabalhadores;documentada;lista_global_rotulo;lista_siglas_global.csv/linha 4668/DGERT-1.533/rótulo CRL;;2026-11-25
 SINDICATO DOS CONTROLADORES DE TRÁFEGO AÉREO;SINCTA;1.383;trabalhadores;documentada;lista_global;lista_siglas_global.csv/linha 4669/DGERT-1.383;;2026-11-25
 SINCTA;SINCTA;1.383;trabalhadores;documentada;lista_global_rotulo;lista_siglas_global.csv/linha 4669/DGERT-1.383/rótulo CRL;;2026-11-25
-Secretaria-Geral da Presidência;SGP;;administração pública;documentada;lista_global;lista_siglas_global.csv/linha 4670/INE-0414;;2026-11-25
-Secretaria Geral da Presidência;SG-PRESIDENC;;administração pública;documentada;lista_global;lista_siglas_global.csv/linha 4671/INE-0483;;2026-11-25
+Secretaria-Geral da Presidência;SGP;;administração pública;ambigua;lista_global;lista_siglas_global.csv/linha 4670/INE-0414;;2026-11-25
+Secretaria Geral da Presidência;SG-PRESIDENC;;administração pública;ambigua;lista_global;lista_siglas_global.csv/linha 4671/INE-0483;;2026-11-25
 SINDICATO DEMOCRÁTICO DOS TRABALHADORES DOS AEROPORTOS E AVIAÇÃO;SINDAV;1.462;trabalhadores;documentada;lista_global;lista_siglas_global.csv/linha 4672/DGERT-1.462;;2026-11-25
 SINDAV;SINDAV;1.462;trabalhadores;documentada;lista_global_rotulo;lista_siglas_global.csv/linha 4672/DGERT-1.462/rótulo CRL;;2026-11-25
 PJCSC - Pousada da Juventude da Caldeira do Santo Cristo, Lda.;PJCSC;;administração pública;documentada;lista_global;lista_siglas_global.csv/linha 4673/INE-0555;;2026-11-25
@@ -5189,8 +5184,8 @@ SINDICATO LIVRE DOS PROFISSIONAIS DE ODONTOLOGIA;SLIPO;1.425;trabalhadores;docum
 SINDICATO NACIONAL DOS MAQUINISTAS DOS CAMINHOS DE FERRO PORTUGUESES;SMAQ;1.344;trabalhadores;documentada;lista_global;lista_siglas_global.csv/linha 4784/DGERT-1.344;;2026-11-25
 SMAQ;SMAQ;1.344;trabalhadores;documentada;lista_global_rotulo;lista_siglas_global.csv/linha 4784/DGERT-1.344/rótulo CRL;;2026-11-25
 SINDICATO DOS MEIOS AUDIOVISUAIS;SMAV;1.440;trabalhadores;documentada;lista_global;lista_siglas_global.csv/linha 4785/DGERT-1.440;;2026-11-25
-SINDICATO DOS MÉDICOS DENTISTAS;SMD;1.596;trabalhadores;documentada;lista_global;lista_siglas_global.csv/linha 4786/DGERT-1.596;;2026-11-25
-SINDICATO DOS MÉDICOS DENTISTAS;SM-DENTIST;1.664;trabalhadores;documentada;lista_global;lista_siglas_global.csv/linha 4787/DGERT-1.664;;2026-11-25
+SINDICATO DOS MÉDICOS DENTISTAS;SMD;1.596;trabalhadores;ambigua;lista_global;lista_siglas_global.csv/linha 4786/DGERT-1.596;;2026-11-25
+SINDICATO DOS MÉDICOS DENTISTAS;SM-DENTIST;1.664;trabalhadores;ambigua;lista_global;lista_siglas_global.csv/linha 4787/DGERT-1.664;;2026-11-25
 SINDICATO DOS MÉDICOS DENTISTAS DO SETOR PÚBLICO E SOCIAL PORTUGUÊS;SMDSP;1.690;trabalhadores;documentada;lista_global;lista_siglas_global.csv/linha 4788/DGERT-1.690;;2026-11-25
 SINDICATO DA MESTRANÇA E MARINHAGEM DE CAMARAS DA MARINHA MERCANTE;SMMCMM;1.228;trabalhadores;documentada;lista_global;lista_siglas_global.csv/linha 4789/DGERT-1.228;;2026-11-25
 SINDICATO DOS MAGISTRADOS DO MINISTÉRIO PÚBLICO;SMMP-MAGIST;1.352;trabalhadores;documentada;lista_global;lista_siglas_global.csv/linha 4790/DGERT-1.352;;2026-11-25
@@ -5343,7 +5338,7 @@ SINDICATO DOS TRABALHADORES DAS INDÚSTRIAS DE CERÂMICA, CIMENTOS E SIMILARES, 
 SINDICATO DOS TRABALHADORES DA CONSTRUÇÃO CIVIL E OFÍCIOS CORRELATIVOS DO DISTRITO DE LEIRIA;STCCOCDL;1.297;trabalhadores;documentada;lista_global;lista_siglas_global.csv/linha 4912/DGERT-1.297;;2026-11-25
 SINDICATO DOS TRABALHADORES CONSULARES, DAS MISSÕES DIPLOMÁTICAS E DOS SERVIÇOS CENTRAIS DO MINISTERIO DOS NEGOCIOS ESTRANGEIROS;STCDE;1.329;trabalhadores;documentada;lista_global;lista_siglas_global.csv/linha 4913/DGERT-1.329;;2026-11-25
 SINDICATO DOS TRABALHADORES DA CONSTRUÇÃO, MADEIRAS, MÁRMORES E CORTIÇAS DO SUL;STCMMDL;1.194;trabalhadores;documentada;lista_global;lista_siglas_global.csv/linha 4914/DGERT-1.194;;2026-11-25
-SINDICATO DOS TRABALHADORES DA CONSTRUÇÃO, MADEIRAS E MÁRMORES DO DISTRITO DE SANTARÉM;STCMMDS;1.416;trabalhadores;documentada;lista_global;lista_siglas_global.csv/linha 4915/DGERT-1.416;;2026-11-25
+SINDICATO DOS TRABALHADORES DA CONSTRUÇÃO, MADEIRAS E MÁRMORES DO DISTRITO DE SANTARÉM;STCMMDS;1.416;trabalhadores;ambigua;lista_global;lista_siglas_global.csv/linha 4915/DGERT-1.416;;2026-11-25
 SINDICATO DOS TRABALHADORES DA CONSTRUÇÃO, MADEIRAS, MÁRMORES, PEDREIRAS, CERÂMICA E AFINS, DA REGIÃO A NORTE DO RIO DOURO;STCMMPCA;1.389;trabalhadores;documentada;lista_global;lista_siglas_global.csv/linha 4916/DGERT-1.389;;2026-11-25
 SINDICATO DOS TRABALHADORES DA CONSTRUÇÃO, MADEIRAS, MÁRMORES, PEDREIRAS, CERÂMICA E MATERIAIS DE CONSTRUÇÃO DE PORTUGAL;STCMMPCM;1.342;trabalhadores;documentada;lista_global;lista_siglas_global.csv/linha 4917/DGERT-1.342;;2026-11-25
 SINDICATO DOS TRANSPORTES RODOVIÁRIOS DO DISTRITO DE SETÚBAL;STDS;1.16;trabalhadores;documentada;lista_global;lista_siglas_global.csv/linha 4918/DGERT-1.16;;2026-11-25
@@ -6259,7 +6254,7 @@ UNIÃO DOS SINDICATOS DE BRAGANÇA (U.S. BRAGANÇA;US-BRAGANCA;3.30;trabalhadore
 UNIÃO DOS SINDICATOS DE COIMBRA/CONFEDERAÇÃO GERAL DOS TRABALHADORES PORTUGUESES-INTERSINDICAL NACIONAL;USC;3.8;trabalhadores;documentada;lista_global;lista_siglas_global.csv/linha 5790/DGERT-3.8;;2026-11-25
 UNIÃO DOS SINDICATOS DE CASTELO BRANCO / CGTP-IN;USCBN;3.31;trabalhadores;documentada;lista_global;lista_siglas_global.csv/linha 5791/DGERT-3.31;;2026-11-25
 UNIÃO DOS SINDICATOS DO DISTRITO DE ÉVORA;USDEN;3.33;trabalhadores;documentada;lista_global;lista_siglas_global.csv/linha 5792/DGERT-3.33;;2026-11-25
-UNIÃO DOS SINDICATOS DO DISTRITO DE LEIRIA;USDL;3.41;trabalhadores;documentada;lista_global;lista_siglas_global.csv/linha 5793/DGERT-3.41;;2026-11-25
+UNIÃO DOS SINDICATOS DO DISTRITO DE LEIRIA;USDL;3.41;trabalhadores;ambigua;lista_global;lista_siglas_global.csv/linha 5793/DGERT-3.41;;2026-11-25
 UNIÃO DOS SINDICATOS DA FIGUEIRA DA FOZ;USFFN;3.37;trabalhadores;documentada;lista_global;lista_siglas_global.csv/linha 5794/DGERT-3.37;;2026-11-25
 UNIÃO SINDICAL CONCELHIA DE FELGUEIRAS/CGTP/IN;USFN;3.36;trabalhadores;documentada;lista_global;lista_siglas_global.csv/linha 5795/DGERT-3.36;;2026-11-25
 UNIÃO DOS SINDICATOS DA GUARDA/CGTP-IN;USGN;3.16;trabalhadores;documentada;lista_global;lista_siglas_global.csv/linha 5796/DGERT-3.16;;2026-11-25
@@ -6566,7 +6561,6 @@ Troiaverde - Exploração Hoteleira e Imobiliária, SA;TROIAVERDE;;empregadores;
 TroiaVerde;TROIAVERDE;;empregadores;documentada;lista_global_rotulo;lista_siglas_global.csv/linha 5981/CRL-0329/rótulo CRL;;2026-11-25
 T.S.T. - Transportes Sul do Tejo, SA;TST;;empregadores;documentada;lista_global;lista_siglas_global.csv/linha 5982/CRL-0314;;2026-11-25
 T.S.T. - Transp.Sul.Tejo;TST;;empregadores;documentada;lista_global_rotulo;lista_siglas_global.csv/linha 5982/CRL-0314/rótulo CRL;;2026-11-25
-União Empresarial do Vale do Minho;UE-VALE-DO-MINHO;;empregadores;documentada;lista_global;lista_siglas_global.csv/linha 5983/CRL-0330;;2026-11-25
 UE - Vale do Minho;UE-VALE-DO-MINHO;;empregadores;documentada;lista_global_rotulo;lista_siglas_global.csv/linha 5983/CRL-0330/rótulo CRL;;2026-11-25
 Universidade de Aveiro;UNIVERSIDADE-DE-AVEIRO;;empregadores;documentada;lista_global;lista_siglas_global.csv/linha 5984/CRL-0336;;2026-11-25
 UPS of Portugal - Transportes Internacionais de Mercadorias, Sociedade Unipessoal L.da;UPS-OF-PORTUGAL;;empregadores;documentada;lista_global;lista_siglas_global.csv/linha 5985/CRL-0335;;2026-11-25
@@ -6589,9 +6583,7 @@ Associação dos Distribuidores de Produtos Alimentares (ADIPA) - Grossistas;ADI
 ADIPA (Grossistas);ADIPA-GROS;;empregadores;documentada;lista_global_rotulo;lista_siglas_global.csv/linha 5993/CRL-0376/rótulo CRL;;2026-11-25
 Associação dos Distribuidores de Produtos Alimentares (ADIPA) - Retalhistas;ADIPA-RETA;;empregadores;documentada;lista_global;lista_siglas_global.csv/linha 5994/CRL-0377;;2026-11-25
 ADIPA (Retalhistas);ADIPA-RETA;;empregadores;documentada;lista_global_rotulo;lista_siglas_global.csv/linha 5994/CRL-0377/rótulo CRL;;2026-11-25
-Associação Empresarial de Baião;AE-BAIAO;;empregadores;documentada;lista_global;lista_siglas_global.csv/linha 5995/CRL-0021;;2026-11-25
 AE - Baião;AE-BAIAO;;empregadores;documentada;lista_global_rotulo;lista_siglas_global.csv/linha 5995/CRL-0021/rótulo CRL;;2026-11-25
-Associação Empresarial de Felgueiras;AE-FELGUEIRAS;;empregadores;documentada;lista_global;lista_siglas_global.csv/linha 5996/CRL-0022;;2026-11-25
 AE - Felgueiras;AE-FELGUEIRAS;;empregadores;documentada;lista_global_rotulo;lista_siglas_global.csv/linha 5996/CRL-0022/rótulo CRL;;2026-11-25
 Associação Empresarial de Gondomar;AE-GONDOMAR;;empregadores;documentada;lista_global;lista_siglas_global.csv/linha 5997/CRL-0023;;2026-11-25
 AE - Gondomar;AE-GONDOMAR;;empregadores;documentada;lista_global_rotulo;lista_siglas_global.csv/linha 5997/CRL-0023/rótulo CRL;;2026-11-25
@@ -6601,13 +6593,9 @@ Associação Empresarial de Matosinhos;AE-MATOSINHOS;;empregadores;documentada;l
 AE - Matosinhos;AE-MATOSINHOS;;empregadores;documentada;lista_global_rotulo;lista_siglas_global.csv/linha 5999/CRL-0025/rótulo CRL;;2026-11-25
 Associação para o Ensino Bento de Jesus Caraça;A-ENSINO-BENTO-J-CARACA;;empregadores;documentada;lista_global;lista_siglas_global.csv/linha 6000/CRL-0004;;2026-11-25
 A. ENSINO BENTO J. CARAÇA;A-ENSINO-BENTO-J-CARACA;;empregadores;documentada;lista_global_rotulo;lista_siglas_global.csv/linha 6000/CRL-0004/rótulo CRL;;2026-11-25
-Associação Empresarial de Paços de Ferreira;AE-PACOS-DE-FERREIRA;;empregadores;documentada;lista_global;lista_siglas_global.csv/linha 6001/CRL-0027;;2026-11-25
 AE - Paços de Ferreira;AE-PACOS-DE-FERREIRA;;empregadores;documentada;lista_global_rotulo;lista_siglas_global.csv/linha 6001/CRL-0027/rótulo CRL;;2026-11-25
-Associação Empresarial de Paredes;AE-PAREDES;;empregadores;documentada;lista_global;lista_siglas_global.csv/linha 6002/CRL-0026;;2026-11-25
 AE - Paredes;AE-PAREDES;;empregadores;documentada;lista_global_rotulo;lista_siglas_global.csv/linha 6002/CRL-0026/rótulo CRL;;2026-11-25
-Associação Empresarial de Penafiel;AE-PENAFIEL;;empregadores;documentada;lista_global;lista_siglas_global.csv/linha 6003/CRL-0028;;2026-11-25
 AE - Penafiel;AE-PENAFIEL;;empregadores;documentada;lista_global_rotulo;lista_siglas_global.csv/linha 6003/CRL-0028/rótulo CRL;;2026-11-25
-Associação Empresarial de Ponte de Lima;AE-PONTE-DE-LIMA;;empregadores;documentada;lista_global;lista_siglas_global.csv/linha 6004/CRL-0029;;2026-11-25
 AE - Ponte de Lima;AE-PONTE-DE-LIMA;;empregadores;documentada;lista_global_rotulo;lista_siglas_global.csv/linha 6004/CRL-0029/rótulo CRL;;2026-11-25
 Associação Empresarial de Póvoa do Varzim;AE-POVOA-DO-VARZIM;;empregadores;documentada;lista_global;lista_siglas_global.csv/linha 6005/CRL-0030;;2026-11-25
 AE - Póvoa do Varzim;AE-POVOA-DO-VARZIM;;empregadores;documentada;lista_global_rotulo;lista_siglas_global.csv/linha 6005/CRL-0030/rótulo CRL;;2026-11-25

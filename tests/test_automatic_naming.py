@@ -27,15 +27,9 @@ def test_supplied_index_organizes_all_documents_without_confirmation(tmp_path):
     workspace = initialize(tmp_path / "RNC")
     table = nomeacao.tabela_de_siglas(equipa=workspace / "0_gestao/vocabularios/siglas.csv")
     results = execute_records(registry, workspace, table, apply=True)
-    # A lista_siglas_global tem «Metropolitano de Lisboa, EPE» em duas entidades
-    # com siglas diferentes (ML e METROLISBOA). Siglas contraditórias bloqueiam a
-    # nomeação: este documento fica por confirmar até a lista ser corrigida.
-    pendentes = [r for r in results if r["estado"] != "nomeado"]
-    assert [(r["chave"], r["estado"]) for r in pendentes] == [("2026/6/01650220", "por_confirmar")]
-    assert "Metropolitano de Lisboa, EPE" in pendentes[0]["motivo"]
-    assert Counter(r["estado"] for r in results) == {"nomeado": 410, "por_confirmar": 1}
+    assert Counter(r["estado"] for r in results) == {"nomeado": 411}
     files = list((workspace / "1_fontes/irct").rglob("*.pdf"))
-    assert len(files) == 410
+    assert len(files) == 411
     assert all(sha256_ficheiro(p) == sha256_ficheiro(source) for p in files)
     assert all(len(p.stem) <= 63 for p in files)
     assert len(list((workspace / "1_fontes/irct/convencoes/APU").glob("*.pdf"))) == 55
@@ -55,8 +49,8 @@ def test_supplied_index_organizes_all_documents_without_confirmation(tmp_path):
     assert "_0457-2025-1_" in portaria["nome_canonico"]
     names_before = {e["chave"]: e.get("nomeacao", {}).get("nome") for e in entries}
     repeated = execute_records(registry, workspace, table, apply=True)
-    assert Counter(r["estado"] for r in repeated) == {"nomeado": 410, "por_confirmar": 1}
-    assert len(list((workspace / "1_fontes/irct").rglob("*.pdf"))) == 410
+    assert Counter(r["estado"] for r in repeated) == {"nomeado": 411}
+    assert len(list((workspace / "1_fontes/irct").rglob("*.pdf"))) == 411
     assert names_before == {e["chave"]: e.get("nomeacao", {}).get("nome") for e in entries}
 
 

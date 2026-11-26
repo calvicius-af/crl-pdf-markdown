@@ -6,11 +6,11 @@
     }
   ],
   "gerado_por": "scripts/gerar_siglas_da_lista_global.py",
-  "linhas": 6778,
+  "linhas": 6766,
   "estados": {
-    "ambigua": 2,
-    "documentada": 6602,
-    "por_confirmar": 174
+    "ambigua": 26,
+    "documentada": 6571,
+    "por_confirmar": 169
   },
-  "sha256_saida": "b354592210c5a3d370bd3fdfc6cc34abf54d5c938f82b1f8f50b33cd599687cd"
+  "sha256_saida": "c2f3376cb43e3355ae52919cf49082541574caa2ba7580c967e2f663d803ba2b"
 }

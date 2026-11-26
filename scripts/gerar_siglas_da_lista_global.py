@@ -28,7 +28,7 @@ import json
 from collections import defaultdict
 from pathlib import Path
 
-from crl_markdown.nomeacao import chave_entidade, normalizar_sigla
+from crl_markdown.nomeacao import chave_entidade, chave_grafia, normalizar_sigla
 
 OBRIGATORIAS = ("sigla", "nome", "fonte", "codigo_origem", "id_entidade", "lado",
                 "rotulos_crl", "revisao", "data_atualizacao")
@@ -36,6 +36,17 @@ SAIDA = ("nome", "sigla", "codigo_dgert", "lado", "estado", "origem_sigla", "fon
          "responsavel", "data")
 ORIGEM = "lista_global"
 ORIGEM_ROTULO = "lista_global_rotulo"
+# Prioridade quando o mesmo nome tem siglas diferentes (decisão de 2026-11-26):
+# primeiro a DGERT, depois o INE, por fim o CRL.
+PRIORIDADE = (("Organização (DGERT)", 0, "DGERT"), ("Administração pública", 1, "INE"),
+              ("Empregador (CRL", 2, "CRL"), ("Sindicato (CRL", 2, "CRL"))
+
+
+def nivel(fonte: str) -> tuple[int, str]:
+    for prefixo, valor, nome in PRIORIDADE:
+        if (fonte or "").startswith(prefixo):
+            return valor, nome
+    return 9, fonte or "?"
 
 
 def ler_lista(caminho: Path) -> list[dict]:
@@ -65,6 +76,7 @@ def converter(linhas: list[dict], nome_fonte: str = "lista_siglas_global.csv"):
             "responsavel": "",
             "data": (linha["data_atualizacao"] or "").strip(),
             "_entidade": (linha["id_entidade"] or "").strip() or f"linha-{n}",
+            "_nivel": nivel(linha["fonte"]),
         }
         fonte = f"{nome_fonte}/linha {n}/{base['_entidade']}"
         saida.append({**base, "nome": nome, "origem_sigla": ORIGEM, "fonte": fonte})
@@ -74,6 +86,30 @@ def converter(linhas: list[dict], nome_fonte: str = "lista_siglas_global.csv"):
                 saida.append({**base, "nome": rotulo, "origem_sigla": ORIGEM_ROTULO,
                               "fonte": f"{fonte}/rótulo CRL"})
 
+    # 1. Mesmo nome com siglas diferentes em fontes diferentes: fica a da fonte
+    #    com prioridade; as outras linhas desse nome saem. Os nomes só do INE
+    #    (freguesias e municípios) são tratados no passo 2, pela grafia.
+    por_chave = defaultdict(list)
+    for linha in saida:
+        por_chave[chave_entidade(linha["nome"])].append(linha)
+    preteridas = []
+    retirar = set()
+    for grupo in por_chave.values():
+        if len({normalizar_sigla(g["sigla"]) for g in grupo}) < 2:
+            continue
+        if {g["_nivel"][1] for g in grupo} == {"INE"}:
+            continue
+        melhor = min(g["_nivel"][0] for g in grupo)
+        vencedoras = [g for g in grupo if g["_nivel"][0] == melhor]
+        for g in grupo:
+            if g["_nivel"][0] != melhor:
+                retirar.add(id(g))
+                preteridas.append({"nome": g["nome"], "sigla": g["sigla"], "entidade": g["_entidade"],
+                                   "fonte": g["_nivel"][1],
+                                   "fica": sorted({v["sigla"] for v in vencedoras}),
+                                   "fica_fonte": vencedoras[0]["_nivel"][1]})
+    saida = [linha for linha in saida if id(linha) not in retirar]
+
     por_sigla = defaultdict(set)
     for linha in saida:
         por_sigla[normalizar_sigla(linha["sigla"]).casefold()].add(linha["_entidade"])
@@ -82,10 +118,31 @@ def converter(linhas: list[dict], nome_fonte: str = "lista_siglas_global.csv"):
         if normalizar_sigla(linha["sigla"]).casefold() in colisoes:
             linha["estado"] = "ambigua"
 
-    por_nome = defaultdict(set)
+    # 2. Freguesias e outras entidades do INE cujos nomes só diferem num acento
+    #    ou num espaço (Lousa e Lousã) são entidades diferentes: a nomeação
+    #    distingue-as pela grafia exata.
+    #    O que sobra são nomes com siglas diferentes na mesma fonte.
+    por_nome = defaultdict(lambda: defaultdict(set))
     for linha in saida:
-        por_nome[chave_entidade(linha["nome"])].add(normalizar_sigla(linha["sigla"]))
-    nomes_contraditorios = {k: sorted(v) for k, v in por_nome.items() if len(v) > 1}
+        por_nome[chave_entidade(linha["nome"])][chave_grafia(linha["nome"])].add(
+            normalizar_sigla(linha["sigla"]))
+    distinguidas, nomes_contraditorios = {}, {}
+    for chave, grafias in por_nome.items():
+        siglas = set().union(*grafias.values())
+        if len(siglas) < 2:
+            continue
+        fontes = {linha["_nivel"][1] for linha in saida if chave_entidade(linha["nome"]) == chave}
+        if (fontes == {"INE"} and len(grafias) == len(siglas)
+                and all(len(v) == 1 for v in grafias.values())):
+            distinguidas[chave] = {g: next(iter(v)) for g, v in sorted(grafias.items())}
+        else:
+            nomes_contraditorios[chave] = sorted(siglas)
+    # Só os topónimos da administração pública se distinguem pela grafia. Nas
+    # organizações, uma diferença de acento é um erro de registo: o conflito
+    # fica «ambigua» e a nomeação não escolhe.
+    for linha in saida:
+        if chave_entidade(linha["nome"]) in nomes_contraditorios:
+            linha["estado"] = "ambigua"
 
     relatorio = {
         "entidades": len({linha["_entidade"] for linha in saida}),
@@ -94,6 +151,8 @@ def converter(linhas: list[dict], nome_fonte: str = "lista_siglas_global.csv"):
         "por_estado": dict(sorted(_contar(saida, "estado").items())),
         "colisoes_de_sigla": colisoes,
         "nomes_com_siglas_diferentes": nomes_contraditorios,
+        "distinguidas_por_grafia": distinguidas,
+        "preteridas_por_prioridade": preteridas,
     }
     return [{k: linha[k] for k in SAIDA} for linha in saida], relatorio
 
@@ -137,7 +196,14 @@ def texto_relatorio(r: dict) -> str:
     ]
     for sigla, entidades in sorted(r["colisoes_de_sigla"].items())[:20]:
         linhas.append(f"  {sigla}: {', '.join(entidades)}")
-    linhas.append(f"Nomes com siglas diferentes: {len(r['nomes_com_siglas_diferentes'])}.")
+    linhas.append(f"Linhas retiradas pela prioridade DGERT, INE, CRL: {len(r['preteridas_por_prioridade'])}.")
+    for p in r["preteridas_por_prioridade"][:20]:
+        linhas.append(f"  {p['nome']}: {p['sigla']} ({p['fonte']}) dá lugar a "
+                      f"{', '.join(p['fica'])} ({p['fica_fonte']})")
+    linhas.append(f"Nomes distinguidos pela grafia: {len(r['distinguidas_por_grafia'])}.")
+    for chave, grafias in sorted(r["distinguidas_por_grafia"].items()):
+        linhas.append(f"  {' / '.join(f'{g} = {s}' for g, s in grafias.items())}")
+    linhas.append(f"Nomes com siglas diferentes por resolver: {len(r['nomes_com_siglas_diferentes'])}.")
     for nome, siglas in sorted(r["nomes_com_siglas_diferentes"].items())[:20]:
         linhas.append(f"  {nome}: {', '.join(siglas)}")
     return "\n".join(linhas)

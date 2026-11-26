@@ -415,6 +415,13 @@ b) a lista nova fica como fonte única, e `siglas.csv` passa a ser gerado a part
 `vocabularios/README.md`). No índice de 2026, os documentos com outorgantes cujas duas
 siglas escolhidas se resolvem sem aviso passam de 122 para 244 em 286.
 
+**Conflitos da lista (decisão de 2026-11-26).** Nomes iguais em fontes diferentes ficam com
+a sigla da DGERT, depois do INE, por fim do CRL (12 linhas). Freguesias cujos nomes só
+diferem num acento ou num espaço coexistem, confirmadas na CAOP 2024.1 (Lousa e Lousã,
+Mosteiro e Mosteirô, Paçó e Paçô, Tabua e Tábua, Travassos e Travassós). Ficam por
+resolver 12 nomes com duas siglas na mesma fonte e a colisão `JF-AGUALONGA` /
+`JF-AGUA-LONGA`, que a nomeação lê como `JFAGUALONGA`.
+
 Em qualquer dos casos, as siglas dos nomes já atribuídos ao corpus até 2025 não mudam
 (ADR-0021). Para o corpus de 2026, a mudança tem de acontecer antes de começar a
 codificação no MAXQDA (ADR-0022, transição).
