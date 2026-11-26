@@ -5,7 +5,43 @@ As regras sobre avisos públicos (ACEP/ACCE), deliberações e cessações estã
 com um [vocabulário JSON executável](../src/crl_markdown/vocabularios/tipologias_documentais.json).
 Ambos são instalados em `0_gestao/vocabularios` da pasta RNC.
 
-O ficheiro de trabalho deste fork é `../siglas.csv`, em UTF-8, separado por `;`.
+## Fonte única das siglas: `lista_siglas_global.csv`
+
+Decisão de 2026-11-26: a [lista_siglas_global.csv](lista_siglas_global.csv) é a
+fonte única das siglas. Reúne entidades da DGERT, da administração pública (INE
+S.13) e das listas do CRL de 2025, com o âmbito SPE quando se aplica.
+
+O `../siglas.csv` e a cópia em `../src/crl_markdown/vocabularios/siglas.csv` são
+derivados dela e não se editam à mão. Para os regerar depois de mudar a lista:
+
+```text
+python scripts/gerar_siglas_da_lista_global.py vocabularios/lista_siglas_global.csv --saida siglas.proposta.csv --manifesto siglas.proposta.manifest.json
+```
+
+Compare a proposta com o `siglas.csv` ativo e substitua os dois ficheiros
+derivados e os manifestos. Um teste falha se o `siglas.csv` não for exatamente
+o que a lista gera.
+
+Regras da conversão:
+
+1. cada entidade dá uma linha, e cada rótulo CRL (`rotulos_crl`) dá outra com a
+   mesma sigla;
+2. uma entidade com pendentes na coluna `revisao` fica `por_confirmar`, e a
+   nomeação não usa a sigla dela;
+3. duas entidades cuja sigla fica igual depois de a nomeação retirar hífenes e
+   acentos ficam `ambigua`;
+4. o mesmo nome com duas siglas diferentes também bloqueia a nomeação.
+
+Na árvore de dados do RNC, o `siglas.csv` gerado é o que vai para
+`0_gestao/vocabularios/`.
+
+## Consolidação anterior (até 2026-11-25)
+
+O texto abaixo descreve a consolidação que produzia o `siglas.csv` antes da
+decisão de 2026-11-26. Fica como registo; o `consolidar_siglas.py` deixou de ser
+o gerador do ficheiro ativo.
+
+O ficheiro de trabalho deste fork era `../siglas.csv`, em UTF-8, separado por `;`.
 O manifesto `../siglas.manifest.json` identifica fontes e hashes. A consolidação
 de 13/10/2026 leu os três XLSX e a lista CSV fornecidos, complementados pelo
 vocabulário AppCCT do commit `53fd77c1f18bf41d35e988ad36e49c855ed209b5`.

@@ -410,6 +410,11 @@ a) a lista nova substitui `siglas.csv` e `siglas_organizacoes.csv`, que passam p
    `9_arquivo/`;
 b) a lista nova fica como fonte única, e `siglas.csv` passa a ser gerado a partir dela.
 
+**Decisão de 2026-11-26: opção b).** A `lista_siglas_global` passa a ser a fonte única. O
+`siglas.csv` é gerado por `scripts/gerar_siglas_da_lista_global.py` (ver
+`vocabularios/README.md`). No índice de 2026, os documentos com outorgantes cujas duas
+siglas escolhidas se resolvem sem aviso passam de 122 para 244 em 286.
+
 Em qualquer dos casos, as siglas dos nomes já atribuídos ao corpus até 2025 não mudam
 (ADR-0021). Para o corpus de 2026, a mudança tem de acontecer antes de começar a
 codificação no MAXQDA (ADR-0022, transição).
@@ -420,9 +425,8 @@ linhas com pendentes. A lista ainda não está pronta para ser o vocabulário at
 
 ### 10.6 Próximos passos
 
-1. Decidir entre as opções a) e b) da secção 10.5.
-2. Converter a `lista_siglas_global` para o formato de `siglas.csv`, com teste de que a
-   nomeação a lê e de que não há siglas repetidas.
+1. ~~Decidir entre as opções a) e b) da secção 10.5.~~ Opção b).
+2. ~~Converter a `lista_siglas_global` para o formato de `siglas.csv`.~~ Feito, com testes.
 3. Trazer para este repositório os ADR 0017, 0018, 0019 e 0022 e a SPEC-0004, que
    justificam as regras já presentes.
 4. Responder às perguntas 1 a 7 e 9 a 11 da secção 9.

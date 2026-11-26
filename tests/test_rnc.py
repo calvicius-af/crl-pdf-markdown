@@ -100,7 +100,12 @@ def test_consolidated_siglas_safe_rows_have_no_acronym_collision_between_lineage
         assert row["fonte"] and row["sigla"] and row["estado"]
         if row["estado"] != "documentada":
             continue
-        lineage = ".".join(row["codigo_dgert"].split(".")[:2]) or key(row["nome"])
+        # Linhas geradas da lista_siglas_global: a entidade está na fonte
+        # («…/linha N/DGERT-5.411»), e os rótulos CRL partilham-na.
+        if row["origem_sigla"].startswith("lista_global"):
+            lineage = row["fonte"].split("/")[2]
+        else:
+            lineage = ".".join(row["codigo_dgert"].split(".")[:2]) or key(row["nome"])
         previous = claims.setdefault(row["sigla"].casefold(), lineage)
         assert previous == lineage
 

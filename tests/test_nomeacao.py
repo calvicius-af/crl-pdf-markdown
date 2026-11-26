@@ -264,10 +264,10 @@ def test_siglas_adivinhadas_ficam_num_ficheiro_para_rever(tmp_path, monkeypatch,
 
     empresa = (
         "386/2026",
-        "Acordo de empresa entre a Petrogal, SA e o SITESE",
+        "Acordo de empresa entre a Refinaria Exemplar, SA e o SITESE",
         "AE-ALT",
         "46748",
-        "Petrogal, SA; SITESE - Sindicato dos Trabalhadores e Técnicos de Serviços",
+        "Refinaria Exemplar, SA; SITESE - Sindicato dos Trabalhadores e Técnicos de Serviços",
         "",
         "01400145.pdf",
     )
@@ -280,14 +280,14 @@ def test_siglas_adivinhadas_ficam_num_ficheiro_para_rever(tmp_path, monkeypatch,
     assert "observações automáticas" in capsys.readouterr().out
     assert not pendentes.exists()
     assert [p.name for p in tmp_path.rglob("data/raw/bte/**/*.pdf")] == [
-        "2026_BTE_31_PRI_386_AE-ALT_46748_Petrogal-SITESE.pdf"
+        "2026_BTE_31_PRI_386_AE-ALT_46748_RefinariaExemplar-SITESE.pdf"
     ]
 
     # A sigla revista fica disponível, mas não renomeia uma identidade atribuída.
-    (tmp_path / "siglas.csv").write_bytes("nome;sigla\nPetrogal, SA;GALP\n".encode("cp1252"))
+    (tmp_path / "siglas.csv").write_bytes("nome;sigla\nRefinaria Exemplar, SA;REFEX\n".encode("cp1252"))
     assert main(argumentos) == 0
     assert [p.name for p in tmp_path.rglob("data/raw/bte/**/*.pdf")] == [
-        "2026_BTE_31_PRI_386_AE-ALT_46748_Petrogal-SITESE.pdf"
+        "2026_BTE_31_PRI_386_AE-ALT_46748_RefinariaExemplar-SITESE.pdf"
     ]
     assert not pendentes.exists()
 
