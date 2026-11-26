@@ -591,6 +591,7 @@ def recolher(
     abridor=None,
     pausa: float = 1.0,
     limite: int | None = None,
+    progress_event=None,
 ) -> dict:
     """Percorre os índices e descarrega o que ainda não está cá.
 
@@ -624,7 +625,9 @@ def recolher(
                 resumo["problemas"].append(f"{indice.name}: {exc}")
                 continue
             resumo["indices"].append({"ficheiro": indice.name, "linhas": len(itens)})
-            for item in itens:
+            from .progress import track
+            for item in track(itens, progress_event, stage="collecting",
+                              label="A recolher PDFs — " + indice.name, unit="registos"):
                 resumo["documentos"] += 1
                 anterior = (registo.get(item["chave"]) or {}).get("descarga") or {}
                 if item["familia"] is None:
@@ -785,7 +788,7 @@ def add_arguments(p):
     )
 
 
-def collect(args):
+def collect(args, *, progress_event=None):
     """Executa a recolha com os argumentos já validados pelo parser."""
     workspace = getattr(args, "workspace", None)
     if workspace:
@@ -824,6 +827,7 @@ def collect(args):
         familias=familias,
         pausa=args.pausa,
         limite=args.limite,
+        progress_event=progress_event,
     )
     print(texto_resumo(resumo, rede=rede))
     from .pipeline import atomic_write
@@ -855,6 +859,8 @@ def collect(args):
         aplicar=True,
         scheme=getattr(args, "esquema", "adr0022"),
         workspace=bool(workspace and Path(args.nomes) == NOMES_OMISSAO),
+        named_root=getattr(args, "named_root", None),
+        progress_event=progress_event,
         tabela=nomeacao.tabela_de_siglas(equipa=args.siglas[0], caminhos=args.siglas[1:])
         if args.siglas else nomeacao.tabela_de_siglas(),
         familias=familias,

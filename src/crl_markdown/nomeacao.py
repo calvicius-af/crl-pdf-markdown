@@ -790,6 +790,8 @@ def nomear(
     registo: Registo, destino: Path, *, aplicar=False, tabela=None,
     familias=("convencao", "extensao", "adesao", "acordao", "cessacao", "aviso"),
     aceitar_heuristicas=False, vocabulario_ambito=None, scheme="adr0022", workspace=False,
+    named_root=None,
+    progress_event=None,
 ) -> dict:
     """Adaptador de compatibilidade; execução e verificações partilhadas com naming."""
     from .naming import execute_records
@@ -799,7 +801,8 @@ def nomear(
     results = execute_records(registo, destino, tabela,
                               vocabulario_ambito, apply=aplicar, scheme=scheme,
                               families=familias, workspace=workspace,
-                              accept_warnings=aceitar_heuristicas)
+                              accept_warnings=aceitar_heuristicas, named_root=named_root,
+                              progress_event=progress_event)
     resumo = {"ordinais_novos": 0, "por_estado": {}, "avisos": [], "informacoes": [], "problemas": [],
               "nomes": [], "siglas_pendentes": {}}
     for result in results:

@@ -2,14 +2,26 @@
 
 import errno
 import json
+import os
 import platform
 import re
 import sys
+import tempfile
 import traceback
 from datetime import datetime, timezone
 from pathlib import Path
 
-from .pipeline import atomic_write
+
+def atomic_write(path, text):
+    # Independente do conversor: também funciona se uma biblioteca não importar.
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.NamedTemporaryFile(dir=path.parent, delete=False) as handle:
+        temporary = Path(handle.name)
+        handle.write(text.encode("utf-8"))
+    try:
+        temporary.replace(path)
+    finally:
+        temporary.unlink(missing_ok=True)
 
 
 def safe_detail(text: str) -> str:
@@ -22,7 +34,17 @@ def safe_detail(text: str) -> str:
 def explain(error: BaseException) -> dict:
     detail = safe_detail(str(error))
     lowered = detail.lower()
-    if 'documento bloqueado' in lowered:
+    if 'não foram encontrados pdfs' in lowered:
+        code, action = 'CRL-SEM-PDFS', (
+            'Use PDF… para escolher um documento, ou Pasta… para escolher uma pasta que contenha PDFs. '
+            'Confirme no Explorador que os ficheiros estão disponíveis, incluindo nas subpastas. '
+            'Se usar uma pasta sincronizada, aguarde que os PDFs fiquem disponíveis neste computador.')
+    elif 'o modo offline bloqueou' in lowered:
+        code, action = 'CRL-REDE-OFFLINE', (
+            'Uma biblioteca tentou aceder à rede durante a conversão local. '
+            'Os modelos devem vir incluídos na instalação. Guarde o relatório para o apoio '
+            'e peça a verificação do pacote instalado.')
+    elif 'documento bloqueado' in lowered:
         code, action = 'CRL-QUALIDADE', (
             'Abra Conferir / aprovar e selecione a ocorrência do documento. '
             'Use Criar / editar correção e Reauditar correção para erros de conteúdo, '
@@ -48,14 +70,13 @@ def explain(error: BaseException) -> dict:
     elif isinstance(error, (ImportError, ModuleNotFoundError)):
         code, action = "CRL-INSTALACAO", (
             "Abra a aplicação pelo lançador CRL, para usar o ambiente instalado. "
-            "Se não abrir, execute novamente Instalar_CRL.bat a partir do pacote offline "
-            "completo. Conserve este relatório se o problema continuar."
+            "Se não abrir, execute novamente o instalador oficial do CRL. "
+            "Conserve este relatório se o problema continuar."
         )
     elif any(word in lowered for word in ("model", "hugging", "artifacts", "offline")):
         code, action = "CRL-MODELOS", (
-            "No campo Pasta de modelos, escolha a pasta modelos do pacote instalado. "
-            "Mantenha Modelos locais / offline selecionado. Se faltar essa pasta, "
-            "obtenha uma cópia completa do pacote junto do apoio informático."
+            "Os modelos incluídos na instalação estão em falta ou não puderam ser lidos. "
+            "Execute novamente o instalador oficial ou contacte o apoio informático."
         )
     elif isinstance(error, TimeoutError) or any(
             word in lowered for word in ("timeout", "tempo máximo", "timed out")):
@@ -93,3 +114,67 @@ def save_failure(error: BaseException, folder: Path, context: str) -> Path:
                  f"O ficheiro JSON com o mesmo nome conserva o erro técnico e o ambiente.\n"
                  f"Python: {sys.executable}\n")
     return target
+
+
+def export_support(target, *, error=None, context="Interface", log="", attachments=()):
+    """Um ZIP explícito, sem PDFs nem recolha recursiva dos dados da colega."""
+    import zipfile
+
+    from . import __version__
+    data = {"version": __version__, "platform": platform.platform(), "python": sys.version,
+            "context": safe_detail(context)}
+    if error is not None:
+        data.update(explain(error))
+        data["traceback"] = safe_detail(getattr(error, "remote_traceback", "")
+                                        or "".join(traceback.format_exception(error)))
+    target = Path(target)
+    # Produzir primeiro num temporário conserva o relatório anterior se falhar.
+    with tempfile.NamedTemporaryFile(dir=target.parent, delete=False) as handle:
+        temporary = Path(handle.name)
+    try:
+        with zipfile.ZipFile(temporary, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+            archive.writestr("apoio.json", json.dumps(data, ensure_ascii=False, indent=2))
+            archive.writestr("operacao.txt", safe_detail(log))
+            for index, attachment in enumerate(attachments):
+                path = Path(attachment)
+                if path.is_file() and path.suffix in {".json", ".md", ".txt", ".jsonl", ".log"}:
+                    archive.writestr(f"relatorios/{index}-{path.name}",
+                                     safe_detail(path.read_text(encoding="utf-8", errors="replace")))
+        os.replace(temporary, target)
+    finally:
+        temporary.unlink(missing_ok=True)
+
+
+def support_dialog(parent, error, context):
+    import tkinter as tk
+    from tkinter import filedialog, messagebox, ttk
+
+    info = explain(error)
+    window = tk.Toplevel(parent)
+    window.title("A operação não terminou")
+    # No arranque, a raiz está escondida. Um transient dessa raiz também fica
+    # invisível no Windows/macOS, precisamente quando é necessário pedir apoio.
+    if parent.winfo_viewable():
+        window.transient(parent)
+    window.grab_set()
+    frame = ttk.Frame(window, padding=20)
+    frame.pack(fill="both", expand=True)
+    ttk.Label(frame, text=f"A operação não terminou ({info['code']}).\n\n{info['action']}",
+              wraplength=540).pack(anchor="w")
+
+    def save():
+        target = filedialog.asksaveasfilename(parent=window, title="Guardar relatório para o apoio",
+                                             defaultextension=".zip", initialfile="CRL-apoio.zip",
+                                             filetypes=[("Relatório de apoio", "*.zip")])
+        if target:
+            try:
+                export_support(target, error=error, context=context)
+            except OSError:
+                messagebox.showerror("Não foi possível guardar", "Escolha outra pasta onde tenha "
+                                     "permissão para guardar ficheiros.", parent=window)
+            else:
+                messagebox.showinfo("Relatório guardado", "Entregue o ZIP ao apoio informático.", parent=window)
+
+    ttk.Button(frame, text="Guardar relatório para o apoio", command=save).pack(pady=16)
+    ttk.Button(frame, text="Fechar", command=window.destroy).pack()
+    parent.wait_window(window)

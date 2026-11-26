@@ -31,6 +31,9 @@ defeitos do auditor e regista a reauditoria das 18 convenções selecionadas.
 | Consultar a consolidação e validação atual                       | [Verificação de fecho](validacao/fecho-2026-10-13.md)                                              |
 | Consultar a primeira integração de 13/10/2026                    | [Registo da intervenção](validacao/integracao-2026-10-13.md)                                       |
 
+Para a linha 0.4, consulte o [instalador Windows completo](operacao/instalacao-windows.md)
+e a [construção e aceitação da distribuição](desenvolvimento/distribuicao-windows.md).
+
 A [revisão e consolidação de 27/10](revisoes/revisao-consolidacao-2026-10-27.md)
 regista o achado de integridade corrigido, a relação entre PRs e as referências
 históricas preservadas.

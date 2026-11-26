@@ -39,8 +39,16 @@ def block(value):
 
 
 def link(path, parent, label):
-    relative = os.path.relpath(Path(path).resolve(), parent.resolve()).replace(os.sep, "/")
-    return f"[{escaped(label)}](<{quote(relative, safe='/.-_~')}>)"
+    target = Path(path).resolve()
+    try:
+        relative = os.path.relpath(target, parent.resolve()).replace(os.sep, "/")
+    except ValueError:
+        # Windows não tem caminhos relativos entre C:, L: ou partilhas UNC.
+        # A ligação absoluta conserva o acesso à origem sem interromper o lote.
+        url = target.as_uri()
+    else:
+        url = quote(relative, safe='/.-_~')
+    return f"[{escaped(label)}](<{url}>)"
 
 
 def evidence(key, value):

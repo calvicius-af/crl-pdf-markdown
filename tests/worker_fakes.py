@@ -48,3 +48,9 @@ def sem_modelos(_options):
 
 def cai_ao_arrancar(_options):
     faulthandler._sigsegv()
+
+
+def tenta_rede(_options):
+    import socket
+    socket.create_connection(("127.0.0.1", 9))
+    raise AssertionError("O processo offline deixou usar a rede")

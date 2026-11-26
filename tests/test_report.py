@@ -1,4 +1,5 @@
 import json
+import sys
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -6,6 +7,36 @@ import pytest
 
 from crl_markdown.pipeline import Options, atomic_write, run
 from crl_markdown.report import diagnostic, new_manifest, write_reports
+
+
+def test_final_report_keeps_source_link_when_relative_path_is_impossible(tmp_path, monkeypatch):
+    from crl_markdown import report
+    source = tmp_path / "origem com acentos á.pdf"
+    output = tmp_path / "markdown"
+    manifest = new_manifest(source, output, [(source, Path("teste.md"))], {})
+    manifest["documents"][0].update(state="rever", quality_status="review",
+                                     output=str(output / "teste.md"), findings=[])
+    manifest["status"] = "concluida"
+    real_relpath = report.os.path.relpath
+
+    def different_drive(path, start):
+        if path == source.resolve():
+            raise ValueError("path is on mount C:, start on mount D:")
+        return real_relpath(path, start)
+
+    monkeypatch.setattr(report.os.path, "relpath", different_drive)
+    target = write_reports(manifest, output, atomic_write)
+    assert source.as_uri() in (target.parent / "detalhes.md").read_text(encoding="utf-8")
+    assert json.loads((target.parent / "manifest.json").read_text(encoding="utf-8"))["status"] == "concluida"
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="Volumes Windows reais")
+def test_source_on_another_windows_drive_uses_file_uri(tmp_path):
+    from crl_markdown.report import link
+    drive = "C:" if tmp_path.drive.upper() != "C:" else "D:"
+    source = Path(drive + "/PDFs originais/Índice (teste).pdf")
+    text = link(source, tmp_path, "PDF de origem")
+    assert source.as_uri() in text
 
 
 def test_all_findings_and_completeness_evidence_retained(tmp_path):
