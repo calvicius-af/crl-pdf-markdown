@@ -20,26 +20,26 @@ BTE 1 a 41 de 2026), folha `Listas`, tabelas do Copilot, `lista_siglas_global.cs
 
 ## 2. Tipos presentes no índice de 2026 (facto)
 
-| TipoSubTipoDoc | N   | Com outorgantes | Com CodigoGEPDGERT | Família atual na aplicação             |
-| -------------- | --- | --------------- | ------------------ | -------------------------------------- |
-| PE             | 108 | 0               | 108                | extensão                               |
-| AE-ALT         | 80  | 80              | 80                 | convenção                              |
-| CCT-ALT        | 68  | 68              | 68                 | convenção                              |
-| ACT            | 55  | 55              | 9                  | convenção                              |
-| CCT            | 29  | 29              | 29                 | convenção                              |
-| AE             | 17  | 17              | 17                 | convenção                              |
-| ACT-ALT        | 15  | 15              | 15                 | convenção                              |
-| ADESÃO         | 9   | 9               | 9                  | **ignorado** (a aplicação espera `AA`) |
-| AVISO          | 9   | 9               | 0                  | aviso                                  |
-| AE-ALT-RECT    | 8   | 0               | parcial            | convenção                              |
-| AE-DELI        | 4   | 4               | 4                  | convenção                              |
-| CCT-ALT-RECT   | 4   | 0               | parcial            | convenção                              |
-| AV-CES-VIG     | 2   | 0               | 2                  | aviso                                  |
-| PE-ALT         | 1   | 0               | 1                  | extensão                               |
-| PCT-ALT        | 1   | 0               | 1                  | extensão                               |
-| ACORDÃO        | 1   | 0               | 1                  | **ignorado**                           |
+| TipoSubTipoDoc | N   | Com outorgantes | Com CodigoGEPDGERT | Família atual na aplicação                                  |
+| -------------- | --- | --------------- | ------------------ | ----------------------------------------------------------- |
+| PE             | 108 | 0               | 108                | extensão                                                    |
+| AE-ALT         | 80  | 80              | 80                 | convenção                                                   |
+| CCT-ALT        | 68  | 68              | 68                 | convenção                                                   |
+| ACT            | 55  | 55              | 9                  | convenção                                                   |
+| CCT            | 29  | 29              | 29                 | convenção                                                   |
+| AE             | 17  | 17              | 17                 | convenção                                                   |
+| ACT-ALT        | 15  | 15              | 15                 | convenção                                                   |
+| ADESÃO         | 9   | 9               | 9                  | **ignorado** (a aplicação espera `AA`); corrigido em `main` |
+| AVISO          | 9   | 9               | 0                  | aviso                                                       |
+| AE-ALT-RECT    | 8   | 0               | parcial            | convenção                                                   |
+| AE-DELI        | 4   | 4               | 4                  | convenção                                                   |
+| CCT-ALT-RECT   | 4   | 0               | parcial            | convenção                                                   |
+| AV-CES-VIG     | 2   | 0               | 2                  | aviso                                                       |
+| PE-ALT         | 1   | 0               | 1                  | extensão                                                    |
+| PCT-ALT        | 1   | 0               | 1                  | extensão                                                    |
+| ACORDÃO        | 1   | 0               | 1                  | **ignorado**; corrigido em `main`                           |
 
-**Consequência direta.** Com o código atual, as 9 adesões e o acórdão não são
+**Consequência direta (2026-11-25).** Com o código de então, as 9 adesões e o acórdão não são
 descarregados nem convertidos. É uma correção necessária antes de tudo o resto: acrescentar
 `ADESÃO` à família adesão e criar uma família para decisões judiciais.
 
@@ -275,7 +275,8 @@ A lista tem `ambito_subsetor` com `SEE` (106), `SEL` (103) e `SER` (23). Proponh
 
 ## 8. Correções prévias na aplicação
 
-1. Reconhecer `ADESÃO` como adesão e `ACORDÃO` como decisão judicial; hoje ficam de fora.
+1. ~~Reconhecer `ADESÃO` como adesão e `ACORDÃO` como decisão judicial.~~ Feito em `main`
+   (versão 0.4.0rc3), com as famílias `adesao` e `acordao`.
 2. Ler `DocAlteradosPorEste` com códigos múltiplos e com espaços espúrios
    (`ACT. 20250429.199/2025`), que ocorrem em 5 portarias e nos 2 avisos de cessação.
 3. Portar do projeto original a nomeação RNC, com a lista global de siglas como fonte.
@@ -298,27 +299,27 @@ A lista tem `ambito_subsetor` com `SEE` (106), `SEL` (103) e `SER` (23). Proponh
 
 ### 10.1 Onde vivem as regras e as listas (facto)
 
-As regras que decidem «o que é o quê» estão no projeto de origem, `crl-app-cct`. Ainda
-não existem neste repositório.
+Com a integração dos PR #4, #18, #19 e #20 (versão 0.4.0rc3), este repositório passou a ter:
 
-| Assunto               | Fonte em `crl-app-cct`                                   | O que decide                                                                                                                    |
-| --------------------- | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| Esquema de nomes      | ADR-0022 e SPEC-0004 (substituem o ADR-0016)             | nome com cabeça `{ANO}_BTE_{NN}_{X}_{SEQ}`; `X` é o âmbito nas convenções e o tipo nas outras famílias; limite de 63 caracteres |
-| Siglas sem duplicados | ADR-0017                                                 | escada de desambiguação; uma sigla atribuída não muda                                                                           |
-| Âmbito                | ADR-0019                                                 | ordem de classificação e papel da lista do INE                                                                                  |
-| Famílias documentais  | ADR-0018 e `vocabularios/tipos_documento.csv`            | família de cada tipo do BTE; só a família `convencao` é codificada                                                              |
-| Vocabulários          | `vocabularios/README.md` e `docs/rnc/pastas/0_gestao.md` | listas fechadas lidas pela aplicação                                                                                            |
+1. `vocabularios/` com `tipos_documento.csv`, `siglas_organizacoes.csv`,
+   `empregadores_ambito.csv`, `entidades_administracao_publica.csv` e
+   `actos_negociacao.csv`, como no `crl-app-cct`;
+2. `siglas.csv` na raiz, com cópia em `src/crl_markdown/vocabularios/siglas.csv`
+   (3648 linhas, colunas `nome;sigla;codigo_dgert;lado;estado;origem_sigla;fonte;responsavel;data`);
+3. `src/crl_markdown/vocabularios/tipologias_documentais.md` e `.json`, com as regras de
+   ACEP, ACCE, deliberações e cessações de vigência;
+4. a nomeação (`naming.py`), que lê `0_gestao/vocabularios/siglas.csv` e
+   `0_gestao/vocabularios/empregadores_ambito.csv` da pasta de trabalho.
 
-O `vocabularios/README.md` diz que estes ficheiros são os mesmos que vivem em
-`0_gestao/vocabularios/` na árvore de dados do RNC, «referenciado, não copiado». O
-`0_gestao.md` acrescenta duas regras: os vocabulários têm nome descritivo em minúsculas e
-sem data, e só há uma versão ativa de cada um. As versões anteriores vão para
-`9_arquivo/0_gestao/` com data no nome.
+Os ADR que justificam estas regras (0017, 0018, 0019 e 0022) e a SPEC-0004 continuam só
+no `crl-app-cct`.
 
-**Consequência.** A lista de siglas, quando estiver pronta, vai para
-`0_gestao/vocabularios/`. A aplicação lê-a daí com a bandeira `--siglas`. Neste
-repositório deve existir uma pasta `vocabularios/` com a mesma função, como no projeto
-de origem.
+O `docs/rnc/pastas/0_gestao.md` do projeto de origem fixa duas regras: os vocabulários
+têm nome descritivo em minúsculas e sem data, e só há uma versão ativa de cada um. As
+versões anteriores vão para `9_arquivo/0_gestao/` com data no nome.
+
+**Consequência.** A lista de siglas, quando estiver pronta, entra em
+`0_gestao/vocabularios/` com o nome `siglas.csv`, que é o que a aplicação lê.
 
 ### 10.2 Âmbito: PRI por omissão (decisão e regra existente)
 
@@ -337,16 +338,16 @@ A coluna `ambito` da `lista_siglas_global` já incorpora os passos 2 e 3. Os fun
 registados são «INE S.13 2025: forma empresarial», «forma jurídica na denominação» e
 «capital público maioritário». Por isso a regra da secção 5.2 fica assim:
 
-1. `APU` nos acordos coletivos de empregador público (ACEP). O
-   `tipos_documento.csv` dá-lhes âmbito `APU`;
+1. `APU` nos acordos de empregador público (ACEP) e de carreira especial (ACCE), como em
+   `tipologias_documentais.md`;
 2. `SPE` quando a entidade empregadora tem `ambito = SPE` na lista ou está em
    `empregadores_ambito.csv`;
 3. `PRI` nos restantes, sem bloqueio. A folha de revisão mostra os `SPE` de confiança
    `média`, que a lista manda confirmar no SIOE ou na DGTF.
 
 **Interpretação.** Uma entidade com `lado = administração pública` que outorga uma
-convenção que não é ACEP deve ir para revisão, e não para `APU` direto. O ADR-0019 proíbe
-propostas automáticas de `APU` sem revisão.
+convenção que não é ACEP nem ACCE deve ir para revisão, e não para `APU` direto. O
+ADR-0019 proíbe propostas automáticas de `APU` sem revisão.
 
 ### 10.3 O que o ficheiro de variáveis de 2025 confirma (facto)
 
@@ -369,19 +370,27 @@ continua a ser um valor novo por confirmar.
 
 ### 10.4 Significado de `ACC` (hipótese de trabalho)
 
-Na Lei Geral do Trabalho em Funções Públicas (Lei n.º 35/2014), os acordos coletivos de
-trabalho dividem-se em acordos coletivos de carreira e acordos coletivos de empregador
-público. Por isso `ACC` deve ser o acordo coletivo de carreira, ao lado do `ACEP`.
+O código em `main` já trata o `ACCE` como acordo de carreira especial, família
+`convencao`, âmbito `APU`. Na Lei Geral do Trabalho em Funções Públicas (Lei n.º 35/2014),
+os acordos coletivos de trabalho dividem-se em acordos coletivos de carreira e acordos
+coletivos de empregador público. Por isso `ACC` em `Listas` deve corresponder ao acordo
+coletivo de carreira, o mesmo universo que o `ACCE`.
 
-Esta leitura não está verificada: confirmar no artigo 13.º da LTFP. Se se confirmar, `ACC`
-fica no vocabulário mas não se aplica ao corpus do BTE. Estes acordos são publicados no
-Diário da República, e nenhum aparece em 2025 nem no índice de 2026.
+Esta leitura não está verificada: confirmar no artigo 13.º da LTFP. Se se confirmar,
+proponho que `Tipo_conv` use um só valor para os dois códigos, `ACC` ou `ACCE`, à escolha
+da equipa.
 
-### 10.5 Duas listas de siglas em uso: risco a decidir
+### 10.5 Listas de siglas em uso: risco a decidir
 
-O projeto de origem usa `vocabularios/siglas_organizacoes.csv` (2403 linhas, só DGERT). A
-`lista_siglas_global` (6089 linhas: DGERT, INE e CRL) é uma lista diferente. Comparei as
-duas pelo código DGERT:
+Há hoje três listas com siglas para as mesmas entidades:
+
+| Lista                     | Linhas                        | Onde                                                           |
+| ------------------------- | ----------------------------- | -------------------------------------------------------------- |
+| `siglas_organizacoes.csv` | 2403 (só DGERT)               | `vocabularios/` deste repositório e do `crl-app-cct`           |
+| `siglas.csv`              | 3648 (equipa, índice e DGERT) | raiz e `src/crl_markdown/vocabularios/`; é a que a nomeação lê |
+| `lista_siglas_global`     | 6089 (DGERT, INE e CRL)       | versão de trabalho de 2026-11-24, ainda fora do Git            |
+
+Comparei `siglas_organizacoes.csv` com a `lista_siglas_global` pelo código DGERT:
 
 1. Todas as 2403 entradas antigas têm correspondência na lista nova.
 2. A sigla é igual em 1629 entradas e diferente em 774. Por exemplo, `5.554.0` é `AANP` na
@@ -389,13 +398,17 @@ duas pelo código DGERT:
 3. As regras também diferem. A antiga aceita siglas de `recurso` em CamelCase e protege as
    siglas já atribuídas. A nova usa maiúsculas com hífen, um máximo de 12 caracteres (25
    para juntas, uniões de freguesias e câmaras) e reescreve as siglas fora do padrão.
+4. As colunas da `lista_siglas_global` não são as que a nomeação lê. Para entrar como
+   `siglas.csv` é preciso convertê-la (`sigla`, `nome`, `codigo_origem` e `lado` têm
+   correspondência direta) ou adaptar o leitor.
 
 O `0_gestao.md` avisa que «duas versões de um vocabulário em uso produzem duas nomeações
 diferentes para o mesmo documento». Antes de a lista nova entrar em
 `0_gestao/vocabularios/`, é preciso decidir uma de duas opções:
 
-a) a lista nova substitui `siglas_organizacoes.csv`, que passa para `9_arquivo/`;
-b) a lista nova fica como fonte e o `siglas_organizacoes.csv` é gerado a partir dela.
+a) a lista nova substitui `siglas.csv` e `siglas_organizacoes.csv`, que passam para
+   `9_arquivo/`;
+b) a lista nova fica como fonte única, e `siglas.csv` passa a ser gerado a partir dela.
 
 Em qualquer dos casos, as siglas dos nomes já atribuídos ao corpus até 2025 não mudam
 (ADR-0021). Para o corpus de 2026, a mudança tem de acontecer antes de começar a
@@ -407,10 +420,10 @@ linhas com pendentes. A lista ainda não está pronta para ser o vocabulário at
 
 ### 10.6 Próximos passos
 
-1. Corrigir `PREFIXOS_FAMILIA` em `src/crl_markdown/recolha.py`: `ADESÃO` passa à família
-   `adesao` e `ACORDÃO` ganha uma família própria. Inclui testes. Parte de `main` depois
-   da integração dos PR abertos.
-2. Trazer para este repositório a pasta `vocabularios/` e os ADR que a regem (0017, 0018,
-   0019 e 0022), com a SPEC-0004.
-3. Decidir entre as opções a) e b) da secção 10.5.
+1. Decidir entre as opções a) e b) da secção 10.5.
+2. Converter a `lista_siglas_global` para o formato de `siglas.csv`, com teste de que a
+   nomeação a lê e de que não há siglas repetidas.
+3. Trazer para este repositório os ADR 0017, 0018, 0019 e 0022 e a SPEC-0004, que
+   justificam as regras já presentes.
 4. Responder às perguntas 1 a 7 e 9 a 11 da secção 9.
+5. Implementar o gerador do XLSX de variáveis por tipologia.
