@@ -1,0 +1,63 @@
+{
+  "versao": "2026-10-16.1",
+  "fonte": "Regras documentais fornecidas pelo utilizador em 16/10/2026; metadados dos índices DGERT/DGAEP",
+  "criterio": "Conservar o tipo publicado e classificar separadamente a natureza documental. Aviso não implica documento apenas de metadados.",
+  "regras": [
+    {
+      "id": "cessacao_vigencia",
+      "tipo_regex": "^(?:AV-CES-VIG|CESSACAO)(?:-.*)?$",
+      "titulo_alternativo_regex": "^aviso.*(?:cessacao.*vigencia|caducidade)",
+      "familia": "cessacao",
+      "tipo_documental": "CES-VIG",
+      "operacao_documental": "cessacao_vigencia"
+    },
+    {
+      "id": "aviso_acce_deliberacao",
+      "tipo_regex": "^(?:AVISO|AV)$",
+      "titulo_regex": "comissao paritaria",
+      "contexto_regex": "carreira(?:s)? especia(?:l|is)|\\bacce\\b",
+      "familia": "convencao",
+      "tipo_documental": "ACCE-DELI",
+      "tipo_acordo_base": "ACCE",
+      "ambito_documental": "APU",
+      "operacao_documental": "deliberacao_comissao_paritaria"
+    },
+    {
+      "id": "aviso_acce_alteracao",
+      "tipo_regex": "^(?:AVISO|AV)$",
+      "titulo_regex": "alteracao",
+      "contexto_regex": "carreira(?:s)? especia(?:l|is)|\\bacce\\b",
+      "familia": "convencao",
+      "tipo_documental": "ACCE-ALT",
+      "tipo_acordo_base": "ACCE",
+      "ambito_documental": "APU",
+      "operacao_documental": "alteracao"
+    },
+    {
+      "id": "aviso_acep_deliberacao",
+      "tipo_regex": "^(?:AVISO|AV)$",
+      "titulo_regex": "comissao paritaria",
+      "contexto_regex": "municipio|freguesia|empregador(?:es)? public|\\bacep\\b",
+      "familia": "convencao",
+      "tipo_documental": "ACEP-DELI",
+      "tipo_acordo_base": "ACEP",
+      "ambito_documental": "APU",
+      "operacao_documental": "deliberacao_comissao_paritaria"
+    },
+    {
+      "id": "aviso_acep_alteracao",
+      "tipo_regex": "^(?:AVISO|AV)$",
+      "titulo_regex": "alteracao",
+      "contexto_regex": "municipio|freguesia|empregador(?:es)? public|\\bacep\\b",
+      "familia": "convencao",
+      "tipo_documental": "ACEP-ALT",
+      "tipo_acordo_base": "ACEP",
+      "ambito_documental": "APU",
+      "operacao_documental": "alteracao"
+    }
+  ],
+  "familias": {
+    "cessacao": {"pasta": "cessacoes_vigencia", "conservar_pdf": true, "ligar_processo": true},
+    "aviso": {"pasta": "avisos", "conservar_pdf": true, "observacao": "Avisos sem evidência suficiente para uma natureza mais específica permanecem documentos autónomos."}
+  }
+}

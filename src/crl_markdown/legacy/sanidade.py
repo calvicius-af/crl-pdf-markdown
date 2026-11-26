@@ -67,8 +67,12 @@ def clausulas_sem_corpo(doc: dict, texto: str,
         # a primeira linha é o próprio rótulo
         corpo = "\n".join(bruto.split("\n")[1:]).strip()
         if not corpo:
+            if re.search(r' - \(?\s*(?:Eliminar|Eliminad[oa]|Revogad[oa])\s*\)?\.?$', no['rotulo'], re.IGNORECASE):
+                continue
             falhas.append(f"{no['rotulo']}: sem conteúdo")
         elif not any(RE_FRASE_FECHADA.search(l) for l in corpo.split("\n") if l.strip()):
+            if re.fullmatch(r'\(?\s*(?:Eliminar|Eliminad[oa]|Revogad[oa])\s*\)?\.?', corpo, re.IGNORECASE):
+                continue
             if (_anuncia_o_que_segue(no, corpo, comecos) or _corpo_sem_frases(bruto)
                     or _dois_pontos_como_no_pdf(no, corpo, comecos, referencia)):
                 continue
@@ -159,6 +163,8 @@ def deposito_no_fim(texto: str, e_retificacao: bool = False) -> str | None:
 
 AVISO_RETIFICACAO_SEM_ARTICULADO = (
     "retificação sem articulado próprio: zero cláusulas é o esperado")
+AVISO_DECLARATIVO_SEM_ARTICULADO = (
+    "documento declarativo sem articulado próprio: zero cláusulas é compatível com a tipologia")
 AVISO_SEM_ESTRUTURA = (
     "nenhuma cláusula ou artigo reconhecido: estrutura não reconhecida pelo "
     "extrator, ou documento sem articulado — verificar o PDF")
@@ -237,8 +243,14 @@ def sem_articulado(doc: dict, texto: str = "") -> str | None:
     """
     if any(no.get("tipo") in _TIPOS_COM_CORPO for no in doc.get("nos", [])):
         return None
+    from crl_markdown.policies import applicability
+
     if e_retificacao(doc, texto):
         return AVISO_RETIFICACAO_SEM_ARTICULADO
+    if doc.get("subtipo") in {"cessacao_vigencia", "deliberacao_comissao_paritaria"}:
+        return AVISO_DECLARATIVO_SEM_ARTICULADO
+    if not applicability(doc.get('subtipo'))['articulado']:
+        return None
     if alteracao_salarial_sem_articulado(texto):
         return AVISO_ALTERACAO_SALARIAL_SEM_ARTICULADO
     return AVISO_SEM_ESTRUTURA
@@ -258,9 +270,12 @@ def verificar(doc: dict, texto: str, referencia: list[str] | None = None,
     aviso = sem_articulado(doc, texto)
     if aviso:
         avisos.append(aviso)
-    aviso = deposito_no_fim(texto, e_retificacao=e_retificacao(doc, texto))
-    if aviso:
-        avisos.append(aviso)
+    from crl_markdown.policies import applicability
+
+    if applicability(doc.get('subtipo'))['deposito']:
+        aviso = deposito_no_fim(texto, e_retificacao=e_retificacao(doc, texto))
+        if aviso:
+            avisos.append(aviso)
     vazias = clausulas_sem_corpo(doc, texto, referencia)
     if vazias:
         avisos.append(f"{len(vazias)} cláusula(s)/artigo(s) sem corpo válido: "

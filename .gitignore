@@ -36,7 +36,8 @@ examples/**/entrada/versoes/**/*.pdf
 
 # O siglas.csv da equipa: conhecimento local, não vem no repositório
 # (docs/dados/README.md, «Siglas dos outorgantes»)
-/siglas.csv
+# siglas.csv consolidado e com proveniência é versionado neste fork.
+RNC_Dados_*/
 
 # ── Ambiente e sistema ──────────────────────────────────────────────
 .DS_Store

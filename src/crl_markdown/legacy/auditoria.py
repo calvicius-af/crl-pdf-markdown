@@ -15,10 +15,11 @@ extrator ver tabelas onde o outro não vê nada — ou um anexo de
 remuneração sem uma única linha de tabela.
 """
 import re
+from contextlib import nullcontext
 from pathlib import Path
 
 
-def contar_tabelas_pdfplumber(pdf_path: Path) -> int:
+def contar_tabelas_pdfplumber(pdf_path: Path, *, document=None) -> int:
     """Tabelas que o pdfplumber deteta no PDF (soma por página).
 
     Corre só o `find_tables()` — a parte barata. Não extrai texto, não
@@ -28,10 +29,11 @@ def contar_tabelas_pdfplumber(pdf_path: Path) -> int:
     from .extractor import normalizar_pagina
 
     total = 0
-    with pdfplumber.open(pdf_path) as pdf:
+    with (nullcontext(document) if document is not None else pdfplumber.open(pdf_path)) as pdf:
         for pag in pdf.pages:
             normalizar_pagina(pag)
-            total += len(pag.find_tables())
+            pag._crl_tables = pag.find_tables()
+            total += len(pag._crl_tables)
     return total
 
 
@@ -83,7 +85,7 @@ def tabelas_rodadas_pdfplumber(pdf_path: Path) -> list[str]:
 FRACAO_IMAGEM = 0.03
 
 
-def paginas_com_imagem(pdf_path: Path) -> list[int]:
+def paginas_com_imagem(pdf_path: Path, *, document=None) -> list[int]:
     """Páginas com uma imagem grande: conteúdo que o texto não pode ter.
 
     Na corrida de 2025, as tabelas salariais do INCM (três documentos), do
@@ -93,7 +95,7 @@ def paginas_com_imagem(pdf_path: Path) -> list[int]:
     import pdfplumber
 
     paginas = []
-    with pdfplumber.open(pdf_path) as pdf:
+    with (nullcontext(document) if document is not None else pdfplumber.open(pdf_path)) as pdf:
         for i, pag in enumerate(pdf.pages, 1):
             area = (pag.bbox[2] - pag.bbox[0]) * (pag.bbox[3] - pag.bbox[1])
             if any((im["x1"] - im["x0"]) * (im["bottom"] - im["top"]) >= FRACAO_IMAGEM * area

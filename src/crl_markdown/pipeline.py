@@ -1,17 +1,24 @@
 """Conversão local com Docling e saídas Markdown auditáveis."""
 
+import difflib
+import faulthandler
 import hashlib
 import json
 import os
 import sys
 import tempfile
+import traceback
 from dataclasses import asdict, dataclass
+from datetime import datetime
 from importlib.metadata import version
 from pathlib import Path
 
+from . import models
 from .audit import audit_pdf
 from .document import plain_markdown, prepare
+from .isolamento import ConversorIsolado, FalhaArranque
 from .legacy import completude
+from .policies import fingerprint, model_fingerprint, policy, profile_context
 from .quality import lint, parser
 from .report import new_manifest, write_reports
 
@@ -47,12 +54,43 @@ def apply_offline(offline: bool):
         constants.HF_HUB_OFFLINE = offline or initial in {"1", "ON", "YES", "TRUE"}
 
 
-def make_converter(options: Options):
+def check_models(options: Options):
+    """Recusa à partida o que falharia em cada documento por falta de modelos."""
+    if options.models and (options.models / models.MANIFEST).is_file():
+        problems = models.verify(options.models)
+        if problems:
+            shown = "; ".join(problems[:3]) + ("; …" if len(problems) > 3 else "")
+            raise ValueError(
+                f"Os modelos em {options.models} não correspondem ao manifesto ({shown}). "
+                "Copiar de novo a pasta preparada com `crl-md models download`."
+            )
+    if not options.ocr:
+        return
+    if options.models and not models.has_ocr_models(options.models):
+        raise ValueError(
+            f"OCR pedido, mas {options.models} não tem os modelos do OCR "
+            f"({models.OCR_FOLDER}). Prepará-los com `crl-md models download`."
+        )
+    if options.offline and not options.models:
+        raise ValueError(
+            "OCR em modo offline requer a pasta de modelos (--models), preparada com "
+            "`crl-md models download`; sem ela, o OCR iria buscar os modelos à rede."
+        )
+
+
+def validate_options(options: Options):
+    """O que se pode recusar antes de carregar o Docling."""
     if options.timeout <= 0:
         raise ValueError("O tempo máximo deve ser positivo.")
     if options.models and not options.models.is_dir():
         raise ValueError(f"Pasta de modelos inexistente: {options.models}")
+    check_models(options)
+
+
+def make_converter(options: Options):
+    validate_options(options)
     apply_offline(options.offline)
+    from docling.datamodel.backend_options import ThreadedDoclingParseBackendOptions
     from docling.datamodel.base_models import InputFormat
     from docling.datamodel.pipeline_options import PdfPipelineOptions, TableFormerMode
     from docling.document_converter import DocumentConverter, PdfFormatOption
@@ -65,11 +103,18 @@ def make_converter(options: Options):
         document_timeout=options.timeout,
         artifacts_path=options.models,
     )
+    if options.ocr:
+        pipeline.ocr_options = models.ocr_options()
     pipeline.table_structure_options.mode = TableFormerMode.ACCURATE
     pipeline.table_structure_options.do_cell_matching = True
     return DocumentConverter(
         allowed_formats=[InputFormat.PDF],
-        format_options={InputFormat.PDF: PdfFormatOption(pipeline_options=pipeline)},
+        format_options={InputFormat.PDF: PdfFormatOption(
+            pipeline_options=pipeline,
+            # Mitigação a validar em Windows: limitar os leitores nativos após
+            # quedas observadas no parser; não reduz as threads dos modelos.
+            backend_options=ThreadedDoclingParseBackendOptions(parser_threads=1),
+        )},
     )
 
 
@@ -99,11 +144,66 @@ def atomic_write(path: Path, content: str):
         temporary.unlink(missing_ok=True)
 
 
-def convert_pdf(
-    pdf: Path, target: Path, converter, options: Options, overwrite: bool = False
-) -> dict:
-    raw_target = target.parent / "_auditoria" / (target.stem + ".docling.md")
-    report_target = target.parent / "_auditoria" / (target.stem + ".qualidade.json")
+def audit_paths(target: Path, audit_dir: Path | None = None) -> tuple[Path, Path]:
+    """Exportação Docling e relatório de qualidade de um documento."""
+    folder = audit_dir if audit_dir is not None else target.parent / "_auditoria"
+    return folder / (target.stem + ".docling.md"), folder / (target.stem + ".qualidade.json")
+
+
+def previous_report(pdf: Path, target: Path, audit_dir: Path | None = None) -> dict | None:
+    """O relatório de uma conversão anterior completa do mesmo PDF, se existir.
+
+    O Markdown final é o último ficheiro escrito; com ele e o relatório, e o
+    mesmo SHA-256 do PDF, a conversão terminou e pode ser reaproveitada.
+    """
+    _raw, report_target = audit_paths(target, audit_dir)
+    if not (target.is_file() and report_target.is_file()):
+        return None
+    try:
+        report = json.loads(report_target.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    if not isinstance(report, dict) or report.get("quality_status") not in {"passed", "review", "blocked"}:
+        return None
+    artifacts = [(pdf, "source_sha256"), (target, "markdown_sha256"),
+                 (_raw.with_suffix(".json"), "docling_document_sha256")]
+    if report.get("raw_markdown_sha256"):
+        artifacts.append((_raw, "raw_markdown_sha256"))
+    try:
+        if any(not p.is_file() or report.get(key) != models._sha256(p)
+               for p, key in artifacts):
+            return None
+    except OSError:
+        return None
+    return report
+
+
+def adopt_previous_report(pdf: Path, target: Path, audit_dir: Path) -> dict | None:
+    """Reaproveita uma conversão anterior, incluindo as do formato antigo.
+
+    Até aqui, a auditoria de cada documento ficava em `_auditoria` ao lado do
+    Markdown. Uma conversão completa nesse formato é reaproveitada e os seus
+    ficheiros passam para `audit_dir`; a pasta antiga sai se ficar vazia.
+    """
+    report = previous_report(pdf, target, audit_dir)
+    if report is not None:
+        return report
+    legacy = target.parent / "_auditoria"
+    report = previous_report(pdf, target, legacy)
+    if report is None:
+        return None
+    audit_dir.mkdir(parents=True, exist_ok=True)
+    for suffix in (".docling.md", ".docling.json", ".qualidade.json", ".qualidade.md"):
+        old = legacy / (target.stem + suffix)
+        if old.is_file():
+            old.replace(audit_dir / old.name)
+    if not any(legacy.iterdir()):
+        legacy.rmdir()
+    return report
+
+
+def check_output_paths(target: Path, audit_dir: Path | None, *, overwrite=False):
+    raw_target, report_target = audit_paths(target, audit_dir)
     if not overwrite and any(
         p.exists()
         for p in (
@@ -115,12 +215,30 @@ def convert_pdf(
         )
     ):
         raise FileExistsError(f"Saída já existente: {target}; usar --overwrite para substituir.")
+
+
+def convert_pdf(
+    pdf: Path,
+    target: Path,
+    converter,
+    options: Options,
+    overwrite: bool = False,
+    *,
+    audit_dir: Path | None = None,
+    markdown_override: str | None = None,
+    generated_headings_override=None,
+    logical_name=None,
+) -> dict:
+    raw_target, report_target = audit_paths(target, audit_dir)
+    check_output_paths(target, audit_dir, overwrite=overwrite)
+    source_digest = models._sha256(pdf)
     result = converter.convert(pdf)
     status = getattr(result.status, "value", str(result.status))
     if status != "success":
         raise RuntimeError(f"Conversão incompleta ({status}): {pdf.name}")
     raw = result.document.export_to_markdown(image_placeholder="<!-- image -->")
-    subtype = "retificacao" if "-RECT_" in pdf.stem.upper() else "desconhecido"
+    doc_id = logical_name or pdf.stem
+    subtype, profile_origin = profile_context(pdf.with_name(doc_id + pdf.suffix))
     reference = None
     reference_words = []
     try:
@@ -132,13 +250,30 @@ def convert_pdf(
     except Exception:
         # A auditoria reportará a indisponibilidade; não inventar reparações.
         pass
-    prepared = prepare(result.document, pdf.stem, subtype=subtype, reference_words=reference_words)
+    from .table_repair import recover_tables
+    try:
+        table_repairs = recover_tables(pdf, result.document)
+    except Exception:
+        table_repairs = {}  # Conservar a extração e os seus bloqueios se não houver prova auxiliar.
+    prepared = prepare(result.document, doc_id, subtype=subtype, reference_words=reference_words,
+                       table_repairs=table_repairs)
     markdown = prepared.markdown
+    if markdown_override is not None:
+        from .quality import normalize
+        from .revisions import correction_structure
+        markdown = normalize(markdown_override)
+        prepared.generated_headings = list(generated_headings_override or ())
+        prepared.structure, prepared.structured_text = correction_structure(
+            markdown, prepared.generated_headings, doc_id, subtype)
+        prepared.tables = sum(t.type == 'table_open' for t in parser().parse(markdown))
+        prepared.findings = [f for f in prepared.findings if f.rule != 'RENDER_CONTENT']
+        prepared.transformations.append({'stage': 'correcao_humana',
+            'reason': 'Versão editada separadamente; nova auditoria de conteúdo e estrutura.'})
     title_added = not any(
         token.type == "heading_open" and token.tag == "h1" for token in parser().parse(markdown)
     )
     if title_added:
-        title = pdf.stem.replace("_", " ")
+        title = doc_id.replace("_", " ")
         # Nome de ficheiro usado como texto, sem permitir sintaxe Markdown.
         for char in "\\`*_{}[]<>()#!|":
             title = title.replace(char, "\\" + char)
@@ -153,15 +288,22 @@ def convert_pdf(
         prepared.structured_text,
         prepared.tables,
         reference=reference,
+        docling_document=result.document,
     )
     findings.extend(audit_findings)
     state = "rever" if any(f.severity != "info" for f in findings) else "sem_alertas_automaticos"
     document_json = json.dumps(result.document.export_to_dict(), ensure_ascii=False) + "\n"
     report = {
         "source": str(pdf.resolve()),
+        "document_profile": subtype,
+        "profile_origin": profile_origin,
+        "audit_policy_version": policy()['versao'],
+        "pipeline_fingerprint": fingerprint(),
+        "model_manifest_sha256": model_fingerprint(options.models),
         "output": str(target.resolve()),
-        "source_sha256": hashlib.sha256(pdf.read_bytes()).hexdigest(),
+        "source_sha256": source_digest,
         "markdown_sha256": hashlib.sha256(markdown.encode("utf-8")).hexdigest(),
+        "raw_markdown_sha256": hashlib.sha256(raw.encode("utf-8")).hexdigest(),
         "docling_version": getattr(converter, "docling_version", None) or version("docling"),
         "docling_document_sha256": hashlib.sha256(document_json.encode("utf-8")).hexdigest(),
         "cached_extraction": hasattr(converter, "extraction_options"),
@@ -176,6 +318,13 @@ def convert_pdf(
         "pages": len(result.document.pages),
         "tables": len(result.document.tables),
         "title_from_filename": title_added,
+        "generated_headings": prepared.generated_headings,
+        "transformations": prepared.transformations,
+        "rendering_diff": "".join(difflib.unified_diff(raw.splitlines(keepends=True),
+            markdown.splitlines(keepends=True), fromfile="Docling bruto", tofile="Markdown final")),
+        "structure_nodes": prepared.structure["nos"],
+        "structure_offsets_reference": "structured_text, não são posições no Markdown",
+        "structured_text": prepared.structured_text,
         "structure": {
             "clauses": sum(n["tipo"] == "clausula" for n in prepared.structure["nos"]),
             "articles": sum(n["tipo"] == "artigo" for n in prepared.structure["nos"]),
@@ -191,6 +340,8 @@ def convert_pdf(
         "completeness": audit,
         "findings": [finding.to_dict() for finding in findings],
     }
+    if models._sha256(pdf) != source_digest:
+        raise ValueError('O PDF mudou durante a conversão/auditoria. Repita com a fonte estável.')
     atomic_write(raw_target, raw)
     atomic_write(report_target, json.dumps(report, ensure_ascii=False, indent=2) + "\n")
     atomic_write(report_target.with_suffix(".md"), diagnostic)
@@ -202,18 +353,45 @@ def convert_pdf(
     return report
 
 
-def run(
-    source: Path, output: Path, options: Options, *, overwrite=False, progress=print, converter=None
+def _run(
+    source: Path,
+    output: Path,
+    options: Options,
+    *,
+    overwrite=False,
+    progress=print,
+    converter=None,
+    converter_factory=None,
+    entries_override=None,
+    relative_sources=None,
+    report_provider=None,
+    provenance=None,
 ) -> list[dict]:
-    entries = discover(source)
+    """Converte um PDF ou uma pasta de PDFs.
+
+    Sem `converter`, o Docling corre num processo separado (`isolamento.py`),
+    criado com `converter_factory` (por omissão `make_converter`): uma falha
+    nativa leva esse processo, não a corrida. Com `converter`, a conversão
+    corre neste processo, como nos testes e na reaplicação de uma cache.
+    """
+    entries = discover(source) if entries_override is None else entries_override
     if not entries:
         raise ValueError("Não foram encontrados PDFs.")
+    if relative_sources is not None and (
+            len(relative_sources) != len(entries)
+            or any(Path(name).is_absolute() or '..' in Path(name).parts
+                   or Path(name).with_suffix('.md') != relative
+                   for name, (_, relative) in zip(relative_sources, entries))):
+        raise ValueError('As identidades documentais não correspondem às saídas da seleção.')
     # Detecta colisões também em volumes Windows/macOS que ignoram maiúsculas.
     names = [str(relative).casefold() for _, relative in entries]
     if len(names) != len(set(names)):
         raise ValueError("PDFs com nomes que colidem na saída Markdown.")
     if any("_auditoria" in relative.parts for _, relative in entries):
         raise ValueError("O nome _auditoria está reservado para os relatórios.")
+    from .review_history import archive_legacy_manifest, protect_reviewed_outputs
+    protect_reviewed_outputs(output, entries, overwrite=overwrite)
+    archive_legacy_manifest(output)
     manifest = new_manifest(
         source,
         output,
@@ -223,31 +401,123 @@ def run(
             "models": str(options.models) if options.models else None,
             "overwrite": overwrite,
         },
+        relative_sources=relative_sources,
     )
+    if provenance is not None:
+        manifest['provenance'] = provenance
     reports = []
-    manifest["status"] = "interrompida"
+    # Os relatórios do lote são escritos já no início e atualizados a cada
+    # documento: uma corrida longa interrompida (janela fechada, falta de
+    # memória, falha de energia) deixa o diagnóstico do que foi feito.
+    manifest["status"] = "em_curso"
+    write_reports(manifest, output, atomic_write)
+    # Uma falha nativa (numa biblioteca em C, ao ler um PDF) fecha o processo
+    # sem exceção Python: a janela desaparece sem mensagem. O registo de
+    # progresso diz em que documento ia, e o faulthandler deixa o rasto.
+    audit = output / "_auditoria"
+    log = open(audit / "progresso.log", "a", encoding="utf-8")  # noqa: SIM115
+    native = None
+    if not faulthandler.is_enabled():
+        native = open(audit / "falha_nativa.log", "a", encoding="utf-8")  # noqa: SIM115
+        faulthandler.enable(file=native)
+    shown = progress
+
+    def progress(line):
+        log.write(f"{datetime.now().isoformat(timespec='seconds')} {line}\n")
+        log.flush()
+        shown(line)
+
+    progress(f"Corrida {manifest['run_id']}: {len(entries)} PDF de {source}")
+    isolated = None
     try:
-        converter = converter if converter is not None else make_converter(options)
+        if converter is None and report_provider is None:
+            validate_options(options)
+            # O processo de conversão herda o ambiente: o modo offline tem de
+            # estar decidido antes de ele arrancar.
+            apply_offline(options.offline)
+            isolated = ConversorIsolado(
+                options,
+                converter_factory or make_converter,
+                registo_falhas=audit / "falha_nativa.log",
+                aviso=progress,
+            )
+            manifest["execution_events"] = isolated.events
         for index, (pdf, relative) in enumerate(entries, 1):
             progress(f"[{index}/{len(entries)}] {pdf.name}")
+            target = output / relative
+            audit_dir = output / "_auditoria" / "documentos" / relative.parent
             try:
-                report = convert_pdf(pdf, output / relative, converter, options, overwrite)
+                report = None if overwrite or report_provider is not None else adopt_previous_report(pdf, target, audit_dir)
+                if report is not None:
+                    stored = report.get('options', {})
+                    if (report.get('pipeline_fingerprint') != fingerprint()
+                            or bool(stored.get('ocr')) != options.ocr
+                            or stored.get('models') != (str(options.models) if options.models else None)
+                            or report.get('model_manifest_sha256') != model_fingerprint(options.models)
+                            or (converter is None and report.get('docling_version') != version('docling'))):
+                        raise ValueError('As opções ou regras mudaram. Use Reauditar para reaplicar '
+                                         'as regras numa saída nova; mudanças de OCR/modelos '
+                                         'exigem nova extração numa pasta nova.')
+                    # Retomar uma corrida: o mesmo PDF já foi convertido.
+                    report["reused"] = True
+                elif report_provider is not None:
+                    report = report_provider(pdf, target, audit_dir)
+                elif isolated is not None:
+                    report = isolated.convert_pdf(pdf, target, overwrite, audit_dir)
+                else:
+                    report = convert_pdf(
+                        pdf, target, converter, options, overwrite, audit_dir=audit_dir,
+                        logical_name=relative.stem if relative_sources is not None else None,
+                    )
             except Exception as exc:
+                if isinstance(exc, FalhaArranque):
+                    raise
+                from .diagnostics import explain
                 report = {
                     "source": str(pdf.resolve()),
                     "state": "falhou",
                     "error": str(exc),
-                    "error_type": type(exc).__name__,
+                    "error_type": getattr(exc, "error_type", type(exc).__name__),
+                    "recovery": explain(exc),
+                    "traceback": getattr(exc, "remote_traceback", "") or "".join(traceback.format_exception(exc)),
                 }
             report = {**manifest["documents"][index - 1], **report}
+            from .occurrences import record_version
+            record_version(output, report['relative_source'], report)
             manifest["documents"][index - 1] = report
             reports.append(report)
-            progress(f"  {report['state']}" + (f": {report['error']}" if "error" in report else ""))
+            progress(
+                f"  {report['state']}"
+                + (" (já convertido, reaproveitado)" if report.get("reused") else "")
+                + (f": {report['error']}" if "error" in report else "")
+            )
+            write_reports(manifest, output, atomic_write)
         manifest["status"] = "concluida"
     except BaseException as exc:
+        manifest["status"] = "interrompida"
+        from .diagnostics import explain
         manifest["error"] = f"{type(exc).__name__}: {exc}"
+        manifest["recovery"] = explain(exc)
+        manifest["traceback"] = getattr(exc, "remote_traceback", "") or "".join(traceback.format_exception(exc))
         raise
     finally:
+        if isolated is not None:
+            isolated.fechar()
         report_path = write_reports(manifest, output, atomic_write)
         progress(f"Relatório consolidado: {report_path.resolve()}")
+        log.close()
+        if native is not None:
+            faulthandler.disable()
+            native.close()
+            if (audit / "falha_nativa.log").stat().st_size == 0:
+                (audit / "falha_nativa.log").unlink()
     return reports
+
+
+def run(source: Path, output: Path, options: Options, **kwargs) -> list[dict]:
+    from .locking import exclusive
+
+    with exclusive(output / "_auditoria" / ".operacao.lock"):
+        from .review_exchange import ensure_complete_imports
+        ensure_complete_imports(output)
+        return _run(source, output, options, **kwargs)
