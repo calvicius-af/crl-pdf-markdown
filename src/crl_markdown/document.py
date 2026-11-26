@@ -86,9 +86,18 @@ def table_rows(table, findings=None, reference_words=()) -> list[list[str]]:
                 "Células com posições sobrepostas: todos os textos foram preservados, "
                 "mas a correspondência entre linhas e colunas exige revisão.",
                 "error",
+                **item_location(table),
             )
         )
     return rows
+
+
+def item_location(item):
+    prov = getattr(item, 'prov', [])
+    if not prov:
+        return {'node': item.self_ref}
+    return {'node': item.self_ref, 'page': prov[0].page_no,
+            'bbox': tuple(prov[0].bbox.as_tuple())}
 
 
 def table_markdown(rows: list[list[str]]) -> str:
@@ -173,7 +182,7 @@ def is_bte_margin_picture(item, document):
     return True
 
 
-def prepare(document, doc_id: str, *, subtype="desconhecido", reference_words=()) -> Prepared:
+def prepare(document, doc_id: str, *, subtype="desconhecido", reference_words=(), table_repairs=None) -> Prepared:
     from docling_core.types.doc import PictureItem, TableItem, TextItem
 
     findings = []
@@ -187,11 +196,26 @@ def prepare(document, doc_id: str, *, subtype="desconhecido", reference_words=()
             if is_bte_margin_picture(item, document):
                 continue
             page = item.prov[0].page_no if item.prov else "?"
-            findings.append(Finding("IMAGE", 0, f"Página {page}: figura sem transcrição textual.", "error"))
+            box = tuple(item.prov[0].bbox.as_tuple()) if item.prov else None
+            findings.append(Finding("IMAGE", 0, f"Página {page}: figura sem transcrição textual.", "error",
+                                    page=page if isinstance(page, int) else None,
+                                    node=item.self_ref, bbox=box))
         elif isinstance(item, TableItem):
-            rows = table_rows(item, findings, reference_words)
+            repair = (table_repairs or {}).get(item.self_ref)
+            rows = repair['rows'] if repair else table_rows(item, findings, reference_words)
+            if repair:
+                transformations.append({'stage': 'reconstrucao_tabela_pdf', 'node': item.self_ref,
+                                        **{k: v for k, v in repair.items() if k != 'rows'}})
+                findings.append(Finding('TABLE_RECONSTRUCTED', 0,
+                    f"Página {repair['page']}: grelha reconstruída por linhas desenhadas no PDF; "
+                    'caracteres conferidos. Rever correspondência e importação.', 'warning', **item_location(item)))
+                if repair.get('unassigned'):
+                    findings.append(Finding('TABLE_GRID_GAP', 0,
+                        f"Página {repair['page']}: {len(repair['unassigned'])} carácter(es) fora "
+                        'das células reconhecidas, conservados em linha separada. '
+                        'Atribuir a célula correta antes de aprovar.', 'error', **item_location(item)))
             if not rows or not any(cell for row in rows for cell in row):
-                findings.append(Finding("TABLE_EMPTY", 0, "Tabela Docling sem conteúdo.", "error"))
+                findings.append(Finding("TABLE_EMPTY", 0, "Tabela Docling sem conteúdo.", "error", **item_location(item)))
                 continue
             # APSolutions (ISSUE-0016): o Docling confundiu o título da
             # cláusula e os números 1–12 omitidos com uma grelha de duas colunas.
@@ -223,6 +247,7 @@ def prepare(document, doc_id: str, *, subtype="desconhecido", reference_words=()
                         0,
                         f"Tabela {len(table_data)}: células unidas; "
                         "continuações vazias preservam a grelha. Conferir no PDF.",
+                        **item_location(item),
                     )
                 )
         elif isinstance(item, TextItem):
@@ -254,12 +279,35 @@ def prepare(document, doc_id: str, *, subtype="desconhecido", reference_words=()
         return min(6, level(parent) + 1) if parent else 2
 
     output, generated = [], []
+    # Uma cláusula inicial sem capítulo não pertence ao Preâmbulo. Quando
+    # existem capítulos mais adiante, abrir uma divisão de topo identificável,
+    # preferindo o último título nativo antes do primeiro articulado.
+    has_divisions = any(n['tipo'] in {'capitulo', 'seccao'} for n in nodes['nos'])
+    first_legal = next((n for n in nodes['nos'] if n['tipo'] in
+                       {'capitulo', 'seccao', 'anexo', 'clausula', 'artigo'}), None)
+    initial_clauses = first_legal and first_legal['tipo'] in {'clausula', 'artigo'}
+    native_headings = {item.text.strip() for item in ordered
+                       if getattr(getattr(item, 'label', None), 'value', '') == 'section_header'}
+    opening_heading = None
+    root_articulated = False
     for node in nodes["nos"]:
         if not node.get("folha", True):
             continue
         body = text[node["char_start"] : node["char_end"]].strip().splitlines()
+        if node['tipo'] in {'capitulo', 'seccao', 'anexo'} or node['rotulo'] in {'ASSINATURAS', 'TEXTO CONSOLIDADO'}:
+            root_articulated = False
+        root_clause = has_divisions and node['tipo'] in {'clausula', 'artigo'} and not node.get('pai')
+        if root_clause and not root_articulated:
+            heading = '## ' + escape_text(opening_heading) if opening_heading else '## Articulado'
+            output.append(heading)
+            if not opening_heading:
+                generated.append(heading)
+            transformations.append({'stage': 'hierarquia_markdown', 'node': node['id'],
+                                    'heading': heading, 'generated': not bool(opening_heading),
+                                    'reason': 'Articulado inicial separado do preâmbulo; não inventar capítulo.'})
+            root_articulated = True
         if node["tipo"] in {"clausula", "artigo", "capitulo", "seccao", "anexo"}:
-            output.append("#" * level(node) + " " + escape_text(node["rotulo"]))
+            output.append("#" * (3 if root_clause else level(node)) + " " + escape_text(node["rotulo"]))
             body = body[1:]
         elif node["tipo"] == "preambulo":
             heading = "## Preâmbulo"
@@ -269,6 +317,8 @@ def prepare(document, doc_id: str, *, subtype="desconhecido", reference_words=()
             else:
                 generated.append(heading)
             output.append(heading)
+            if has_divisions and initial_clauses and body and body[-1].strip() in native_headings:
+                opening_heading = body.pop().strip()
         elif node["rotulo"] in {"ASSINATURAS", "TEXTO CONSOLIDADO"}:
             heading = "## " + node["rotulo"].capitalize()
             output.append(heading)
@@ -298,6 +348,6 @@ def prepare(document, doc_id: str, *, subtype="desconhecido", reference_words=()
             )
         )
     return Prepared(
-        markdown, plain, structure, structured_text, findings, generated, reordered, len(table_data),
+        markdown, plain, structure, structured_text, list({f.to_dict()['id']: f for f in findings}.values()), generated, reordered, len(table_data),
         transformations
     )

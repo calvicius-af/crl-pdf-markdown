@@ -22,7 +22,13 @@ def safe_detail(text: str) -> str:
 def explain(error: BaseException) -> dict:
     detail = safe_detail(str(error))
     lowered = detail.lower()
-    if isinstance(error, OSError) and error.errno == errno.ENOSPC:
+    if 'documento bloqueado' in lowered:
+        code, action = 'CRL-QUALIDADE', (
+            'Abra Conferir / aprovar e selecione a ocorrência do documento. '
+            'Use Criar / editar correção e Reauditar correção para erros de conteúdo, '
+            'ou Reauditar lote para aplicar regras atualizadas. Repetir a mesma '
+            'extração não resolve uma regra inadequada. O PDF original é conservado.')
+    elif isinstance(error, OSError) and error.errno == errno.ENOSPC:
         code, action = "CRL-ESPACO", (
             "Não há espaço livre suficiente. Peça ao apoio informático para libertar espaço "
             "na pasta de saída ou escolha uma unidade local com espaço e tente novamente."

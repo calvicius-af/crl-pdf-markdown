@@ -1,0 +1,280 @@
+{
+  "schema_version": 1,
+  "baseline_run_id": "20261016T113033004084Z-2471d135",
+  "candidate_run_id": "20261016T160138618141Z-a09195ae",
+  "baseline_sha256": "a08655aa0afc6aca4c0c47dec79be027488d3c643b0f85fd3fd208e3357b78ea",
+  "candidate_sha256": "5bb965047936c8d22cbac1ec2a5788d414541e3d47c10e1e5c5e80d52815cf12",
+  "baseline_status": "concluida",
+  "candidate_status": "concluida",
+  "compared": 411,
+  "only_baseline": [],
+  "only_candidate": [],
+  "before": {
+    "quality": {
+      "blocked": 105,
+      "review": 230,
+      "passed": 76
+    },
+    "occurrences": {
+      "CRITICAL_SYMBOLS": 45,
+      "AMOUNTS": 57,
+      "STRUCTURE": 178,
+      "COMPLETENESS": 53,
+      "LIST_MARKER": 566,
+      "TABLE_SPAN": 651,
+      "TABLE_WIDE": 169,
+      "TABLE_OVERLAP": 58,
+      "TABLE_AS_TEXT": 7,
+      "IMAGE": 22,
+      "LEGAL_LIST_BULLET": 4,
+      "TABLE_EMPTY": 28,
+      "RENDER_CONTENT": 1,
+      "CLAUSE_TITLE_SPLIT": 2
+    },
+    "affected_documents": {
+      "STRUCTURE": 173,
+      "AMOUNTS": 57,
+      "CRITICAL_SYMBOLS": 45,
+      "COMPLETENESS": 53,
+      "LIST_MARKER": 71,
+      "TABLE_SPAN": 141,
+      "TABLE_OVERLAP": 32,
+      "TABLE_WIDE": 54,
+      "TABLE_AS_TEXT": 7,
+      "IMAGE": 11,
+      "LEGAL_LIST_BULLET": 2,
+      "TABLE_EMPTY": 14,
+      "RENDER_CONTENT": 1,
+      "CLAUSE_TITLE_SPLIT": 2
+    }
+  },
+  "after": {
+    "quality": {
+      "passed": 199,
+      "review": 122,
+      "blocked": 90
+    },
+    "occurrences": {
+      "STRUCTURE": 55,
+      "COMPLETENESS": 50,
+      "LIST_MARKER": 71,
+      "CRITICAL_SYMBOLS": 39,
+      "TABLE_SPAN": 651,
+      "TABLE_WIDE": 169,
+      "TABLE_OVERLAP": 52,
+      "TABLE_CELL_POSITION": 161,
+      "AMOUNTS": 18,
+      "TABLE_AS_TEXT": 7,
+      "IMAGE": 22,
+      "LEGAL_LIST_BULLET": 4,
+      "TABLE_EMPTY": 28,
+      "TABLE_RECONSTRUCTED": 14,
+      "TABLE_CELL_GEOMETRY": 4,
+      "RENDER_CONTENT": 1,
+      "TABLE_GRID_GAP": 12,
+      "CLAUSE_TITLE_SPLIT": 2
+    },
+    "affected_documents": {
+      "STRUCTURE": 51,
+      "COMPLETENESS": 50,
+      "LIST_MARKER": 71,
+      "CRITICAL_SYMBOLS": 39,
+      "TABLE_SPAN": 141,
+      "TABLE_OVERLAP": 27,
+      "TABLE_CELL_POSITION": 14,
+      "TABLE_WIDE": 54,
+      "AMOUNTS": 18,
+      "TABLE_AS_TEXT": 7,
+      "IMAGE": 11,
+      "LEGAL_LIST_BULLET": 2,
+      "TABLE_EMPTY": 14,
+      "TABLE_RECONSTRUCTED": 8,
+      "TABLE_CELL_GEOMETRY": 2,
+      "RENDER_CONTENT": 1,
+      "TABLE_GRID_GAP": 6,
+      "CLAUSE_TITLE_SPLIT": 2
+    }
+  },
+  "transitions": {
+    "blocked → passed": 7,
+    "review → passed": 116,
+    "passed → passed": 76,
+    "review → review": 110,
+    "blocked → blocked": 86,
+    "blocked → review": 12,
+    "review → blocked": 4
+  },
+  "by_family": {
+    "acordaos": {
+      "before": {
+        "blocked": 1
+      },
+      "after": {
+        "passed": 1
+      }
+    },
+    "acordos_adesao": {
+      "before": {
+        "review": 9
+      },
+      "after": {
+        "passed": 9
+      }
+    },
+    "cessacoes_vigencia": {
+      "before": {
+        "passed": 1,
+        "review": 1
+      },
+      "after": {
+        "passed": 1,
+        "review": 1
+      }
+    },
+    "convencoes/APU": {
+      "before": {
+        "passed": 36,
+        "review": 16,
+        "blocked": 3
+      },
+      "after": {
+        "passed": 37,
+        "review": 16,
+        "blocked": 2
+      }
+    },
+    "convencoes/PRI": {
+      "before": {
+        "blocked": 83,
+        "review": 92,
+        "passed": 38
+      },
+      "after": {
+        "blocked": 71,
+        "review": 99,
+        "passed": 43
+      }
+    },
+    "convencoes/SPE": {
+      "before": {
+        "blocked": 18,
+        "passed": 1,
+        "review": 2
+      },
+      "after": {
+        "blocked": 17,
+        "review": 3,
+        "passed": 1
+      }
+    },
+    "portarias_extensao": {
+      "before": {
+        "review": 110
+      },
+      "after": {
+        "passed": 107,
+        "review": 3
+      }
+    }
+  },
+  "manifest_bytes": {
+    "before": 62934340,
+    "after": 2448136
+  },
+  "candidate_duration_seconds": 852.668561,
+  "limitations": "Estados automáticos não são aprovação humana. Sem referência anotada, não se estimam falsos positivos/negativos. Duração da extração original e reauditoria são operações diferentes.",
+  "comparable_complete_corpus": true,
+  "reference_checks": {
+    "reference_sha256": "affe28ddd2f9f96153639d1a95598568a5d61ce71a329623ccbf44caf14468dd",
+    "source": {
+      "file": "MAXQDA Segmentos codificados.xlsx",
+      "sha256": "60c76c05c07b78f50fe34208399936eae1363583e357eac6ec962ef54a842b92",
+      "sheet": "Sheet1",
+      "rows": [
+        2,
+        3,
+        4,
+        5
+      ]
+    },
+    "documents": [
+      {
+        "document": "2026_BTE_27_PRI_322_AE_47246_AutoestradaAlgarve-CESP",
+        "status": "passed",
+        "checks": [
+          {
+            "check": "## Âmbito e vigência",
+            "passed": true
+          },
+          {
+            "check": "### Cláusula 3.ª - (Comissão paritária)",
+            "passed": true
+          },
+          {
+            "check": "## CAPÍTULO II - Admissões e enquadramento profissional",
+            "passed": true
+          },
+          {
+            "check": "### Cláusula 4.ª - (Condições de admissão)",
+            "passed": true
+          },
+          {
+            "check": "ordem dos cabeçalhos",
+            "passed": true
+          },
+          {
+            "check": "não inventar ## CAPÍTULO I",
+            "passed": true
+          }
+        ]
+      },
+      {
+        "document": "2026_BTE_27_PRI_329_AE-ALT_46692_FundacaoINATEL-SITESE",
+        "status": "passed",
+        "checks": [
+          {
+            "check": "### Cláusula 25.ª - Garantias do trabalhador",
+            "passed": true
+          },
+          {
+            "check": "## CAPÍTULO VI - Prestação do trabalho",
+            "passed": true
+          },
+          {
+            "check": "### SECÇÃO I - Princípios gerais",
+            "passed": true
+          },
+          {
+            "check": "#### Cláusula 26.ª - Regulamentação do trabalho",
+            "passed": true
+          },
+          {
+            "check": "ordem dos cabeçalhos",
+            "passed": true
+          },
+          {
+            "check": "Técnico Superior de Grau V",
+            "matched_rows": 2,
+            "passed": true
+          },
+          {
+            "check": "Técnico Superior de Grau IV",
+            "matched_rows": 2,
+            "passed": true
+          },
+          {
+            "check": "manter bloqueio TABLE_GRID_GAP",
+            "passed": true
+          }
+        ]
+      }
+    ]
+  },
+  "integrity_checks": {
+    "original_markdown_hashes_verified": 411,
+    "source_hashes_match": 411,
+    "cached_extractions": 411,
+    "conversion_failures": 0,
+    "original_manifest_unchanged": true
+  }
+}

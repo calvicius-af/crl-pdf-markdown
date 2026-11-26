@@ -771,8 +771,8 @@ def add_arguments(p):
         "--siglas",
         action="append",
         default=[],
-        help="CSV de siglas adicional ('nome;sigla'); o siglas.csv da pasta de trabalho "
-        "e o registo de organizações da DGERT são sempre usados",
+        help="CSV de siglas prioritário ('nome;sigla'); o siglas.csv da pasta de trabalho "
+        "é usado apenas quando não há --siglas; os recursos da DGERT são complementares",
     )
     p.add_argument(
         "--aceitar-heuristicas",
@@ -855,7 +855,8 @@ def collect(args):
         aplicar=True,
         scheme=getattr(args, "esquema", "adr0022"),
         workspace=bool(workspace and Path(args.nomes) == NOMES_OMISSAO),
-        tabela=nomeacao.tabela_de_siglas(args.siglas),
+        tabela=nomeacao.tabela_de_siglas(equipa=args.siglas[0], caminhos=args.siglas[1:])
+        if args.siglas else nomeacao.tabela_de_siglas(),
         familias=familias,
         aceitar_heuristicas=args.aceitar_heuristicas,
     )

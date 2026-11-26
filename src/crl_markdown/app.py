@@ -90,6 +90,7 @@ def main():
 
     report_path = None
     running = threading.Event()
+    reaudit_cancel = threading.Event()
 
     def close():
         # A conversão corre numa thread que morre com a janela. Os documentos
@@ -102,6 +103,7 @@ def main():
             "com a mesma pasta de saída continua a partir deles. Fechar?",
         ):
             return
+        reaudit_cancel.set()
         root.destroy()
 
     root.protocol("WM_DELETE_WINDOW", close)
@@ -257,70 +259,34 @@ def main():
     def review_document():
         if running.is_set():
             return
-        from .models import _sha256
-        from .validation import _load, decide
-        folder = Path(output.get())
+        from .review_app import ReviewWindow
         try:
-            manifest = _load(folder)
-        except ValueError as error:
-            messagebox.showinfo("Ainda não é possível conferir o texto", str(error))
+            ReviewWindow(root, Path(output.get()))
+        except (ValueError, OSError) as error:
+            messagebox.showinfo("Ainda não é possível conferir", str(error))
+
+    def reaudit_batch():
+        if running.is_set():
             return
-        documents = manifest["documents"]
-        if not documents:
-            messagebox.showinfo("Sem documentos para conferir", "O lote não contém documentos. "
-                                "Execute Construir Markdown e consulte o relatório da conversão.")
+        from .reaudit import reaudit
+        if not output.get().strip():
+            messagebox.showinfo("Pasta de saída", "Selecione a saída de uma conversão existente.")
             return
-        expected = {}
-        for document in documents:
-            relative = Path(document["relative_source"])
-            report = folder / "_auditoria/documentos" / relative.parent / (relative.stem + ".qualidade.json")
-            if report.is_file():
-                expected[document["relative_source"]] = {
-                    "source_sha256": document.get("source_sha256"),
-                    "markdown_sha256": document.get("markdown_sha256"),
-                    "report_sha256": _sha256(report),
-                }
-        dialog = tk.Toplevel(root)
-        dialog.title("Conferir texto com o PDF original")
-        dialog.transient(root)
-        dialog.grab_set()
-        dialog.geometry("760x530")
-        body = ttk.Frame(dialog, padding=14)
-        body.pack(fill="both", expand=True)
-        ttk.Label(body, text="Abra o PDF, o Markdown e o relatório. Confira o texto e todas as tabelas.",
-                  wraplength=700).pack(anchor="w")
-        selected = tk.StringVar()
-        choices = [d["relative_source"] for d in documents]
-        ttk.Combobox(body, textvariable=selected, values=choices, state="readonly", width=95).pack(fill="x", pady=8)
-        if choices:
-            selected.set(choices[0])
-        def document():
-            return next(d for d in documents if d["relative_source"] == selected.get())
-        links = ttk.Frame(body)
-        links.pack(fill="x")
-        for title, field in (("Abrir PDF original", "source"), ("Abrir Markdown", "output")):
-            ttk.Button(links, text=title, command=lambda key=field:
-                       webbrowser.open(Path(document()[key]).resolve().as_uri())).pack(side="left")
-        ttk.Button(links, text="Abrir evidências", command=lambda:
-                   webbrowser.open((folder / "_auditoria/detalhes.md").resolve().as_uri())).pack(side="left")
-        reviewer = tk.StringVar()
-        ttk.Label(body, text="Nome de quem fez a conferência").pack(anchor="w", pady=(10, 0))
-        ttk.Entry(body, textvariable=reviewer).pack(fill="x")
-        integral = tk.BooleanVar()
-        ttk.Checkbutton(body, text="Conferi integralmente este documento, incluindo tabelas e anexos",
-                        variable=integral).pack(anchor="w", pady=8)
-        ttk.Label(body, text="O que conferiu / resolução de cada aviso (obrigatório se há avisos)").pack(anchor="w")
-        notes = tk.Text(body, height=8, wrap="word")
-        notes.pack(fill="both", expand=True)
-        def record(decision):
-            path = decide(folder, selected.get(), reviewer=reviewer.get(), decision=decision,
-                          scope="integral" if integral.get() else "amostra", notes=notes.get("1.0", "end").strip(),
-                          expected=expected.get(selected.get(), {}))
-            messagebox.showinfo("Conferência registada", f"Decisão guardada: {path}", parent=dialog)
-        actions = ttk.Frame(body)
-        actions.pack(pady=8)
-        ttk.Button(actions, text="Registar aprovação", command=lambda: record("aprovado")).pack(side="left")
-        ttk.Button(actions, text="Registar rejeição", command=lambda: record("rejeitado")).pack(side="left")
+        current_output = Path(output.get())
+        reaudit_cancel.clear()
+        running.set()
+        def worker():
+            try:
+                destination, reports = reaudit(current_output, progress=lambda line: events.put(("log", line)),
+                                               cancel_event=reaudit_cancel)
+                events.put(("output", str(destination)))
+                events.put(("report", destination / "_auditoria/diagnostico.md"))
+                events.put(("log", f"Reauditoria terminada: {len(reports)} documentos. Nova saída: {destination}"))
+            except (ValueError, OSError, RuntimeError) as error:
+                events.put(("log", f"Reauditoria não concluída: {error}"))
+            finally:
+                events.put(("done", ""))
+        threading.Thread(target=worker, daemon=True).start()
 
     def deliver_approved():
         if running.is_set():
@@ -343,11 +309,15 @@ def main():
     ttk.Button(workflow, text="Conferir / aprovar…", command=review_document).pack(side="left")
     ttk.Button(workflow, text="Entregar aprovados…", command=deliver_approved).pack(side="left")
 
+    ttk.Button(frame, text="Reauditar lote (sem nova extração)", command=reaudit_batch).pack(pady=4)
+
     def poll():
         nonlocal report_path
         while not events.empty():
             kind, text = events.get_nowait()
-            if kind == "report":
+            if kind == "output":
+                output.set(text)
+            elif kind == "report":
                 report_path = text
                 report_button.configure(state="normal")
             elif kind == "done":

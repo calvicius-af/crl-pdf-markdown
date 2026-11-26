@@ -66,8 +66,76 @@ def main(argv=None):
     delivery = commands.add_parser("deliver", help="Entregar Markdown aprovado e relatório metodológico")
     delivery.add_argument("--out", type=Path, required=True, help="Pasta da conversão")
     delivery.add_argument("--destination", type=Path, required=True, help="Nova pasta de entrega")
+    audit_again = commands.add_parser('reaudit', help='Reauditar uma extração verificada numa pasta nova')
+    audit_again.add_argument('--out', type=Path, required=True)
+    audit_again.add_argument('--destination', type=Path)
+    audit_again.add_argument('--document')
+    audit_again.add_argument('--family', action='append', default=[],
+                             help='Primeira subpasta do PDF, por exemplo convencoes; repetível; . para a raiz')
+    audit_again.add_argument('--rule', action='append', default=[],
+                             help='Regra presente na corrida anterior, por exemplo AMOUNTS; repetível')
+    audit_again.add_argument('--status', action='append', default=[],
+                             choices=['passed', 'review', 'blocked'],
+                             help='Estado automático na corrida anterior; repetível')
+    audit_again.add_argument('--dry-run', action='store_true',
+                             help='Listar a seleção em JSON sem criar saídas nem carregar modelos')
+    audit_again.add_argument('--jobs', type=int, choices=[1, 2], default=2)
+    revision = commands.add_parser('revise', help='Criar uma correção separada do original')
+    revision.add_argument('--out', type=Path, required=True)
+    revision.add_argument('--document', required=True)
+    revision.add_argument('--reviewer', required=True)
+    revision_audit = commands.add_parser('audit-revision', help='Auditar e publicar uma correção guardada')
+    revision_audit.add_argument('revision', type=Path)
+    revision_audit.add_argument('--resolutions', type=Path)
+    ocr_pages = commands.add_parser('ocr-pages', help='Reextrair só as páginas indicadas com OCR local')
+    ocr_pages.add_argument('--out', type=Path, required=True)
+    ocr_pages.add_argument('--document', required=True)
+    ocr_pages.add_argument('--reviewer', required=True)
+    ocr_pages.add_argument('--models', type=Path, required=True)
+    ocr_pages.add_argument('--pages', required=True)
+    evaluation = commands.add_parser('evaluate', help='Comparar auditorias e casos de referência anotados')
+    evaluation.add_argument('--baseline', type=Path, required=True)
+    evaluation.add_argument('--candidate', type=Path, required=True)
+    evaluation.add_argument('--out', type=Path, required=True)
+    evaluation.add_argument('--reference', type=Path)
     args = parser.parse_args(argv)
     try:
+        if args.command == 'evaluate':
+            from .evaluation import evaluate
+            data = evaluate(args.baseline, args.candidate, args.out, reference=args.reference)
+            print(f'Comparação: {args.out / "comparacao.md"}')
+            return int(not data['comparable_complete_corpus'] or any(d['status'] != 'passed'
+                       for d in data.get('reference_checks', {}).get('documents', [])))
+        if args.command == 'ocr-pages':
+            from .page_ocr import parse_pages, reextract_pages
+            from .revisions import _record
+            from .validation import _verified
+            _, _, report = _verified(args.out, _record(args.out, args.document))
+            selected = parse_pages(args.pages, report['pages'])
+            destination, report = reextract_pages(args.out, args.document, args.reviewer, args.models, selected)
+            print(f'OCR dirigido: {destination} ({report["quality_status"]})')
+            return int(report['quality_status'] == 'blocked')
+        if args.command == 'revise':
+            from .revisions import create_revision
+            print(create_revision(args.out, args.document, args.reviewer))
+            return 0
+        if args.command == 'audit-revision':
+            from .revisions import audit_revision
+            resolutions = json.loads(args.resolutions.read_text(encoding='utf-8')) if args.resolutions else []
+            publication, report = audit_revision(args.revision, resolutions=resolutions)
+            print(f'Correção auditada: {publication} ({report["quality_status"]})')
+            return int(report['quality_status'] == 'blocked')
+        if args.command == 'reaudit':
+            from .reaudit import plan_reaudit, reaudit
+            filters = dict(relative_source=args.document, families=args.family,
+                           rules=args.rule, statuses=args.status)
+            if args.dry_run:
+                _, _, selection = plan_reaudit(args.out, **filters)
+                print(json.dumps(selection, ensure_ascii=False, indent=2))
+                return 0
+            destination, reports = reaudit(args.out, args.destination, **filters, jobs=args.jobs)
+            print(f'Reauditoria: {destination}')
+            return int(any(r.get('quality_status') == 'blocked' or r.get('state') == 'falhou' for r in reports))
         if args.command == "review":
             from .validation import decide
             print(decide(args.out, args.document, reviewer=args.reviewer,
@@ -122,7 +190,7 @@ def main(argv=None):
                 args.out,
                 Options(args.ocr, args.models, args.offline, args.timeout),
                 overwrite=args.overwrite,
-                converter=CachedConverter(args.docling_cache) if args.docling_cache else None,
+                converter=CachedConverter(args.docling_cache, Options(args.ocr, args.models, args.offline, args.timeout)) if args.docling_cache else None,
             )
         if any(
             r.get("state") == "falhou"
@@ -136,6 +204,9 @@ def main(argv=None):
             return 2
         return 0
     except (ValueError, OSError, ImportError, RuntimeError) as exc:
+        if args.command == 'reaudit' and args.dry_run:
+            print(f'Erro: {exc}', file=sys.stderr)
+            return 1
         from tempfile import gettempdir
 
         from .diagnostics import save_failure

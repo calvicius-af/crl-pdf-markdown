@@ -47,8 +47,12 @@ Na interface, **Criar / usar pasta RNC…** prepara a árvore e preenche entrada
 **Recolher PDFs**, **Organizar PDFs (sem rede)**, **Conferir / aprovar…** e
 **Entregar aprovados…** cobrem preparação, conferência e entrega.
 As decisões são vinculadas aos hashes; a entrega inclui relatório metodológico.
-O ciclo de edição de correções e nova auditoria ainda está por implementar na GUI;
-documentos bloqueados não podem ser aprovados pelo botão de conferência.
+A janela de conferência inclui ocorrências, correções versionadas, nova auditoria
+e OCR dirigido. A CLI permite reauditar uma seleção por família, regra e estado,
+com simulação prévia (`reaudit --dry-run`); ver o
+[percurso de seleção](docs/operacao/guia-utilizacao.md#reauditar-uma-seleção-pela-linha-de-comandos). A aprovação exige uma versão sem erros por resolver e uma decisão
+humana atual. Ver o [percurso de correção](docs/operacao/guia-utilizacao.md#corrigir-reauditar-e-decidir-na-gui)
+e a [hierarquia Markdown](docs/operacao/hierarquia-markdown.md).
 O caminho antigo `data/`/`results/` continua disponível para compatibilidade;
 `--workspace` é o caminho recomendado para novos lotes.
 
@@ -58,6 +62,10 @@ direta no MaxQDA continuam gates de aceitação por realizar. Docling mantém-se
 como único motor principal de conversão, com cache auditada e auditores auxiliares.
 
 ## Instalar e utilizar
+
+Candidato de teste: **0.3.1rc2**. Para testar o pacote completo sem rede, siga
+o [guia curto de instalação e teste](docs/operacao/testar-pacote-offline.md).
+O pacote Windows só é disponibilizado após o ensaio de instalação/conversão.
 
 Python 3.11 a 3.13; as estações do CRL usam Windows com Python 3.13. Instalar o
 Python de python.org com a opção «tcl/tk and IDLE», necessária à interface

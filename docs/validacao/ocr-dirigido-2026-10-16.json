@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "test": "PDF sintético de três páginas; OCR integral apenas da página selecionada 2, em processo Docling isolado",
+  "offline": true,
+  "selected_pages": [
+    2
+  ],
+  "reused_pages": [
+    1,
+    3
+  ],
+  "docling_version": "2.128.0",
+  "quality_status": "review",
+  "unchanged_source": true,
+  "unchanged_original_markdown": true,
+  "findings": [
+    {
+      "rule": "STRUCTURE",
+      "severity": "warning"
+    }
+  ],
+  "limits": "Ensaio de execução e composição; não mede qualidade de reconhecimento de digitalizações nem substitui validação Windows ou importação MAXQDA.",
+  "force_full_page_ocr": true
+}

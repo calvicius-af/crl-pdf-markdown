@@ -22,14 +22,34 @@ def normalizar(texto):
                    if unicodedata.category(c) != "Mn")
 
 
-def perfil_documental(doc_id):
-    """Só marcadores de tipo no nome canónico alteram o perfil de auditoria."""
-    if "_CES-VIG_" in doc_id.upper():
+def perfil_documental(doc_id, metadata=None):
+    """Tipologia/operação/âmbito explícitos, com fallback do nome canónico."""
+    record = metadata or {}
+    kind = str(record.get('tipo_documental') or record.get('tipo') or '').upper()
+    family = record.get('familia', '')
+    identity = '_' + kind + '_' if metadata and (kind or family) else doc_id.upper() + '_'
+    operation = record.get('operacao_documental', '')
+    if "_CES-VIG_" in identity or family == 'cessacao' or operation == 'cessacao_vigencia':
         return "cessacao_vigencia"
-    if re.search(r"_(?:ACEP|ACCE)-DELI_", doc_id.upper()):
+    if re.search(r"_(?:ACEP|ACCE)-DELI_", identity) or operation == 'deliberacao_comissao_paritaria':
         return "deliberacao_comissao_paritaria"
-    if "-RECT_" in doc_id.upper():
+    if "-RECT_" in identity or kind == 'RECT' or operation == 'retificacao':
         return "retificacao"
+    if family == 'extensao' or re.search(r'_(?:PE|PCT|PRT)_', identity):
+        return 'portaria'
+    if family == 'adesao' or re.search(r'_(?:AA|ADESAO)_', identity):
+        return 'adesao'
+    if family == 'acordao' or '_JUR_' in identity:
+        return 'acordao'
+    if family == 'aviso' or re.search(r'_(?:AVISO|AV)_', identity):
+        return 'aviso'
+    scope = record.get('ambito_documental') or record.get('nomeacao', {}).get('ambito')
+    public = scope == 'APU' if scope else bool(re.search(r'_APU_|_(?:ACEP|ACCE)(?:-|_)', identity))
+    alteration = operation == 'alteracao' or '-ALT_' in identity
+    if public:
+        return 'alteracao_publica' if alteration else 'convencao_publica'
+    if family == 'convencao' or re.search(r'_(?:CCT|ACT|ACTV|AE|DA)(?:-|_)', identity):
+        return 'alteracao_privada' if alteration else 'convencao_privada'
     return "desconhecido"
 
 

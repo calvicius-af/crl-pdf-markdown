@@ -42,6 +42,46 @@ def sha256(path):
     return digest.hexdigest()
 
 
+def windows_ascii_path(path):
+    """Alias do mesmo diretório para bibliotecas nativas que abrem nomes ANSI."""
+    text = str(path)
+    if text.isascii():
+        return path
+    import ctypes
+    from ctypes import wintypes
+
+    get_short_path = ctypes.WinDLL('kernel32', use_last_error=True).GetShortPathNameW
+    get_short_path.argtypes = [wintypes.LPCWSTR, wintypes.LPWSTR, wintypes.DWORD]
+    get_short_path.restype = wintypes.DWORD
+    size = get_short_path(text, None, 0)
+    if size:
+        buffer = ctypes.create_unicode_buffer(size)
+        written = get_short_path(text, buffer, size)
+        if 0 < written < size and buffer.value.isascii():
+            alias = Path(buffer.value)
+            if alias.samefile(path):
+                return alias
+    raise ValueError('O parser PDF requer um caminho de bibliotecas sem acentos nesta estação. '
+                     'O Windows não disponibilizou um alias curto. Repita com --destination '
+                     'numa pasta local sem acentos, com permissão de escrita; não altere os modelos.')
+
+
+def configure_native_paths(environment):
+    """Conservar o ambiente; importar a mesma site-packages pelo alias ASCII."""
+    if sys.platform != 'win32':
+        return {}
+    packages = environment / 'Lib/site-packages'
+    alias = windows_ascii_path(packages)
+    if alias == packages:
+        return {}
+    # A linha .pth é executada pelo próprio ambiente antes de importar Docling.
+    # Não altera wheels, recursos nativos ou o ambiente de outros projetos.
+    bootstrap = packages / 'crl_native_paths.pth'
+    bootstrap.write_text('import sys; sys.path.insert(0, ' + repr(str(alias)) + ')\n',
+                         encoding='ascii')
+    return {'native_site_packages': str(alias), 'native_path_bootstrap_sha256': sha256(bootstrap)}
+
+
 def verify(package):
     package = package.resolve()
     if (package / 'PACOTE_INCOMPLETO.txt').exists():
@@ -117,6 +157,10 @@ socket.socket.connect_ex = blocked
 socket.create_connection = blocked
 socket.getaddrinfo = blocked
 import tkinter
+window = tkinter.Tk()
+window.withdraw()
+window.update_idletasks()
+window.destroy()
 from crl_markdown import models
 from crl_markdown.pipeline import Options, make_converter
 folder = Path(sys.argv[1])
@@ -201,6 +245,7 @@ def install(package, destination, log):
                 if sha256(resources / name) != digest:
                     raise ValueError(f'Ficheiro alterado durante a cópia: {name}. Copie novamente o pacote.')
         venv.create(environment, with_pip=True)
+        native_paths = configure_native_paths(environment)
         python = environment / ('Scripts/python.exe' if os.name == 'nt' else 'bin/python')
         child_env = {**os.environ, 'PIP_NO_INDEX': '1', 'PIP_DISABLE_PIP_VERSION_CHECK': '1',
                      'HF_HUB_OFFLINE': '1', 'TRANSFORMERS_OFFLINE': '1', 'PYTHONUTF8': '1',
@@ -230,7 +275,7 @@ def install(package, destination, log):
                 except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as error:
                     raise RuntimeError(label + ' falhou. Conserve o relatório TXT para o apoio; '
                                        'a instalação anterior continua disponível.') from error
-        config = {'python': str(python), 'models': str(resources / 'modelos'),
+        config = {**native_paths, 'python': str(python), 'models': str(resources / 'modelos'),
                   'resources': str(resources), 'ocr_tested': bool(manifest.get('ocr')),
                   'package_sha256': sha256(package / 'pacote.json'), 'versions': manifest['versions']}
         if os.name == 'nt':
@@ -300,4 +345,7 @@ def main(argv=None):
 
 
 if __name__ == '__main__':
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, 'reconfigure'):
+            stream.reconfigure(encoding='utf-8', errors='replace')
     raise SystemExit(main())

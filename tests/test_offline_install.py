@@ -136,6 +136,7 @@ def test_package_with_wrong_docling_models_is_rejected(installer, tmp_path):
 def fake_heavy_steps(installer, monkeypatch, commands, fail=None):
     fake_tk(monkeypatch)
     monkeypatch.setattr(installer.venv, 'create', lambda folder, **kw: folder.mkdir())
+    monkeypatch.setattr(installer, 'configure_native_paths', lambda folder: {})
 
     def run(command, **kwargs):
         commands.append((command, kwargs))
@@ -411,3 +412,71 @@ def test_updated_installer_uses_existing_package_without_modifying_it(installer,
     assert installer.verify(package)['schema'] == 2
     pip_command, _options = commands[0]
     assert pip_command[pip_command.index('--find-links') + 1] == str(package / 'wheelhouse')
+
+
+def test_native_path_bootstrap_uses_ascii_import_path_without_changing_packages(installer, tmp_path, monkeypatch):
+    from types import SimpleNamespace
+
+    environment = tmp_path / 'Instalação'
+    packages = environment / 'Lib/site-packages'
+    packages.mkdir(parents=True)
+    original = packages / 'crl_offline_probe.py'
+    original.write_text('value = "original"\n', encoding='utf-8')
+    alias = tmp_path / 'ascii-packages'
+    alias.mkdir()
+    (alias / 'crl_offline_probe.py').write_text('value = "alias"\n', encoding='utf-8')
+    monkeypatch.setattr(installer, 'sys', SimpleNamespace(platform='win32'))
+    seen = []
+    def short_path(path):
+        seen.append(path)
+        return alias
+    monkeypatch.setattr(installer, 'windows_ascii_path', short_path)
+    result = installer.configure_native_paths(environment)
+    assert seen == [packages]
+    bootstrap = packages / 'crl_native_paths.pth'
+    assert result['native_path_bootstrap_sha256'] == hashlib.sha256(bootstrap.read_bytes()).hexdigest()
+    probe = subprocess.run([sys.executable, '-I', '-c',
+        'import site, sys; site.addsitedir(sys.argv[1]); '
+        'import crl_offline_probe; print(crl_offline_probe.value)', str(packages)],
+        check=True, capture_output=True, text=True)
+    assert probe.stdout.strip() == 'alias'
+    assert original.read_text(encoding='utf-8') == 'value = "original"\n'
+
+
+def test_ascii_environment_needs_no_native_path_bootstrap(installer, tmp_path, monkeypatch):
+    from types import SimpleNamespace
+
+    monkeypatch.setattr(installer, 'sys', SimpleNamespace(platform='win32'))
+    monkeypatch.setattr(installer, 'windows_ascii_path', lambda path: path)
+    assert installer.configure_native_paths(tmp_path) == {}
+    assert not list(tmp_path.rglob('*.pth'))
+
+
+def test_missing_windows_short_alias_gives_actionable_error(installer, tmp_path, monkeypatch):
+    import ctypes
+    from types import SimpleNamespace
+
+    def unavailable(*args):
+        return 0
+    monkeypatch.setattr(ctypes, 'WinDLL', lambda *a, **kw: SimpleNamespace(
+        GetShortPathNameW=unavailable), raising=False)
+    with pytest.raises(ValueError, match='--destination'):
+        installer.windows_ascii_path(tmp_path / 'Instalação')
+
+
+def test_native_path_failure_precedes_pip_and_keeps_previous_install(installer, tmp_path, monkeypatch):
+    package = make_package(tmp_path / 'package')
+    destination = tmp_path / 'installed'
+    destination.mkdir()
+    old_config = destination / 'instalacao.json'
+    old_config.write_bytes(b'previous configuration')
+    commands = []
+    fake_heavy_steps(installer, monkeypatch, commands)
+    def fail(environment):
+        raise ValueError('Sem alias curto; use --destination sem acentos.')
+    monkeypatch.setattr(installer, 'configure_native_paths', fail)
+    with pytest.raises(ValueError, match='alias curto'):
+        installer.install(package, destination, tmp_path / 'log.txt')
+    assert not commands
+    assert old_config.read_bytes() == b'previous configuration'
+    assert not (destination / '.instalacao-em-curso').exists()

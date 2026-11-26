@@ -1,5 +1,17 @@
 # Repositório e integração — 16/10/2026
 
+Seguimento de 27/10: [revisão e consolidação](../revisoes/revisao-consolidacao-2026-10-27.md).
+Relação entre PRs e referências históricas novamente verificada; o inventário
+abaixo conserva o retrato anterior.
+
+Seguimento: `codex/5-auditoria-maxqda` parte da integração `9070ad6` e concentra
+o contrato comum de revisão/auditoria e os respetivos percursos GUI. Os commits
+separam siglas, motor de auditoria, GUI e correções numéricas/tabelas. Consulte
+o [registo de implementação e validação](../validacao/correcoes-maxqda-2026-10-16.md).
+O inventário abaixo conserva a situação anterior a esse seguimento; não implica
+que os issues continuem sem implementação. As referências históricas e o stash
+foram preservados; `main` e os PRs antigos não foram integrados nesta fase.
+
 ## Linha de trabalho
 
 O desenvolvimento da aplicação PDF → Markdown fica neste repositório.

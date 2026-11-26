@@ -33,6 +33,10 @@ def _key(relative: str):
 
 
 def _verified(output: Path, document: dict):
+    from .revisions import active_version
+    active = active_version(output, document)
+    if active is not None:
+        return active
     relative = Path(document['relative_source']).with_suffix('.md')
     target = output / relative
     if not target.resolve().is_relative_to(output.resolve()):
@@ -64,7 +68,10 @@ def decide(output: Path, relative_source: str, *, reviewer: str, decision: str,
         if expected is not None and current != expected:
             raise ValueError('O documento mudou desde que abriu a revisão. Feche e reabra a conferência; reveja a versão atual.')
         if decision == 'aprovado' and report['quality_status'] == 'blocked':
-            raise ValueError('Documento bloqueado: resolva os erros e volte a converter antes de aprovar.')
+            raise ValueError('Documento bloqueado: consulte as ocorrências na conferência. '
+                             'Use Criar / editar correção e Reauditar correção; '
+                             'para regras antigas, use Reauditar lote. A aprovação exige '
+                             'uma versão atual sem erros por resolver.')
         if decision == 'aprovado' and report['quality_status'] == 'review' and not notes.strip():
             raise ValueError('Há avisos. Registe o que conferiu e como resolveu cada aviso nas notas.')
         record = {
@@ -88,8 +95,9 @@ def _decision(output: Path, document: dict, report_path: Path):
     if not files:
         return None
     record = json.loads(files[-1].read_text(encoding='utf-8'))
-    if (record.get('markdown_sha256') != document.get('markdown_sha256')
-            or record.get('source_sha256') != document.get('source_sha256')
+    current = json.loads(report_path.read_text(encoding='utf-8'))
+    if (record.get('markdown_sha256') != current.get('markdown_sha256')
+            or record.get('source_sha256') != current.get('source_sha256')
             or record.get('report_sha256') != _sha256(report_path)):
         return None
     return record

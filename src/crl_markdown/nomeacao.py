@@ -105,7 +105,7 @@ GENERICOS = {"sindicato", "sindicatos", "sindical", "sindicais", "associacao",
 
 RE_PARENTESES = re.compile(r"\(([^)]{2,30})\)")
 RE_FORMA_NO_FIM = re.compile(
-    r"(?:,?\s*(?:S\.?\s*A\.?|L\.?da\.?|Lda|CRL|E\.?\s*P\.?\s*E\.?|E\.?\s*M\.?"
+    r"(?:(?:,\s*|\s+)(?:S\.?\s*A\.?|L\.?da\.?|Lda|CRL|E\.?\s*P\.?\s*E\.?|E\.?\s*M\.?"
     r"|E\.?\s*I\.?\s*M\.?|Unipessoal))+\s*$",
     re.IGNORECASE,
 )

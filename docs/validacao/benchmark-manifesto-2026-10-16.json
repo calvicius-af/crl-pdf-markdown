@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "environment": "macOS, pasta temporária local; corpus sintético; não mede extração nem partilha de rede",
+  "measurements": [
+    {
+      "documents": 50,
+      "full_manifest_bytes": 5289841,
+      "index_bytes": 31515,
+      "index_ratio": 0.005957645985956856,
+      "write_seconds": 0.04874054196989164
+    },
+    {
+      "documents": 411,
+      "full_manifest_bytes": 43480082,
+      "index_bytes": 255748,
+      "index_ratio": 0.00588195762832278,
+      "write_seconds": 0.38428112503606826
+    }
+  ]
+}
