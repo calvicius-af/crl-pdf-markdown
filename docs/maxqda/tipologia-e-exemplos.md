@@ -422,6 +422,25 @@ Mosteiro e Mosteirô, Paçó e Paçô, Tabua e Tábua, Travassos e Travassós). 
 resolver 12 nomes com duas siglas na mesma fonte e a colisão `JF-AGUALONGA` /
 `JF-AGUA-LONGA`, que a nomeação lê como `JFAGUALONGA`.
 
+**Conflitos resolvidos (decisão de 2026-11-27).** As notas da equipa no relatório de
+conflitos foram aplicadas na lista, com duas regras gerais:
+
+1. no mesmo nome com duas siglas, a entidade ativa fica e a extinta sai do `siglas.csv`;
+   uma entidade marcada `Desativada` na lista também sai (por exemplo, `SGP` dá lugar a
+   `SG-PRESIDENC`). Quando todas as entidades com esse nome estão extintas, saem todas;
+2. freguesias com nomes muito semelhantes levam o distrito na sigla, por exemplo
+   `JF-AGUALONGA-VIANA-DO-CASTELO` e `JF-AGUA-LONGA-PORTO`. Travassos e Travassós ficam
+   ambas no distrito de Braga, por isso levam o concelho (`JF-TRAVASSOS-POVOA-DE-LANHOSO`
+   e `JF-TRAVASSOS-FAFE`).
+
+Para caberem estas siglas, o limite da sigla na nomeação passou de 20 para 25
+caracteres, o mesmo que a lista já usa para JF, UF e CM. A sigla inventada a partir do
+nome, quando o vocabulário não tem nenhuma, continua limitada a 20. O limite de 63
+caracteres do nome do documento não muda.
+
+Fica por confirmar o distrito de `Freguesia de Mosteiro`: a CAOP tem três (Vieira do
+Minho, Oleiros e Lajes das Flores) e a lista do INE só uma linha.
+
 Em qualquer dos casos, as siglas dos nomes já atribuídos ao corpus até 2025 não mudam
 (ADR-0021). Para o corpus de 2026, a mudança tem de acontecer antes de começar a
 codificação no MAXQDA (ADR-0022, transição).

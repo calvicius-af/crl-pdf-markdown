@@ -36,6 +36,7 @@ SAIDA = ("nome", "sigla", "codigo_dgert", "lado", "estado", "origem_sigla", "fon
          "responsavel", "data")
 ORIGEM = "lista_global"
 ORIGEM_ROTULO = "lista_global_rotulo"
+DESATIVADA = "desativada"
 # Prioridade quando o mesmo nome tem siglas diferentes (decisão de 2026-11-26):
 # primeiro a DGERT, depois o INE, por fim o CRL.
 PRIORIDADE = (("Organização (DGERT)", 0, "DGERT"), ("Administração pública", 1, "INE"),
@@ -61,10 +62,16 @@ def ler_lista(caminho: Path) -> list[dict]:
 def converter(linhas: list[dict], nome_fonte: str = "lista_siglas_global.csv"):
     """Devolve (linhas do siglas.csv, relatório)."""
     saida = []
+    desativadas = []
     for n, linha in enumerate(linhas, start=2):
         sigla = (linha["sigla"] or "").strip()
         nome = (linha["nome"] or "").strip()
         if not sigla or not nome:
+            continue
+        # Uma entidade marcada «Desativada» na lista fica de fora do siglas.csv.
+        if (linha.get("estado") or "").strip().casefold() == DESATIVADA:
+            desativadas.append({"nome": nome, "sigla": sigla, "entidade": linha["id_entidade"],
+                                "motivo": "desativada na lista"})
             continue
         estado = "por_confirmar" if (linha["revisao"] or "").strip() else "documentada"
         dgert = (linha["fonte"] or "").startswith("Organização (DGERT)")
@@ -77,6 +84,7 @@ def converter(linhas: list[dict], nome_fonte: str = "lista_siglas_global.csv"):
             "data": (linha["data_atualizacao"] or "").strip(),
             "_entidade": (linha["id_entidade"] or "").strip() or f"linha-{n}",
             "_nivel": nivel(linha["fonte"]),
+            "_extinta": (linha.get("estado") or "").strip().casefold() == "extinta",
         }
         fonte = f"{nome_fonte}/linha {n}/{base['_entidade']}"
         saida.append({**base, "nome": nome, "origem_sigla": ORIGEM, "fonte": fonte})
@@ -108,6 +116,27 @@ def converter(linhas: list[dict], nome_fonte: str = "lista_siglas_global.csv"):
                                    "fonte": g["_nivel"][1],
                                    "fica": sorted({v["sigla"] for v in vencedoras}),
                                    "fica_fonte": vencedoras[0]["_nivel"][1]})
+    saida = [linha for linha in saida if id(linha) not in retirar]
+
+    # 1b. Mesmo nome com siglas diferentes na mesma fonte (organizações): a
+    #     entidade ativa fica e as extintas saem. Se todas estão extintas, saem
+    #     todas desse nome (decisão de 2026-11-27).
+    por_chave = defaultdict(list)
+    for linha in saida:
+        por_chave[chave_entidade(linha["nome"])].append(linha)
+    retirar = set()
+    for grupo in por_chave.values():
+        if len({normalizar_sigla(g["sigla"]) for g in grupo}) < 2:
+            continue
+        if {g["_nivel"][1] for g in grupo} == {"INE"}:
+            continue
+        for g in grupo:
+            if g["_extinta"]:
+                retirar.add(id(g))
+                ativas = sorted({a["sigla"] for a in grupo if not a["_extinta"]})
+                desativadas.append({"nome": g["nome"], "sigla": g["sigla"], "entidade": g["_entidade"],
+                                    "motivo": ("extinta; fica " + ", ".join(ativas)) if ativas
+                                    else "extinta, sem entidade ativa com o mesmo nome"})
     saida = [linha for linha in saida if id(linha) not in retirar]
 
     por_sigla = defaultdict(set)
@@ -153,6 +182,7 @@ def converter(linhas: list[dict], nome_fonte: str = "lista_siglas_global.csv"):
         "nomes_com_siglas_diferentes": nomes_contraditorios,
         "distinguidas_por_grafia": distinguidas,
         "preteridas_por_prioridade": preteridas,
+        "desativadas": desativadas,
     }
     return [{k: linha[k] for k in SAIDA} for linha in saida], relatorio
 
@@ -200,6 +230,9 @@ def texto_relatorio(r: dict) -> str:
     for p in r["preteridas_por_prioridade"][:20]:
         linhas.append(f"  {p['nome']}: {p['sigla']} ({p['fonte']}) dá lugar a "
                       f"{', '.join(p['fica'])} ({p['fica_fonte']})")
+    linhas.append(f"Linhas desativadas: {len(r['desativadas'])}.")
+    for d in r["desativadas"][:30]:
+        linhas.append(f"  {d['nome']}: {d['sigla']} ({d['entidade']}) — {d['motivo']}")
     linhas.append(f"Nomes distinguidos pela grafia: {len(r['distinguidas_por_grafia'])}.")
     for chave, grafias in sorted(r["distinguidas_por_grafia"].items()):
         linhas.append(f"  {' / '.join(f'{g} = {s}' for g, s in grafias.items())}")

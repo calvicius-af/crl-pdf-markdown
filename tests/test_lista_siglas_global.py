@@ -28,8 +28,8 @@ def _lista(*linhas):
 
 
 def _linha(sigla, nome, *, ident, fonte="Organização (DGERT)", codigo="5.1", lado="empregadores",
-           rotulos="", revisao=""):
-    return (f"{sigla};{nome};{fonte};X;Activa;{codigo};VERDADEIRO;{ident};{lado};;{rotulos};;"
+           rotulos="", revisao="", estado="Activa"):
+    return (f"{sigla};{nome};{fonte};X;{estado};{codigo};VERDADEIRO;{ident};{lado};;{rotulos};;"
             f"{revisao};2026-11-25;;;;")
 
 
@@ -130,6 +130,38 @@ def test_organizacoes_com_o_mesmo_nome_na_mesma_fonte_ficam_ambiguas(tmp_path):
     modulo.escrever(linhas, destino)
     tabela = nomeacao.carregar_siglas(destino)
     assert nomeacao.sigla("FEDERAÇÃO PORTUGUESA DE PROFESSORES", tabela)[1]
+
+
+def test_entidade_desativada_fica_fora():
+    linhas, rel = _modulo().converter(_lista(
+        _linha("SGP", "Secretaria-Geral da Presidência", ident="INE-1", fonte=INE, estado="Desativada"),
+        _linha("SG-PRESIDENC", "Secretaria Geral da Presidência", ident="INE-2", fonte=INE),
+    ))
+    assert [linha["sigla"] for linha in linhas] == ["SG-PRESIDENC"]
+    assert rel["nomes_com_siglas_diferentes"] == {}
+    assert [d["entidade"] for d in rel["desativadas"]] == ["INE-1"]
+
+
+def test_no_mesmo_nome_a_entidade_ativa_prevalece_sobre_a_extinta():
+    linhas, rel = _modulo().converter(_lista(
+        _linha("FPP", "FEDERAÇÃO PORTUGUESA DE PROFESSORES", ident="DGERT-2.59"),
+        _linha("PROFESSORES", "FEDERAÇÃO PORTUGUESA DE PROFESSORES", ident="DGERT-2.49", estado="Extinta"),
+    ))
+    assert [(linha["sigla"], linha["estado"]) for linha in linhas] == [("FPP", "documentada")]
+    assert rel["desativadas"][0]["motivo"] == "extinta; fica FPP"
+
+
+def test_freguesia_com_distrito_cabe_na_sigla(tmp_path):
+    modulo = _modulo()
+    linhas, _ = modulo.converter(_lista(
+        _linha("JF-AGUALONGA-VIANA-DO-CASTELO", "Freguesia de Agualonga", ident="INE-1", fonte=INE),
+        _linha("JF-AGUA-LONGA-PORTO", "Freguesia de Água Longa", ident="INE-2", fonte=INE),
+    ))
+    destino = tmp_path / "siglas.csv"
+    modulo.escrever(linhas, destino)
+    tabela = nomeacao.carregar_siglas(destino)
+    assert nomeacao.sigla("Freguesia de Agualonga", tabela) == ("JFAGUALONGAVIANADOCASTELO", None)
+    assert nomeacao.sigla("Freguesia de Água Longa", tabela) == ("JFAGUALONGAPORTO", None)
 
 
 def test_coluna_em_falta_interrompe(tmp_path):

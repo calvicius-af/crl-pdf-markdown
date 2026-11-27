@@ -2,15 +2,14 @@
   "fontes": [
     {
       "ficheiro": "lista_siglas_global.csv",
-      "sha256": "bbed5347d0d5d01b8d35dd411b319fbbf7acc8c1ea7a2e51beaceee8ff276953"
+      "sha256": "b66305ec29f4411df7a2eb601ef85170248c9bbfb3a1dc998ecc127136e46bbc"
     }
   ],
   "gerado_por": "scripts/gerar_siglas_da_lista_global.py",
-  "linhas": 6766,
+  "linhas": 6753,
   "estados": {
-    "ambigua": 26,
-    "documentada": 6571,
-    "por_confirmar": 169
+    "documentada": 6583,
+    "por_confirmar": 170
   },
-  "sha256_saida": "c2f3376cb43e3355ae52919cf49082541574caa2ba7580c967e2f663d803ba2b"
+  "sha256_saida": "267d62fc5382a02cf8f3f566f6898ba4100a2dc71ac4badd0ff40a10cf90e550"
 }

@@ -71,7 +71,11 @@ FAMILIAS_SO_METADADO = frozenset()
 ESTADOS_COM_FICHEIRO = {"descarregado", "ja_existente", "inalterado"}
 
 MAX_NOME = 63  # limite de nome de documento do MAXQDA
-MAX_SIGLA = 20
+# Igual ao limite da lista_siglas_global para JF, UF e CM: a sigla de uma
+# freguesia com o distrito (JF-AGUALONGA-VIANA-DO-CASTELO) chega aos 25.
+MAX_SIGLA = 25
+# Sigla inventada a partir do nome quando o vocabulário não tem nenhuma.
+MAX_SIGLA_DERIVADA = 20
 
 
 class NomeRNCInvalido(ValueError):
@@ -180,7 +184,7 @@ def avisos_bloqueantes(avisos):
     return [aviso for aviso in avisos if not aviso.startswith("INFORMAÇÃO: ")]
 
 
-def _camel(nome: str, max_chars: int = MAX_SIGLA) -> str:
+def _camel(nome: str, max_chars: int = MAX_SIGLA_DERIVADA) -> str:
     """Recurso quando não há sigla: 'Águas do Norte' → 'AguasNorte'."""
     uteis = []
     for bruto in re.split(r"[^\wÀ-ÿ]+|_+", sem_acentos(nome)):

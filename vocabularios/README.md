@@ -39,7 +39,15 @@ Regras da conversão:
    nomeação. Numa organização, uma diferença de acento é um erro de registo, não
    outra entidade;
 6. duas entidades cuja sigla fica igual depois de a nomeação retirar hífenes e
-   acentos ficam `ambigua`.
+   acentos ficam `ambigua`;
+7. uma entidade com `estado` `Desativada` não entra no `siglas.csv`;
+8. o mesmo nome com siglas diferentes numa organização: a entidade ativa fica e a
+   `Extinta` sai. Se todas estão extintas, saem todas (decisão de 2026-11-27).
+
+Freguesias com nomes muito semelhantes levam o distrito na sigla
+(`JF-LOUSA-BRAGANCA`, `JF-LOUSA-COIMBRA`), ou o concelho quando o distrito é o
+mesmo (`JF-TRAVASSOS-FAFE`). A sigla tem até 25 caracteres depois de normalizada,
+o limite que a nomeação aceita.
 
 Na árvore de dados do RNC, o `siglas.csv` gerado é o que vai para
 `0_gestao/vocabularios/`.

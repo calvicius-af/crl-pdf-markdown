@@ -1,6 +1,6 @@
 ﻿sigla;nome;fonte;categoria;estado;codigo_origem;sigla_unica;id_entidade;lado;sigla_mae;rotulos_crl;confianca_crl;revisao;data_atualizacao;ambito;ambito_subsetor;ambito_fundamento;ambito_confianca
 AGRICULTORESCONSerpa;ASSOCIAÇÃO DOS AGRICULTORES DO CONCELHO DE SERPA;Organização (DGERT);ASSOCIAÇÃO DE EMPREGADORES;Extinta;5.368;VERDADEIRO;DGERT-5.368;empregadores;;;;sigla fora do padrão (entidade extinta) – não padronizada;2026-11-25;;;;
-AGRICULTORESSULEvora;ASSOCIAÇÃO DE AGRICULTORES AO SUL DO TEJO;Organização (DGERT);ASSOCIAÇÃO DE EMPREGADORES;Extinta;5.404;VERDADEIRO;DGERT-5.404;empregadores;;;;sigla fora do padrão (entidade extinta) – não padronizada;2026-11-25;;;;
+AGRICULTORESSULEvora;ASSOCIAÇÃO DE AGRICULTORES AO SUL DO TEJO - Évora;Organização (DGERT);ASSOCIAÇÃO DE EMPREGADORES;Extinta;5.404;VERDADEIRO;DGERT-5.404;empregadores;;;;sigla fora do padrão (entidade extinta) – não padronizada;2026-11-25;;;;
 AICristalaria;ASSOCIAÇÃO INDUSTRIAL DE CRISTALARIA;Organização (DGERT);ASSOCIAÇÃO DE EMPREGADORES;Extinta;5.473;VERDADEIRO;DGERT-5.473;empregadores;;;;sigla fora do padrão (entidade extinta) – não padronizada;2026-11-25;;;;
 AIMoagem;ASSOCIAÇÃO DOS INDÚSTRIAIS DE MOAGEM;Organização (DGERT);ASSOCIAÇÃO DE EMPREGADORES;Extinta;5.329;VERDADEIRO;DGERT-5.329;empregadores;;;;sigla fora do padrão (entidade extinta) – não padronizada;2026-11-25;;;;
 AITomate;ASSOCIAÇÃO DOS INDÚSTRIAIS DE TOMATE;Organização (DGERT);ASSOCIAÇÃO DE EMPREGADORES;Extinta;5.55;VERDADEIRO;DGERT-5.55;empregadores;;;;sigla fora do padrão (entidade extinta) – não padronizada;2026-11-25;;;;
@@ -152,8 +152,8 @@ SINTESTecnicos;SINDICATO NACIONAL DOS TÉCNICOS DA SAÚDE;Organização (DGERT);
 PSICOLOGOSPsicologos;SINDICATO PORTUGUES DOS PSICOLOGOS;Organização (DGERT);SINDICATO;Extinta;1.547;VERDADEIRO;DGERT-1.547;trabalhadores;;;;sigla fora do padrão (entidade extinta) – não padronizada;2026-11-25;;;;
 UIPSSInstituicoes;UNIÃO DAS INSTITUIÇÕES PARTICULARES DE SOLIDARIEDADE SOCIAL;Organização (DGERT);ASSOCIAÇÃO DE EMPREGADORES;Extinta;5.471;VERDADEIRO;DGERT-5.471;empregadores;;;;sigla fora do padrão (entidade extinta) – não padronizada;2026-11-25;;;;
 UNIHSNORHotelaria;UNIÃO DAS ASSOCIAÇÕES DA HOTELARIA E RESTAURAÇÃO DO NORTE DE PORTUGAL;Organização (DGERT);UNIÃO DE EMPREGADORES;Extinta;7.3;VERDADEIRO;DGERT-7.3;empregadores;;;;sigla fora do padrão (entidade extinta) – não padronizada;2026-11-25;;;;
-JF-AGUALONGA;Freguesia de Agualonga;Administração pública (INE S.13 2025);Freguesia;Em lista INE 2025;S.131323;VERDADEIRO;INE-0942;administração pública;;;;sigla difere de outra apenas por hífen (JF-AGUALONGA / JF-AGUA-LONGA) – rever;2026-11-25;;;;
-JF-AGUA-LONGA;Freguesia de Água Longa;Administração pública (INE S.13 2025);Freguesia;Em lista INE 2025;S.131323;VERDADEIRO;INE-3243;administração pública;;;;sigla difere de outra apenas por hífen (JF-AGUALONGA / JF-AGUA-LONGA) – rever;2026-11-25;;;;
+JF-AGUALONGA-VIANA-DO-CASTELO;Freguesia de Agualonga;Administração pública (INE S.13 2025);Freguesia;Em lista INE 2025;S.131323;VERDADEIRO;INE-0942;administração pública;;;;;2026-11-25;;;;
+JF-AGUA-LONGA-PORTO;Freguesia de Água Longa;Administração pública (INE S.13 2025);Freguesia;Em lista INE 2025;S.131323;VERDADEIRO;INE-3243;administração pública;;;;;2026-11-25;;;;
 AAM;AAM;Empregador (CRL 2025);EMPREGADOR (CRL);Em lista CRL 2025;CRL-0009;VERDADEIRO;CRL-0009;empregadores;;AAM;nova entidade;sem designação no ficheiro – completar nome;2026-11-25;;;;
 ACCCL;ACCCL;Empregador (CRL 2025);EMPREGADOR (CRL);Em lista CRL 2025;CRL-0011;VERDADEIRO;CRL-0011;empregadores;;ACCCL;nova entidade;sem designação no ficheiro – completar nome;2026-11-25;;;;
 AESAPSAETA;AESAPSAETA;Empregador (CRL 2025);EMPREGADOR (CRL);Em lista CRL 2025;CRL-0034;VERDADEIRO;CRL-0034;empregadores;;AESAPSAETA;nova entidade;sem designação no ficheiro – completar nome;2026-11-25;;;;
@@ -350,8 +350,8 @@ ACTVS;ASSOCIAÇÃO SINDICAL DO CORPO ESPECIAL DE FISCALIZAÇÃO E CONTROLO DA DI
 AES-SIN;ASSOCIAÇÃO EMPRESARIAL DE SINES;Organização (DGERT);ASSOCIAÇÃO DE EMPREGADORES;Activa;5.565;VERDADEIRO;DGERT-5.565;empregadores;;;;;2026-11-25;;;;
 ADAE;ADAE - Associação de Desenvolvimento da Alta Estremadura;Administração pública (INE S.13 2025);Outra entidade;Em lista INE 2025;S.131325;VERDADEIRO;INE-4112;administração pública;;;;;2026-11-25;;;;
 AEVP;ASSOCIAÇÃO DAS EMPRESAS DE VINHO DO PORTO;Organização (DGERT);ASSOCIAÇÃO DE EMPREGADORES;Activa;5.42;VERDADEIRO;DGERT-5.42;empregadores;;AEVP | AE_Vinho.Porto;alta;;2026-11-25;;;;
-AEVP-ADMI;Associação das Empresas de Vinho do Porto;Empregador (CRL 2025);VARIANTE DE ENTIDADE (CRL);Em lista CRL 2025;CRL-0378;VERDADEIRO;CRL-0378;empregadores;AEVP;AEVP_Administ. | AE_Vinho.Porto_Admin.;nova entidade;;2026-11-25;;;;
-AEVP-ARMA;Associação das Empresas de Vinho do Porto;Empregador (CRL 2025);VARIANTE DE ENTIDADE (CRL);Em lista CRL 2025;CRL-0379;VERDADEIRO;CRL-0379;empregadores;AEVP;AEVP_Armazem | AE_Vinho.Porto_Armaz;nova entidade;;2026-11-25;;;;
+AEVP-ADMI;Associação das Empresas de Vinho do Porto - Administrativo;Empregador (CRL 2025);VARIANTE DE ENTIDADE (CRL);Em lista CRL 2025;CRL-0378;VERDADEIRO;CRL-0378;empregadores;AEVP;AEVP_Administ. | AE_Vinho.Porto_Admin.;nova entidade;;2026-11-25;;;;
+AEVP-ARMA;Associação das Empresas de Vinho do Porto - Armazém;Empregador (CRL 2025);VARIANTE DE ENTIDADE (CRL);Em lista CRL 2025;CRL-0379;VERDADEIRO;CRL-0379;empregadores;AEVP;AEVP_Armazem | AE_Vinho.Porto_Armaz;nova entidade;;2026-11-25;;;;
 ADBA;Agência de Desenvolvimento do Barlavento – Associação;Administração pública (INE S.13 2025);Outra entidade;Em lista INE 2025;S.131325;VERDADEIRO;INE-4139;administração pública;;;;;2026-11-25;;;;
 ADBE;Associação para o Desenvolvimento do Brigantia EcoPark;Administração pública (INE S.13 2025);Outra entidade;Em lista INE 2025;S.131325;VERDADEIRO;INE-4165;administração pública;;;;;2026-11-25;;;;
 ADC;AdC - Autoridade da Concorrência;Administração pública (INE S.13 2025);Outra entidade;Em lista INE 2025;S.13112;VERDADEIRO;INE-0009;administração pública;;;;;2026-11-25;;;;
@@ -3143,8 +3143,8 @@ JF-LOURICAL-DO-CAMPO;Freguesia de Louriçal do Campo;Administração pública (I
 JF-LOURINHA;Freguesia de Lourinhã;Administração pública (INE S.13 2025);Freguesia;Em lista INE 2025;S.131323;VERDADEIRO;INE-1966;administração pública;;;;;2026-11-25;;;;
 JF-LOURO;Freguesia de Louro;Administração pública (INE S.13 2025);Freguesia;Em lista INE 2025;S.131323;VERDADEIRO;INE-1969;administração pública;;;;;2026-11-25;;;;
 JF-LOUROSA;Freguesia de Lourosa;Administração pública (INE S.13 2025);Freguesia;Em lista INE 2025;S.131323;VERDADEIRO;INE-1970;administração pública;;;;;2026-11-25;;;;
-JF-LOUSA;Freguesia de Lousa;Administração pública (INE S.13 2025);Freguesia;Em lista INE 2025;S.131323;VERDADEIRO;INE-1971;administração pública;;;;;2026-11-25;;;;
-JF-LOUSA-2;Freguesia de Lousã;Administração pública (INE S.13 2025);Freguesia;Em lista INE 2025;S.131323;VERDADEIRO;INE-1973;administração pública;;;;;2026-11-25;;;;
+JF-LOUSA-BRAGANCA;Freguesia de Lousa;Administração pública (INE S.13 2025);Freguesia;Em lista INE 2025;S.131323;VERDADEIRO;INE-1971;administração pública;;;;;2026-11-25;;;;
+JF-LOUSA-COIMBRA;Freguesia de Lousã;Administração pública (INE S.13 2025);Freguesia;Em lista INE 2025;S.131323;VERDADEIRO;INE-1973;administração pública;;;;;2026-11-25;;;;
 JF-LOUSADO;Freguesia de Lousado;Administração pública (INE S.13 2025);Freguesia;Em lista INE 2025;S.131323;VERDADEIRO;INE-1972;administração pública;;;;;2026-11-25;;;;
 JF-LUFREI;Freguesia de Lufrei;Administração pública (INE S.13 2025);Freguesia;Em lista INE 2025;S.131323;VERDADEIRO;INE-1974;administração pública;;;;;2026-11-25;;;;
 JF-LUMIAR;Freguesia de Lumiar;Administração pública (INE S.13 2025);Freguesia;Em lista INE 2025;S.131323;VERDADEIRO;INE-1975;administração pública;;;;;2026-11-25;;;;
@@ -3309,7 +3309,7 @@ JF-MOREIRAS;Freguesia de Moreiras;Administração pública (INE S.13 2025);Fregu
 JF-MORGADE;Freguesia de Morgade;Administração pública (INE S.13 2025);Freguesia;Em lista INE 2025;S.131323;VERDADEIRO;INE-2130;administração pública;;;;;2026-11-25;;;;
 JF-MOS;Freguesia de Mós;Administração pública (INE S.13 2025);Freguesia;Em lista INE 2025;S.131323;VERDADEIRO;INE-2151;administração pública;;;;;2026-11-25;;;;
 JF-MOSTEIRO;Freguesia de Mosteiro;Administração pública (INE S.13 2025);Freguesia;Em lista INE 2025;S.131323;VERDADEIRO;INE-2131;administração pública;;;;;2026-11-25;;;;
-JF-MOSTEIRO-2;Freguesia de Mosteirô;Administração pública (INE S.13 2025);Freguesia;Em lista INE 2025;S.131323;VERDADEIRO;INE-2134;administração pública;;;;;2026-11-25;;;;
+JF-MOSTEIRO-AVEIRO;Freguesia de Mosteirô;Administração pública (INE S.13 2025);Freguesia;Em lista INE 2025;S.131323;VERDADEIRO;INE-2134;administração pública;;;;;2026-11-25;;;;
 JF-MOSTEIRO-DE-FRAGUAS;Freguesia de Mosteiro de Fráguas;Administração pública (INE S.13 2025);Freguesia;Em lista INE 2025;S.131323;VERDADEIRO;INE-2132;administração pública;;;;;2026-11-25;;;;
 JF-MOSTEIROS;Freguesia de Mosteiros;Administração pública (INE S.13 2025);Freguesia;Em lista INE 2025;S.131323;VERDADEIRO;INE-2133;administração pública;;;;;2026-11-25;;;;
 JF-MOURAO;Freguesia de Mourão;Administração pública (INE S.13 2025);Freguesia;Em lista INE 2025;S.131323;VERDADEIRO;INE-2138;administração pública;;;;;2026-11-25;;;;
@@ -3406,8 +3406,8 @@ JF-OUTEIRO;Freguesia de Outeiro;Administração pública (INE S.13 2025);Fregues
 JF-OUTEIRO-SECO;Freguesia de Outeiro Seco;Administração pública (INE S.13 2025);Freguesia;Em lista INE 2025;S.131323;VERDADEIRO;INE-2231;administração pública;;;;;2026-11-25;;;;
 JF-OUTIZ;Freguesia de Outiz;Administração pública (INE S.13 2025);Freguesia;Em lista INE 2025;S.131323;VERDADEIRO;INE-2232;administração pública;;;;;2026-11-25;;;;
 JF-OVAR;Freguesia de Ovar;Administração pública (INE S.13 2025);Freguesia;Em lista INE 2025;S.131323;VERDADEIRO;INE-2233;administração pública;;;;;2026-11-25;;;;
-JF-PACO;Freguesia de Paçó;Administração pública (INE S.13 2025);Freguesia;Em lista INE 2025;S.131323;VERDADEIRO;INE-2287;administração pública;;;;;2026-11-25;;;;
-JF-PACO-2;Freguesia de Paçô;Administração pública (INE S.13 2025);Freguesia;Em lista INE 2025;S.131323;VERDADEIRO;INE-2288;administração pública;;;;;2026-11-25;;;;
+JF-PACO-BRAGANCA;Freguesia de Paçó;Administração pública (INE S.13 2025);Freguesia;Em lista INE 2025;S.131323;VERDADEIRO;INE-2287;administração pública;;;;;2026-11-25;;;;
+JF-PACO-VIANA-DO-CASTELO;Freguesia de Paçô;Administração pública (INE S.13 2025);Freguesia;Em lista INE 2025;S.131323;VERDADEIRO;INE-2288;administração pública;;;;;2026-11-25;;;;
 JF-PACO-DE-SOUSA;Freguesia de Paço de Sousa;Administração pública (INE S.13 2025);Freguesia;Em lista INE 2025;S.131323;VERDADEIRO;INE-2281;administração pública;;;;;2026-11-25;;;;
 JF-PACOS;Freguesia de Paços;Administração pública (INE S.13 2025);Freguesia;Em lista INE 2025;S.131323;VERDADEIRO;INE-2282;administração pública;;;;;2026-11-25;;;;
 JF-PACOS-DA-SERRA;Freguesia de Paços da Serra;Administração pública (INE S.13 2025);Freguesia;Em lista INE 2025;S.131323;VERDADEIRO;INE-2283;administração pública;;;;;2026-11-25;;;;
@@ -4109,8 +4109,8 @@ JF-STO-ANTONIO-NORD;Freguesia de Santo António de Nordestinho;Administração p
 JF-SUCAES;Freguesia de Suçães;Administração pública (INE S.13 2025);Freguesia;Em lista INE 2025;S.131323;VERDADEIRO;INE-2812;administração pública;;;;;2026-11-25;;;;
 JF-SUL;Freguesia de Sul;Administração pública (INE S.13 2025);Freguesia;Em lista INE 2025;S.131323;VERDADEIRO;INE-2811;administração pública;;;;;2026-11-25;;;;
 JF-S-VICENTE-PEREIRA-JUSA;Freguesia de São Vicente de Pereira Jusã;Administração pública (INE S.13 2025);Freguesia;Em lista INE 2025;S.131323;VERDADEIRO;INE-2934;administração pública;;;;;2026-11-25;;;;
-JF-TABUA;Freguesia de Tabua;Administração pública (INE S.13 2025);Freguesia;Em lista INE 2025;S.131323;VERDADEIRO;INE-2937;administração pública;;;;;2026-11-25;;;;
-JF-TABUA-2;Freguesia de Tábua;Administração pública (INE S.13 2025);Freguesia;Em lista INE 2025;S.131323;VERDADEIRO;INE-3010;administração pública;;;;;2026-11-25;;;;
+JF-TABUA-MADEIRA;Freguesia de Tabua;Administração pública (INE S.13 2025);Freguesia;Em lista INE 2025;S.131323;VERDADEIRO;INE-2937;administração pública;;;;;2026-11-25;;;;
+JF-TABUA-COIMBRA;Freguesia de Tábua;Administração pública (INE S.13 2025);Freguesia;Em lista INE 2025;S.131323;VERDADEIRO;INE-3010;administração pública;;;;;2026-11-25;;;;
 JF-TABUACAS;Freguesia de Tabuaças;Administração pública (INE S.13 2025);Freguesia;Em lista INE 2025;S.131323;VERDADEIRO;INE-2940;administração pública;;;;;2026-11-25;;;;
 JF-TABUACO;Freguesia de Tabuaço;Administração pública (INE S.13 2025);Freguesia;Em lista INE 2025;S.131323;VERDADEIRO;INE-2941;administração pública;;;;;2026-11-25;;;;
 JF-TABUADELO;Freguesia de Tabuadelo;Administração pública (INE S.13 2025);Freguesia;Em lista INE 2025;S.131323;VERDADEIRO;INE-2938;administração pública;;;;;2026-11-25;;;;
@@ -4170,8 +4170,8 @@ JF-TRANCOZELOS;Freguesia de Trancozelos;Administração pública (INE S.13 2025)
 JF-TRAVANCA;Freguesia de Travanca;Administração pública (INE S.13 2025);Freguesia;Em lista INE 2025;S.131323;VERDADEIRO;INE-2992;administração pública;;;;;2026-11-25;;;;
 JF-TRAVANCA-DE-LAGOS;Freguesia de Travanca de Lagos;Administração pública (INE S.13 2025);Freguesia;Em lista INE 2025;S.131323;VERDADEIRO;INE-2993;administração pública;;;;;2026-11-25;;;;
 JF-TRAVANCINHA;Freguesia de Travancinha;Administração pública (INE S.13 2025);Freguesia;Em lista INE 2025;S.131323;VERDADEIRO;INE-2994;administração pública;;;;;2026-11-25;;;;
-JF-TRAVASSOS;Freguesia de Travassos;Administração pública (INE S.13 2025);Freguesia;Em lista INE 2025;S.131323;VERDADEIRO;INE-2995;administração pública;;;;;2026-11-25;;;;
-JF-TRAVASSOS-2;Freguesia de Travassós;Administração pública (INE S.13 2025);Freguesia;Em lista INE 2025;S.131323;VERDADEIRO;INE-2996;administração pública;;;;;2026-11-25;;;;
+JF-TRAVASSOS-POVOA-DE-LANHOSO;Freguesia de Travassos;Administração pública (INE S.13 2025);Freguesia;Em lista INE 2025;S.131323;VERDADEIRO;INE-2995;administração pública;;;;;2026-11-25;;;;
+JF-TRAVASSOS-FAFE;Freguesia de Travassós;Administração pública (INE S.13 2025);Freguesia;Em lista INE 2025;S.131323;VERDADEIRO;INE-2996;administração pública;;;;;2026-11-25;;;;
 JF-TRESMINAS;Freguesia de Tresminas;Administração pública (INE S.13 2025);Freguesia;Em lista INE 2025;S.131323;VERDADEIRO;INE-2997;administração pública;;;;;2026-11-25;;;;
 JF-TRES-POVOS;Freguesia de Três Povos;Administração pública (INE S.13 2025);Freguesia;Em lista INE 2025;S.131323;VERDADEIRO;INE-3004;administração pública;;;;;2026-11-25;;;;
 JF-TREZOI;Freguesia de Trezói;Administração pública (INE S.13 2025);Freguesia;Em lista INE 2025;S.131323;VERDADEIRO;INE-2998;administração pública;;;;;2026-11-25;;;;
@@ -4667,7 +4667,7 @@ SFAARM;Serviços e Fundos Autónomos da Administração Regional da Madeira;Admi
 SINCONDUCAO;ASSOCIAÇÃO SINDICAL DOS INSTRUTORES DE CONDUÇAO AUTOMOVEL;Organização (DGERT);SINDICATO;Extinta;1.656;VERDADEIRO;DGERT-1.656;trabalhadores;;;;;2026-11-25;;;;
 SINCOR;SINDICATO INDEPENDENTE DOS CORREIOS DE PORTUGAL;Organização (DGERT);SINDICATO;Activa;1.533;VERDADEIRO;DGERT-1.533;trabalhadores;;SINCOR;média – sem designação no ficheiro;;2026-11-25;;;;
 SINCTA;SINDICATO DOS CONTROLADORES DE TRÁFEGO AÉREO;Organização (DGERT);SINDICATO;Activa;1.383;VERDADEIRO;DGERT-1.383;trabalhadores;;SINCTA;média – sem designação no ficheiro;;2026-11-25;;;;
-SGP;Secretaria-Geral da Presidência;Administração pública (INE S.13 2025);Outra entidade;Em lista INE 2025;S.131311A;VERDADEIRO;INE-0414;administração pública;;;;;2026-11-25;;;;
+SGP;Secretaria-Geral da Presidência;Administração pública (INE S.13 2025);Outra entidade;Desativada;S.131311A;VERDADEIRO;INE-0414;administração pública;;;;fica SG-PRESIDENC (INE-0483), designação actual;2026-11-25;;;;
 SG-PRESIDENC;Secretaria Geral da Presidência;Administração pública (INE S.13 2025);Outra entidade;Em lista INE 2025;S.131311M;VERDADEIRO;INE-0483;administração pública;;;;;2026-11-25;;;;
 SINDAV;SINDICATO DEMOCRÁTICO DOS TRABALHADORES DOS AEROPORTOS E AVIAÇÃO;Organização (DGERT);SINDICATO;Activa;1.462;VERDADEIRO;DGERT-1.462;trabalhadores;;SINDAV;média – sem designação no ficheiro;;2026-11-25;;;;
 PJCSC;PJCSC - Pousada da Juventude da Caldeira do Santo Cristo, Lda.;Administração pública (INE S.13 2025);Outra entidade;Em lista INE 2025;S.131312A;VERDADEIRO;INE-0555;administração pública;;;;;2026-11-25;SPE;SER;INE S.13 2025: forma empresarial (S.131312A);alta
