@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from uuid import uuid4
 
+from .caminhos import longpath
 from .locking import exclusive
 from .models import _sha256
 from .pipeline import Options, atomic_write, convert_pdf, previous_report
@@ -98,13 +99,13 @@ def active_version(output, document):
 def create_revision(output, relative_source, reviewer):
     from .validation import _key, _verified
 
-    output = Path(output).resolve()
+    output = longpath(output).resolve()
     if not reviewer.strip():
         raise ValueError('Indique o responsável pela correção.')
     with exclusive(output / '_auditoria/.operacao.lock'):
         document = _record(output, relative_source)
         target, report_path, report = _verified(output, document)
-        revision = output / '_auditoria/correcoes' / _key(relative_source) / uuid4().hex
+        revision = output / '_auditoria/correcoes' / _key(relative_source) / uuid4().hex[:12]
         revision.mkdir(parents=True)
         cache = revision / 'cache'
         cache.mkdir()
@@ -151,7 +152,12 @@ def _apply_resolutions(report, resolutions, reviewer, changed):
         action = resolution.get('action')
         rule = finding['rule']
         table = rule in {'TABLE_OVERLAP', 'TABLE_EMPTY', 'TABLE_GRID_GAP', 'TABLE_CELL_POSITION'}
-        if finding['severity'] == 'error':
+        if action == 'falso_alarme':
+            # A pessoa conferiu no PDF que o Markdown está certo e o alerta é
+            # falso. Fica registado com responsável, página e notas, e a
+            # ocorrência é conservada no histórico com a severidade original.
+            pass
+        elif finding['severity'] == 'error':
             permitted = ((rule == 'IMAGE' and action == 'decorativo')
                          or (rule == 'IMAGE' and action == 'transcrito' and changed)
                          or (table and action == 'corrigido' and changed and report.get('table_content_changed')))
@@ -173,7 +179,7 @@ def audit_revision(revision, *, resolutions=()):
     from .report import new_manifest, write_reports
     from .validation import _verified
 
-    revision = Path(revision).resolve()
+    revision = longpath(revision).resolve()
     meta = json.loads((revision / 'revision.json').read_text(encoding='utf-8'))
     # A pasta completa pode ter sido transferida para outra máquina. A origem
     # registada conserva a proveniência; a operação usa a localização atual.
@@ -197,7 +203,7 @@ def audit_revision(revision, *, resolutions=()):
         draft_digest = hashlib.sha256(draft_bytes).hexdigest()
         if not draft.strip():
             raise ValueError('A correção está vazia.')
-        publication = revision / 'publicacoes' / uuid4().hex
+        publication = revision / 'publicacoes' / uuid4().hex[:12]
         relative_md = Path(relative).with_suffix('.md')
         audit = publication / '_auditoria/documentos' / relative_md.parent
         cache_path = (revision / meta.get('extraction_cache', 'cache')).resolve()

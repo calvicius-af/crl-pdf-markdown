@@ -44,6 +44,8 @@ de correções, que conserva o original e cria uma publicação auditada separad
 2. Abra **Conferir / aprovar…**. Filtre por estado, família ou regra e selecione
    o documento. A lista mostra as ocorrências, IDs e páginas disponíveis.
    **Relatório deste documento** abre as evidências da versão selecionada.
+   **Abrir PDF** e **Abrir Markdown** usam a aplicação predefinida do sistema
+   (leitor de PDF e editor de texto), o que permite colocá-los lado a lado.
 3. Preencha o responsável. Se há erro real, escolha **Criar / editar correção**.
    Edite no rascunho separado, guarde e clique em **Reauditar correção guardada**.
    O editor tem deslocação horizontal para tabelas largas.
@@ -54,7 +56,10 @@ de correções, que conserva o original e cria uma publicação auditada separad
    **corrigido** para uma grelha efetivamente alterada, **decorativo** para uma
    figura sem conteúdo a transcrever ou **transcrito** quando a transcrição foi
    incorporada e conferida. Clique em **Resolver ocorrência e reauditar**.
-   Montantes, completude e falhas de referência não podem ser dispensados por nota.
+   Se conferiu no PDF que o Markdown está certo e o alerta é falso, escolha
+   **está correto (falso alarme)**: a página da ocorrência e uma nota padrão são
+   usadas quando não indicar outras. A ocorrência fica no histórico com o
+   responsável e a severidade original.
 6. Se faltar reconhecimento de conteúdo numa imagem, use **Reler páginas com
    OCR** e indique as páginas e a pasta de modelos locais. Só essas páginas são
    reextraídas; as restantes são verificadas e reutilizadas. Se um elemento

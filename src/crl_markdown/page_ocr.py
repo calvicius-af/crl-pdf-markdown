@@ -9,6 +9,7 @@ from types import SimpleNamespace
 from uuid import uuid4
 
 from .cache import CachedConverter
+from .caminhos import display, longpath
 from .locking import exclusive
 from .models import _sha256
 from .pipeline import Options, atomic_write, make_converter, run
@@ -113,6 +114,18 @@ def make_page_ocr_converter(options):
     return PageOCRConverter(options, native)
 
 
+def check_ocr_models(models):
+    """Distinguir uma pasta de modelos errada de outros erros do sistema de ficheiros."""
+    from .models import required_files_problems
+    folder = Path(models)
+    if not folder.is_dir():
+        raise ValueError(f'A pasta de modelos indicada não existe: {display(folder)}')
+    problems = required_files_problems(folder, ocr=True)
+    if problems:
+        raise ValueError('A pasta de modelos não serve para OCR: ' + '; '.join(problems)
+                         + f'. Pasta indicada: {display(folder)}')
+
+
 def reextract_pages(output, relative_source, reviewer, models, pages, *, progress=print):
     from .report import write_reports
     from .revisions import _identity, _record, create_revision, current_pointer
@@ -120,8 +133,9 @@ def reextract_pages(output, relative_source, reviewer, models, pages, *, progres
 
     if not pages or any(isinstance(p, bool) or not isinstance(p, int) or p < 1 for p in pages):
         raise ValueError('Indique números de página positivos.')
+    check_ocr_models(models)
     revision = create_revision(output, relative_source, reviewer)
-    output = Path(output).resolve()
+    output = longpath(output).resolve()
     meta = json.loads((revision / 'revision.json').read_text(encoding='utf-8'))
     with exclusive(output / '_auditoria/.operacao.lock'):
         document = _record(output, relative_source)
@@ -131,7 +145,7 @@ def reextract_pages(output, relative_source, reviewer, models, pages, *, progres
         if report.get('revision'):
             raise ValueError('Há uma correção humana ativa. Reaplicar OCR exige preservar e reconciliar '
                              'essa edição; use uma nova reauditoria do original para este ensaio.')
-        publication = revision / 'publicacoes' / uuid4().hex
+        publication = revision / 'publicacoes' / uuid4().hex[:12]
         options = PageOCROptions(ocr=True, models=Path(models), offline=True,
                                  selected_pages=tuple(sorted(set(pages))), cache_directory=str(revision / 'cache'))
         relative_md = Path(relative_source).with_suffix('.md')

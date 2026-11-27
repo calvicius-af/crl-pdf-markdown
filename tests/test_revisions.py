@@ -83,6 +83,9 @@ def test_reaudit_invalidates_previous_decision_even_for_same_text(damaged_output
     ('AMOUNTS', 'corrigido', True, False),
     ('COMPLETENESS', 'conferido', True, False),
     ('REFERENCE_EMPTY', 'decorativo', True, False),
+    ('AMOUNTS', 'falso_alarme', False, True),
+    ('CRITICAL_SYMBOLS', 'falso_alarme', False, True),
+    ('COMPLETENESS', 'falso_alarme', False, True),
 ])
 def test_resolution_is_specific_and_cannot_dismiss_independent_content_errors(rule, action, changed, allowed):
     report = {'pages': 2, 'table_content_changed': changed,

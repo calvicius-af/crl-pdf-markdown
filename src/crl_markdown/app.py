@@ -3,10 +3,10 @@
 import queue
 import threading
 import tkinter as tk
-import webbrowser
 from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
 
+from .caminhos import open_with_system
 from .pipeline import Options, run
 
 
@@ -214,7 +214,7 @@ def main(argv=None):
 
     def open_report():
         if report_path:
-            webbrowser.open(report_path.resolve().as_uri())
+            open_with_system(report_path)
 
     def start():
         if running.is_set():
@@ -532,7 +532,7 @@ def main(argv=None):
         if parent:
             destination = Path(parent) / ("entrega_" + datetime.now().strftime("%Y%m%d_%H%M%S"))
             path = deliver(Path(output.get()), destination)
-            webbrowser.open(path.resolve().as_uri())
+            open_with_system(path)
             messagebox.showinfo("Entrega pronta", f"Importe os Markdown da pasta documentos.\n{destination}\n\n"
                                 "O relatório de conformidade acompanha a entrega.")
 
