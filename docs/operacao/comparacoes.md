@@ -57,16 +57,16 @@ comparação já feita só é refeita com `--substituir`. No fim, os estados do
 
 ### Estados no `pendentes.csv`
 
-| Estado | Significado |
-| --- | --- |
-| `a_criar` | Na simulação: a pasta será criada |
-| `por_nomear` | A revisão global ainda não tem nome; corra a nomeação |
-| `sem_pdf_actual` | O PDF actual falta ou tem hash diferente do registo |
-| `sem_anterior` | Falta a versão anterior na pasta |
+| Estado                     | Significado                                            |
+| -------------------------- | ------------------------------------------------------ |
+| `a_criar`                  | Na simulação: a pasta será criada                      |
+| `por_nomear`               | A revisão global ainda não tem nome; corra a nomeação  |
+| `sem_pdf_actual`           | O PDF actual falta ou tem hash diferente do registo    |
+| `sem_anterior`             | Falta a versão anterior na pasta                       |
 | `anterior_igual_ao_actual` | O PDF posto como anterior é o próprio documento actual |
-| `varias_anteriores` | Há mais de um PDF anterior; confirmar o escolhido |
-| `pronta` | Pronta para comparar |
-| `comparada` | Comparação feita |
+| `varias_anteriores`        | Há mais de um PDF anterior; confirmar o escolhido      |
+| `pronta`                   | Pronta para comparar                                   |
+| `comparada`                | Comparação feita                                       |
 
 ## 4. Ler o Excel
 
@@ -75,13 +75,13 @@ O ficheiro `<pasta>_comparacao.xlsx` tem três folhas.
 **Comparação.** Uma linha por cláusula, artigo ou anexo, ordenada por
 importância: novas, alteradas, removidas, alterações formais, iguais.
 
-| Classificação | Significado |
-| --- | --- |
-| `nova` | Sem correspondente na versão anterior |
-| `alteracao` | O conteúdo mudou |
-| `removida` | Sem correspondente na versão actual |
+| Classificação      | Significado                                                                                    |
+| ------------------ | ---------------------------------------------------------------------------------------------- |
+| `nova`             | Sem correspondente na versão anterior                                                          |
+| `alteracao`        | O conteúdo mudou                                                                               |
+| `removida`         | Sem correspondente na versão actual                                                            |
 | `alteracao_formal` | Só muda o espaçamento, a pontuação, a translineação ou a grafia anterior ao Acordo Ortográfico |
-| `=` | Texto igual (sem contar acentos, maiúsculas e espaços repetidos) |
+| `=`                | Texto igual (sem contar acentos, maiúsculas e espaços repetidos)                               |
 
 A coluna **Diferenças** mostra o que mudou, palavra a palavra, com algum
 contexto: `[-texto retirado-]` e `{+texto acrescentado+}`. **Números
