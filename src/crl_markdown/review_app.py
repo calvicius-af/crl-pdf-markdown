@@ -15,6 +15,7 @@ from .ui_labels import CATEGORIES, FAMILIES, PROFILES, category, family, rule_la
 from .validation import _load, _verified, decide, review_head
 
 FALSE_ALARM = 'está correto (falso alarme)'
+BATCH_NOTE = 'Aprovação em lote: documento sem alertas automáticos.'
 APPROVAL_NOTE = 'Avisos conferidos no PDF; o Markdown está correto.'
 FALSE_ALARM_NOTE = 'Conferido no PDF: o Markdown está correto; o alerta automático não corresponde a um erro.'
 
@@ -143,6 +144,7 @@ class ReviewWindow:
         for label, action in [('Abrir PDF no leitor do sistema', self.open_pdf),
                               ('Abrir Markdown no editor do sistema', self.open_markdown),
                               ('Relatório deste documento', self.open_evidence),
+                              ('Aprovar todos os documentos sem alertas desta lista…', self.approve_clean),
                               ('Reler páginas com OCR…', self.ocr_pages),
                               ('Histórico de ocorrências…', self.open_history),
                               (None, None),
@@ -754,6 +756,42 @@ class ReviewWindow:
             self.task(lambda: reextract_pages(folder, relative, reviewer, model_folder, selected),
                       lambda _result: self.refresh())
         ttk.Button(frame, text='Executar OCR sem rede', command=start).pack(pady=10)
+
+    def approve_clean(self):
+        """Aprovação em lote, com o nome de quem revê, só para documentos sem alertas."""
+        if self.busy or not self.check_notes():
+            return
+        try:
+            self.check_revision_author()
+        except ValueError as error:
+            messagebox.showerror('Aprovar em lote', str(error), parent=self.window)
+            return
+        listed = set(self.choices['values'])
+        clean = [d['relative_source'] for d in self.documents
+                 if d['relative_source'] in listed and d.get('quality_status') == 'passed']
+        if not clean:
+            messagebox.showinfo('Aprovar em lote', 'Não há documentos sem alertas nesta lista.', parent=self.window)
+            return
+        if not messagebox.askyesno('Aprovar em lote',
+                                   f'Aprovar em seu nome os {len(clean)} documentos sem alertas automáticos '
+                                   'desta lista? Os que já têm decisão atual ficam como estão.', parent=self.window):
+            return
+        output, reviewer = self.output, self.reviewer.get()
+
+        def work():
+            done = 0
+            for relative in clean:
+                if review_head(output, relative) is not None:
+                    continue
+                decide(output, relative, reviewer=reviewer, decision='aprovado', scope='integral',
+                       notes=BATCH_NOTE)
+                done += 1
+            return done
+
+        def finished(count):
+            self.refresh()
+            messagebox.showinfo('Aprovar em lote', f'Documentos aprovados: {count}.', parent=self.window)
+        self.task(work, finished)
 
     def record(self, decision):
         if not self.current or self.busy:

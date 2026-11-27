@@ -215,3 +215,44 @@ def test_false_alarm_for_all_alerts_unblocks_and_approval_moves_on(damaged_outpu
         assert json.loads(decisions[0].read_text(encoding='utf-8'))['scope'] == 'integral'
     finally:
         root.destroy()
+
+
+@pytest.mark.skipif(os.environ.get('CRL_TEST_TK') != '1', reason='Ensaio Tk explícito numa sessão gráfica')
+def test_batch_approval_covers_only_clean_documents_and_allows_delivery(reviewed_output, tmp_path, monkeypatch):  # noqa: F811
+    import json
+
+    from crl_markdown.validation import deliver
+    from tests.test_review_exchange import add_second
+    audit = reviewed_output / '_auditoria/documentos'
+    report = json.loads((audit / 'a.qualidade.json').read_text(encoding='utf-8'))
+    report.update(quality_status='passed', findings=[])
+    (audit / 'a.qualidade.json').write_text(json.dumps(report), encoding='utf-8')
+    manifest = reviewed_output / '_auditoria/manifest.json'
+    manifest.write_text(json.dumps({'run_id': 'test', 'documents': [{**report, 'relative_source': 'a.pdf'}]}),
+                        encoding='utf-8')
+    add_second(reviewed_output)
+    data = json.loads(manifest.read_text(encoding='utf-8'))
+    data['documents'][1].update(quality_status='review', findings=[{'severity': 'warning', 'rule': 'STRUCTURE'}])
+    manifest.write_text(json.dumps(data), encoding='utf-8')
+    second = json.loads((audit / 'b.qualidade.json').read_text(encoding='utf-8'))
+    second.update(quality_status='review', findings=[{'severity': 'warning', 'rule': 'STRUCTURE'}])
+    (audit / 'b.qualidade.json').write_text(json.dumps(second), encoding='utf-8')
+    monkeypatch.setattr('tkinter.messagebox.askyesno', lambda *a, **k: True)
+    shown = []
+    monkeypatch.setattr('tkinter.messagebox.showinfo', lambda title, message, **k: shown.append(message))
+    root = tk.Tk()
+    try:
+        view = ReviewWindow(root, reviewed_output)
+        view.reviewer.set('Pessoa de ensaio')
+        view.approve_clean()
+        deadline = time.monotonic() + 10
+        while view.busy and time.monotonic() < deadline:
+            root.update()
+            time.sleep(.01)
+        root.update()
+        assert shown == ['Documentos aprovados: 1.']
+    finally:
+        root.destroy()
+    conformity = deliver(reviewed_output, tmp_path / 'entrega')
+    delivered = json.loads((conformity.parent / 'conformidade.json').read_text(encoding='utf-8'))
+    assert [d['document'] for d in delivered['documents']] == ['a.md']

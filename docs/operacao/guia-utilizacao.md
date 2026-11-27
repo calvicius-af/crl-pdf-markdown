@@ -62,6 +62,8 @@ de correções, que conserva o original e cria uma publicação auditada separad
    passa ao documento seguinte.
 6. Em **Mais opções** ficam as ações menos frequentes: abrir o PDF ou o
    Markdown na aplicação predefinida do sistema, o relatório do documento,
+   **Aprovar todos os documentos sem alertas desta lista** (aprovação em lote,
+   em nome de quem revê, que não altera decisões já registadas),
    **Reler páginas com OCR**, o histórico de ocorrências e a troca de cópias
    de revisão com outra pessoa. O OCR relê só as páginas indicadas e confirma
    antes a pasta de modelos.
