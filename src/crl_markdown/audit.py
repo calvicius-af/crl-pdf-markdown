@@ -118,7 +118,15 @@ def _pdf_numeric_tokens(pdf: Path, document=None):
                             close = False
                     if sign and aligned and direction == 'ltr' and 4 < gap <= previous['height'] * 2:
                         close = same_cell(previous, word)
-                    if (close and (sign or thousands or overlapping_digits)) or (wrapped and sign):
+                    # Hífen colado entre dois números («2840-500», «1-15»): o
+                    # Docling junta-os numa palavra e o Markdown não tem sinal.
+                    # O pdfplumber, com tolerância de 1 pt, separava «-500» e
+                    # contava um negativo inexistente. Só juntar abaixo da
+                    # largura de um espaço, para «Saldo -9h» continuar negativo.
+                    glued_hyphen = (close and direction == 'ltr' and gap <= previous['height'] * .22
+                                    and re.search(r'\d$', tokens[-1])
+                                    and re.match(r'[-–]\d', value))
+                    if glued_hyphen or (close and (sign or thousands or overlapping_digits)) or (wrapped and sign):
                         tokens[-1] += value
                         grouped[-1] = grouped[-1] or bool(thousands)
                         continue

@@ -12,6 +12,14 @@ def policy():
     return json.loads(PROFILE_PATH.read_text(encoding='utf-8'))
 
 
+def informative(findings):
+    """Avisos que descrevem a forma da saída passam a informação; erros nunca."""
+    from dataclasses import replace
+    rules = set(policy().get('avisos_informativos', {}).get('regras', []))
+    return [replace(f, severity='info') if f.rule in rules and f.severity == 'warning' else f
+            for f in findings]
+
+
 def applicability(profile):
     profiles = policy()['perfis']
     return profiles.get(profile, profiles['desconhecido'])

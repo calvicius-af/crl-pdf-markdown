@@ -237,3 +237,16 @@ def test_numeric_evidence_matches_complete_values_with_their_signs(tmp_path):
     assert len(evidence) == 2
     assert all('5000' not in item['source_text'] and '18,50' not in item['source_text']
                and '+500' not in item['source_text'] for item in evidence)
+
+
+def test_hyphen_glued_between_numbers_is_not_a_negative_value(tmp_path):
+    from crl_markdown.audit import pdf_signed_values
+    # Código postal com o hífen a 2 pt do número anterior: o Docling escreve
+    # «2840-500»; a referência não pode contar um «-500» inexistente.
+    pdf = escrever_pdf(tmp_path / 'postal.pdf', [[
+        (50, 700, 'Código postal'), (120, 700, '2840'), (144.24, 700, '-500'), (170, 700, 'Seixal')]])
+    assert pdf_signed_values(pdf) == Counter()
+    # Separado por um espaço, continua a ser um sinal a conferir.
+    pdf = escrever_pdf(tmp_path / 'spaced.pdf', [[
+        (50, 700, 'Saldo'), (120, 700, '2840'), (145.74, 700, '-500')]])
+    assert pdf_signed_values(pdf) == Counter({'-500': 1})

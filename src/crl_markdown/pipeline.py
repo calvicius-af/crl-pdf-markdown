@@ -18,7 +18,7 @@ from .audit import audit_pdf
 from .document import plain_markdown, prepare
 from .isolamento import ConversorIsolado, FalhaArranque
 from .legacy import completude
-from .policies import fingerprint, model_fingerprint, policy, profile_context
+from .policies import fingerprint, informative, model_fingerprint, policy, profile_context
 from .quality import lint, parser
 from .report import new_manifest, write_reports
 
@@ -291,6 +291,7 @@ def convert_pdf(
         docling_document=result.document,
     )
     findings.extend(audit_findings)
+    findings = informative(findings)
     state = "rever" if any(f.severity != "info" for f in findings) else "sem_alertas_automaticos"
     document_json = json.dumps(result.document.export_to_dict(), ensure_ascii=False) + "\n"
     report = {
