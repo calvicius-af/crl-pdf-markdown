@@ -12,3 +12,13 @@ updates:
       # quando o Docling aceitar o Pillow 13 (decisão de 2026-11-27, PR #23).
       - dependency-name: pillow
         versions: [">=13"]
+
+  # Actions usadas nos workflows: uma PR agrupada por semana, para não voltar a
+  # ficar com versões em runtimes descontinuados (aviso do Node.js 20, 2026-11-27).
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]

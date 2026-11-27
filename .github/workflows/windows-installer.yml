@@ -20,8 +20,8 @@ jobs:
       PYTHONUTF8: '1'
       PIP_CONSTRAINT: ${{ github.workspace }}/requirements/offline-windows-py313.txt
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.13'
           cache: pip
@@ -90,7 +90,7 @@ jobs:
           $check = Start-Process "$destination\python\pythonw.exe" -ArgumentList '-I', '-X', 'utf8', '-B', '-m', 'crl_markdown.release_check', '--out', "`"$env:RUNNER_TEMP\evidencia-instalacao`"" -Wait -PassThru
           if ($check.ExitCode -ne 0) { throw 'Falhou a conversão sem consola após instalar o EXE' }
       - name: Guardar instalador candidato
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: instalador-windows-candidato
           path: ${{ runner.temp }}/instalador/
@@ -99,7 +99,7 @@ jobs:
           retention-days: 30
       - name: Guardar evidência (também em caso de falha)
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: evidencia-instalador-windows
           path: |
