@@ -277,8 +277,13 @@ def test_siglas_adivinhadas_ficam_num_ficheiro_para_rever(tmp_path, monkeypatch,
     argumentos = ["collect", "--indices", str(indice), "--pausa", "0", "--confirmar-rede"]
     assert main(argumentos) == 0
     pendentes = tmp_path / "data" / "registo" / "siglas_pendentes.csv"
-    assert "observações automáticas" in capsys.readouterr().out
+    saida = capsys.readouterr().out
+    assert "observações automáticas" in saida
+    assert "siglas resolvidas por regra" in saida
     assert not pendentes.exists()
+    # A empresa fora da lista recebe sigla por regra e fica para entrar na lista.
+    novas = tmp_path / "data" / "registo" / "siglas_novas.csv"
+    assert "RefinariaExemplar;Refinaria Exemplar, SA;" in novas.read_text("utf-8-sig")
     assert [p.name for p in tmp_path.rglob("data/raw/bte/**/*.pdf")] == [
         "2026_BTE_31_PRI_386_AE-ALT_46748_RefinariaExemplar-SITESE.pdf"
     ]

@@ -869,6 +869,9 @@ def collect(args, *, progress_event=None):
     pendentes = Path(args.registo).parent / "siglas_pendentes.csv"
     if nomeacao.escrever_siglas_pendentes(nomes["siglas_pendentes"], pendentes):
         nomes["ficheiro_siglas_pendentes"] = str(pendentes)
+    novas = Path(args.registo).parent / "siglas_novas.csv"
+    if nomeacao.escrever_siglas_novas(nomes.get("siglas_novas", {}), novas):
+        nomes["ficheiro_siglas_novas"] = str(novas)
     print()
     print(nomeacao.texto_resumo(nomes))
     return 1 if resumo["problemas"] or nomes["problemas"] else 0
