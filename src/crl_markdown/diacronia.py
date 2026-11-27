@@ -140,10 +140,30 @@ def corpo(no: dict, texto: str) -> str:
     return (linhas[1] if len(linhas) > 1 else linhas[0]).strip()
 
 
+def _com_descendentes(nos: list[dict]) -> dict[str, int]:
+    """Fim de cada nó contando os descendentes (pela ligação `pai`).
+
+    O extractor guarda o anexo como um nó só com o cabeçalho e o conteúdo,
+    incluindo as tabelas salariais, num nó «bloco» filho. Sem isto, um anexo
+    em que só mudava a tabela ficava «igual».
+    """
+    fim = {n["id"]: n["char_end"] for n in nos}
+    pais = {n["id"]: n.get("pai") for n in nos}
+    for n in nos:
+        visto, pai = set(), pais.get(n["id"])
+        while pai and pai in fim and pai not in visto:
+            visto.add(pai)
+            fim[pai] = max(fim[pai], n["char_end"])
+            pai = pais.get(pai)
+    return fim
+
+
 def unidades(nos: list[dict]) -> list[dict]:
-    """Cláusulas, artigos e anexos terminais; numa publicação com texto
-    consolidado, só a republicação (o texto integral final)."""
-    todas = [n for n in nos if n["tipo"] in TIPOS and n.get("folha", True)]
+    """Cláusulas, artigos e anexos terminais, com o texto dos seus descendentes;
+    numa publicação com texto consolidado, só a republicação (o texto integral final)."""
+    fim = _com_descendentes(nos)
+    todas = [{**n, "char_end": fim[n["id"]]} for n in nos
+             if n["tipo"] in TIPOS and n.get("folha", True)]
     consolidadas = [n for n in todas if n.get("origem") == "consolidado"]
     return consolidadas if len(consolidadas) >= len(todas) * 0.5 and consolidadas else todas
 

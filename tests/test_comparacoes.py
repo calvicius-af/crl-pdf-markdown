@@ -228,3 +228,27 @@ def test_cli_prepares_and_compares(workspace, versoes_sinteticas, capsys):
     assert cli.main(["compare", "--workspace", str(root)]) == 0
     assert (pasta / (nome + "_comparacao.xlsx")).is_file()
     assert _pendentes(root)[0]["estado"] == "comparada"
+
+
+def _extraida(doc_id, salario):
+    """Estrutura do extractor real: o anexo é só o cabeçalho; a tabela fica num «bloco» filho."""
+    from crl_markdown.legacy.extractor import estruturar
+
+    texto = ("Cláusula 1.ª\nÂmbito\n1- O presente contrato obriga as empresas e os trabalhadores.\n"
+             "ANEXO I\nTabela salarial\nNível | Categoria | Retribuição\n"
+             f"I | Encarregado | {salario}\nII | Operador | 850,00\n")
+    estrutura, estruturado = estruturar(texto, doc_id)
+    return {"doc_id": doc_id, "nos": estrutura["nos"], "texto": estruturado}
+
+
+def test_salary_change_inside_annex_table_is_not_equal():
+    anterior, nova = _extraida("anterior", "900,00"), _extraida("nova", "950,00")
+    anexo = next(n for n in nova["nos"] if n["tipo"] == "anexo")
+    assert any(n.get("pai") == anexo["id"] and n["tipo"] == "bloco" for n in nova["nos"])
+    linhas = {r["rotulo_novo"]: r for r in diacronia.comparar(anterior, nova)["linhas"]}
+    tabela = linhas["ANEXO I - Tabela salarial"]
+    assert tabela["classificacao"] == "alteracao" and tabela["numeros_alterados"]
+    assert "[-900,00-] {+950,00+}" in tabela["diferencas"]
+    assert linhas["Cláusula 1.ª - Âmbito"]["classificacao"] == "="
+    igual = diacronia.comparar(anterior, _extraida("nova", "900,00"))
+    assert igual["resumo"]["="] == 2
