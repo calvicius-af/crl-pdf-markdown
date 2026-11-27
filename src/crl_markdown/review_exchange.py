@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from uuid import uuid4
 
-from .caminhos import like, longpath
+from .caminhos import display, like, longpath
 from .locking import exclusive
 from .models import _sha256
 from .pipeline import atomic_write
@@ -276,7 +276,7 @@ def merge_review(output, branch, *, reviewer):
             record['status'] = 'rolled_back'
             atomic_write(receipt, json.dumps(record, ensure_ascii=False, indent=2) + '\n')
             raise
-        return {'imported': len(applied), 'receipt': str(receipt)}
+        return {'imported': len(applied), 'receipt': display(receipt)}
 
 
 def recover_imports(output):
