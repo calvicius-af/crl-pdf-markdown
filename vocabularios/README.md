@@ -49,6 +49,13 @@ Freguesias com nomes muito semelhantes levam o distrito na sigla
 mesmo (`JF-TRAVASSOS-FAFE`). A sigla tem até 25 caracteres depois de normalizada,
 o limite que a nomeação aceita.
 
+Quando a CAOP tem várias freguesias com o mesmo nome e a lista do INE só uma linha,
+cada freguesia entra com o concelho no nome (`Freguesia de Mosteiro - Oleiros`,
+`JF-MOSTEIRO-CASTELO-BRANCO`, fonte `Administração pública (CAOP 2024.1)`), e a
+linha do INE fica com uma nota em `revisao`. Um documento que só diga
+`Freguesia de Mosteiro` recebe então um aviso para confirmar qual é, sem bloquear
+`Freguesia de Mosteirô`.
+
 Na árvore de dados do RNC, o `siglas.csv` gerado é o que vai para
 `0_gestao/vocabularios/`.
 

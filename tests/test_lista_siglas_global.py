@@ -164,6 +164,24 @@ def test_freguesia_com_distrito_cabe_na_sigla(tmp_path):
     assert nomeacao.sigla("Freguesia de Água Longa", tabela) == ("JFAGUALONGAPORTO", None)
 
 
+def test_freguesia_homonima_sem_concelho_fica_pendente_sem_bloquear_a_outra_grafia(tmp_path):
+    modulo = _modulo()
+    linhas, rel = modulo.converter(_lista(
+        _linha("JF-MOSTEIRO", "Freguesia de Mosteiro", ident="INE-1", fonte=INE,
+               revisao="três freguesias com este nome: indicar o concelho"),
+        _linha("JF-MOSTEIRO-BRAGA", "Freguesia de Mosteiro - Vieira do Minho", ident="CAOP-031110",
+               fonte="Administração pública (CAOP 2024.1)"),
+        _linha("JF-MOSTEIRO-AVEIRO", "Freguesia de Mosteirô", ident="INE-2", fonte=INE),
+    ))
+    assert rel["nomes_com_siglas_diferentes"] == {}
+    destino = tmp_path / "siglas.csv"
+    modulo.escrever(linhas, destino)
+    tabela = nomeacao.carregar_siglas(destino)
+    assert nomeacao.sigla("Freguesia de Mosteirô", tabela) == ("JFMOSTEIROAVEIRO", None)
+    assert nomeacao.sigla("Freguesia de Mosteiro - Vieira do Minho", tabela) == ("JFMOSTEIROBRAGA", None)
+    assert "pendente" in nomeacao.sigla("Freguesia de Mosteiro", tabela)[1]
+
+
 def test_coluna_em_falta_interrompe(tmp_path):
     caminho = tmp_path / "lista.csv"
     caminho.write_text("sigla;nome\nAHP;Associação\n", encoding="utf-8")

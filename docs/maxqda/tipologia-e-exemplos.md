@@ -438,8 +438,11 @@ caracteres, o mesmo que a lista já usa para JF, UF e CM. A sigla inventada a pa
 nome, quando o vocabulário não tem nenhuma, continua limitada a 20. O limite de 63
 caracteres do nome do documento não muda.
 
-Fica por confirmar o distrito de `Freguesia de Mosteiro`: a CAOP tem três (Vieira do
-Minho, Oleiros e Lajes das Flores) e a lista do INE só uma linha.
+A `Freguesia de Mosteiro` tem três correspondências na CAOP (Vieira do Minho, Oleiros e
+Lajes das Flores) e uma só linha na lista do INE. Entram as três, com o concelho no nome
+e o distrito na sigla (`JF-MOSTEIRO-BRAGA`, `JF-MOSTEIRO-CASTELO-BRANCO`,
+`JF-MOSTEIRO-FLORES`). Um documento que só diga «Freguesia de Mosteiro» recebe um aviso
+para confirmar qual é.
 
 Em qualquer dos casos, as siglas dos nomes já atribuídos ao corpus até 2025 não mudam
 (ADR-0021). Para o corpus de 2026, a mudança tem de acontecer antes de começar a

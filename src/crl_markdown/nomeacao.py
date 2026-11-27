@@ -348,6 +348,7 @@ def carregar_siglas(caminho: Path) -> dict[str, str]:
     i_estado = cabecalho.index("estado") if tem_cabecalho and "estado" in cabecalho else None
     claims = {}
     grafias = {}
+    grafias_pendentes = {}
     i_origem = (
         cabecalho.index(COLUNA_ORIGEM) if tem_cabecalho and COLUNA_ORIGEM in cabecalho else None
     )
@@ -378,6 +379,7 @@ def carregar_siglas(caminho: Path) -> dict[str, str]:
         if i_estado is not None and (i_estado >= len(linha) or linha[i_estado].strip().lower() not in {"confirmada", "documentada"}):
             tabela.nomes_pendentes.add(nome)
             recusados.add(nome)
+            grafias_pendentes.setdefault(nome, set()).add(chave_grafia(linha[i_nome]))
             if valor:
                 tabela.siglas_pendentes.add(valor.casefold())
                 if not origem or not automatica:
@@ -399,6 +401,10 @@ def carregar_siglas(caminho: Path) -> dict[str, str]:
             tabela.siglas_pendentes.update(valor.casefold() for valor in valores)
         elif nome not in tabela.nomes_pendentes:
             tabela[nome] = next(iter(valores))
+        elif grafias.get(nome) and not set(grafias[nome]) & grafias_pendentes.get(nome, set()):
+            # Uma grafia pendente (Mosteiro, sem concelho) não bloqueia outra
+            # grafia documentada do mesmo nome (Mosteirô).
+            tabela.por_grafia.update({g: next(iter(v)) for g, v in grafias[nome].items()})
     for nome, valor in automaticas.items():
         if nome not in claims and nome not in recusados:
             tabela.nomes_pendentes.discard(nome)
