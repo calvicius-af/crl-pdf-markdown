@@ -138,6 +138,8 @@ def reextract_pages(output, relative_source, reviewer, models, pages, *, progres
     revision = create_revision(output, relative_source, reviewer)
     requested = output
     output = longpath(output).resolve()
+    # A correção volta na forma de quem chamou; aqui tudo usa a forma estendida.
+    revision = longpath(revision).resolve()
     meta = json.loads((revision / 'revision.json').read_text(encoding='utf-8'))
     with exclusive(output / '_auditoria/.operacao.lock'):
         document = _record(output, relative_source)
