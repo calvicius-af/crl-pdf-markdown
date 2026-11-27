@@ -21,6 +21,7 @@ defeitos do auditor e regista a reauditoria das 18 convenções selecionadas.
 | Consultar o documento de organização fornecido                   | [README RNC v4.0](README_Organizacao_pastas_sharepoint.md)                                         |
 | Instalar sem internet e resolver falhas                          | [Instalação offline](operacao/instalacao-offline.md)                                               |
 | Operar a aplicação sem depender do autor                         | [Guia de utilização e ajuda](operacao/guia-utilizacao.md)                                          |
+| Comparar uma revisão global com a versão completa anterior       | [Comparações](operacao/comparacoes.md)                                                             |
 | Perceber e atualizar as siglas                                   | [Vocabulários](../vocabularios/README.md)                                                          |
 | Consultar os resultados reais já medidos                         | [Validação](../VALIDACAO.md)                                                                       |
 | Perceber os bloqueios do lote e a ordem das melhorias            | [Diagnóstico e issues de 16/10](validacao/diagnostico-lote-2026-10-16.md)                          |

@@ -66,6 +66,11 @@ e a [hierarquia Markdown](docs/operacao/hierarquia-markdown.md).
 O caminho antigo `data/`/`results/` continua disponível para compatibilidade;
 `--workspace` é o caminho recomendado para novos lotes.
 
+As revisões globais são comparadas com a versão completa anterior, cláusula a
+cláusula: `prepare-comparisons` cria uma pasta por convenção em
+`3_analise/comparacoes`, com o PDF actual e a lista do que falta descarregar, e
+`compare` produz um Excel por pasta. Ver [comparações](docs/operacao/comparacoes.md).
+
 O [pacote técnico offline](docs/operacao/instalacao-offline.md) continua disponível
 para o apoio preparar a distribuição. A instalação numa estação Windows e a importação
 direta no MaxQDA continuam gates de aceitação por realizar. Docling mantém-se

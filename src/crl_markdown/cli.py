@@ -29,6 +29,21 @@ def main(argv=None):
     naming.add_argument("--ambitos", type=Path)
     naming.add_argument("--esquema", choices=["adr0022", "v4"], default="adr0022")
     naming.add_argument("--aplicar", action="store_true")
+    preparation = commands.add_parser(
+        "prepare-comparisons",
+        help="Criar em 3_analise/comparacoes uma pasta por revisão global, com o PDF actual")
+    preparation.add_argument("--workspace", required=True, type=Path)
+    preparation.add_argument("--registo", type=Path)
+    preparation.add_argument("--aplicar", action="store_true",
+                             help="Criar as pastas e o pendentes.csv; sem esta opção só simula")
+    comparison = commands.add_parser(
+        "compare", help="Comparar a versão actual com a versão completa anterior (Excel por pasta)")
+    comparison.add_argument("--workspace", required=True, type=Path)
+    comparison.add_argument("--pasta", help="Só esta pasta de 3_analise/comparacoes (nome ou caminho)")
+    comparison.add_argument("--anterior", type=Path,
+                            help="PDF da versão anterior a usar, com --pasta")
+    comparison.add_argument("--substituir", action="store_true",
+                            help="Refazer comparações já existentes")
     doctor = commands.add_parser("doctor", help="Verificar instalação e guardar instruções de reparação")
     doctor.add_argument("--models", type=Path)
     doctor.add_argument("--out", type=Path, default=Path("assistencia"))
@@ -197,6 +212,24 @@ def main(argv=None):
             return 0 if ok else 1
         if args.command == "init":
             print(f"Pastas prontas: {initialize(args.workspace).resolve()}")
+            return 0
+        if args.command == "prepare-comparisons":
+            from .comparacoes import preparar, texto_resumo
+            initialize(args.workspace)
+            linhas = preparar(args.workspace, args.registo, aplicar=args.aplicar)
+            print(texto_resumo(linhas, aplicar=args.aplicar))
+            if args.aplicar:
+                print(f"Pendentes: {args.workspace / '3_analise/comparacoes/pendentes.csv'}")
+            return 0
+        if args.command == "compare":
+            from .comparacoes import comparar_tudo, preparar
+            if args.anterior and not args.pasta:
+                raise ValueError("--anterior só se usa com --pasta.")
+            results = comparar_tudo(args.workspace, pasta=args.pasta, anterior=args.anterior,
+                                    substituir=args.substituir)
+            print(json.dumps(results, ensure_ascii=False, indent=2))
+            if (args.workspace / "0_gestao/catalogo/registo_bte.jsonl").is_file():
+                preparar(args.workspace, aplicar=True, copiar=False)  # estados do pendentes.csv
             return 0
         if args.command == "name":
             initialize(args.workspace)
