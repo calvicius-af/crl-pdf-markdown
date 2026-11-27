@@ -1,0 +1,14 @@
+# O Dependabot só abre PR de segurança (open-pull-requests-limit: 0 desliga as
+# actualizações de versão); as regras «ignore» aplicam-se também a essas PR.
+version: 2
+updates:
+  - package-ecosystem: pip
+    directory: /requirements
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 0
+    ignore:
+      # O Docling (docling-slim[standard]) exige pillow<13. Retirar esta regra
+      # quando o Docling aceitar o Pillow 13 (decisão de 2026-11-27, PR #23).
+      - dependency-name: pillow
+        versions: [">=13"]
