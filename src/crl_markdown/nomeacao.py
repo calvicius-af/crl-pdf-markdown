@@ -195,6 +195,12 @@ class TabelaSiglas(dict):
         # {chave_equivalente: {siglas}} das linhas utilizáveis; só serve
         # quando o conjunto tem uma sigla.
         self.equivalentes = {}
+        # Chaves de equivalência de nomes pendentes ou ambíguos: a regra não
+        # decide por elas (decisão de 2026-11-27, revisão do PR #24).
+        self.equivalentes_pendentes = set()
+        # {chave_grafia: {id_entidade}} lidos da coluna fonte do siglas.csv
+        # gerado («lista_siglas_global.csv/linha N/ID»).
+        self.ids_por_grafia = {}
 
 
 def informacao(texto):
@@ -243,7 +249,13 @@ def sigla(nome: str, tabela: dict[str, str] | None = None) -> tuple[str, str | N
                 f"rótulo documental derivado de «{nome}»; não é uma sigla oficial confirmada")
         if chave in getattr(tabela, "nomes_pendentes", set()):
             return _camel(nome), f"sigla de «{nome[:60]}» pendente ou ambígua no vocabulário — confirmar"
-        equivalentes = getattr(tabela, "equivalentes", {}).get(chave_equivalente(nome), set())
+        equivalente = chave_equivalente(nome)
+        equivalentes = getattr(tabela, "equivalentes", {}).get(equivalente, set())
+        if equivalente in getattr(tabela, "equivalentes_pendentes", set()) or len(equivalentes) > 1:
+            # A equivalência não distingue a entidade: há outra pendente ou
+            # ambígua com o mesmo nome (Mosteiro e Mosteirô), ou mais de uma.
+            return _camel(nome), (f"sigla de «{nome[:60]}» ambígua por equivalência com nomes da lista "
+                                  "— confirmar")
         if len(equivalentes) == 1:
             return next(iter(equivalentes)), informacao(
                 f"sigla da lista por equivalência de nome com «{nome[:60]}»")
@@ -379,6 +391,7 @@ def carregar_siglas(caminho: Path) -> dict[str, str]:
         cabecalho.index(COLUNA_ORIGEM) if tem_cabecalho and COLUNA_ORIGEM in cabecalho else None
     )
     i_responsavel = cabecalho.index("responsavel") if tem_cabecalho and "responsavel" in cabecalho else None
+    i_fonte = cabecalho.index("fonte") if tem_cabecalho and "fonte" in cabecalho else None
     tabela.permitir_rotulos = i_origem is not None
     automaticas = {}
     recusados = set()
@@ -387,6 +400,9 @@ def carregar_siglas(caminho: Path) -> dict[str, str]:
             continue
         nome = chave_entidade(linha[i_nome])
         valor = normalizar_sigla(linha[i_sigla])
+        if i_fonte is not None and i_fonte < len(linha) and linha[i_fonte].count("/") >= 2:
+            tabela.ids_por_grafia.setdefault(chave_grafia(linha[i_nome]), set()).add(
+                linha[i_fonte].rsplit("/", 1)[1].strip())
         origem = linha[i_origem].strip().lower().split("+")[0] if i_origem is not None and i_origem < len(linha) else ""
         automatica = i_responsavel is None or i_responsavel >= len(linha) or not linha[i_responsavel].strip()
         estado = linha[i_estado].strip().lower() if i_estado is not None and i_estado < len(linha) else ""
@@ -406,6 +422,7 @@ def carregar_siglas(caminho: Path) -> dict[str, str]:
             tabela.nomes_pendentes.add(nome)
             recusados.add(nome)
             grafias_pendentes.setdefault(nome, set()).add(chave_grafia(linha[i_nome]))
+            tabela.equivalentes_pendentes.add(chave_equivalente(linha[i_nome]))
             if valor:
                 tabela.siglas_pendentes.add(valor.casefold())
                 if not origem or not automatica:
@@ -457,6 +474,9 @@ def tabela_de_siglas(caminhos=(), *, equipa: Path = SIGLAS_EQUIPA, dgert: bool =
             tabela.por_grafia.setdefault(grafia, valor)
         for chave, valores in carregada.equivalentes.items():
             tabela.equivalentes.setdefault(chave, set()).update(valores)
+        tabela.equivalentes_pendentes |= carregada.equivalentes_pendentes
+        for grafia, ids in carregada.ids_por_grafia.items():
+            tabela.ids_por_grafia.setdefault(grafia, set()).update(ids)
         tabela.rotulos.update({nome: valor for nome, valor in carregada.rotulos.items()
                               if nome not in tabela.nomes_pendentes and nome not in tabela})
         for nome, valor in carregada.items():
@@ -480,6 +500,8 @@ def origem_sigla(nome: str, tabela) -> tuple[str, str]:
         na_lista = tabela is not None and (
             chave_entidade(limpo) in tabela or chave_grafia(limpo) in getattr(tabela, "por_grafia", {}))
         return valor, "lista" if na_lista else "literal"
+    if "ambígua por equivalência" in aviso:
+        return valor, "por_confirmar"
     if "por equivalência" in aviso:
         return valor, "equivalencia"
     if "rótulo documental derivado" in aviso:
@@ -512,7 +534,7 @@ def siglas_derivadas(entrada: dict, tabela: dict[str, str] | None = None, *, sch
 
 
 def escrever_siglas_pendentes(pendentes: dict, caminho: Path) -> Path | None:
-    """Escreve `nome;sigla;decisao;documentos;atencao` das siglas que bloqueiam documentos.
+    """Escreve `nome;sigla;decisao;id_entidade;documentos;atencao` das siglas que bloqueiam documentos.
 
     O ficheiro é refeito a cada corrida e apagado quando não há pendentes. Para
     aprovar, corrigir a `sigla` se for preciso, escrever `aprovar` em `decisao`
@@ -532,11 +554,12 @@ def escrever_siglas_pendentes(pendentes: dict, caminho: Path) -> Path | None:
         por_sigla: dict[str, list[str]] = {}
         for nome, dados in pendentes.items():
             por_sigla.setdefault(dados["sigla"], []).append(nome)
-        escritor.writerow(["nome", "sigla", "decisao", "documentos", "atencao"])
+        escritor.writerow(["nome", "sigla", "decisao", "id_entidade", "documentos", "atencao"])
         for nome, dados in sorted(pendentes.items(), key=lambda i: (-len(i[1]["documentos"]), i[0])):
             outros = [n for n in por_sigla[dados["sigla"]] if n != nome]
             atencao = ("mesma sigla sugerida para: " + "; ".join(outros)) if outros else ""
-            escritor.writerow([nome, dados["sigla"], "", " ".join(dados["documentos"]), atencao])
+            escritor.writerow([nome, dados["sigla"], "", " ".join(dados.get("ids", ())),
+                               " ".join(dados["documentos"]), atencao])
     return caminho
 
 
@@ -972,7 +995,9 @@ def nomear(
                     "documentos"].append(documento)
         if state == "por_confirmar":
             for entidade, valor in siglas_derivadas(e, tabela, scheme=scheme):
-                resumo["siglas_pendentes"].setdefault(entidade, {"sigla": valor, "documentos": []})["documentos"].append(result["nome"])
+                ids = sorted(getattr(tabela, "ids_por_grafia", {}).get(chave_grafia(entidade), ()))
+                resumo["siglas_pendentes"].setdefault(entidade, {"sigla": valor, "ids": ids, "documentos": []})[
+                    "documentos"].append(result["nome"])
     return resumo
 
 

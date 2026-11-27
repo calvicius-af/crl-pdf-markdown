@@ -235,7 +235,9 @@ seis origens (decisão de 2026-11-27):
 1. `lista`: o nome está na lista;
 2. `equivalencia`: o nome está na lista com outra grafia (forma jurídica no fim,
    texto entre parênteses, palavras de ligação, «União das freguesias de A e B»
-   em vez de «Freguesia de A e B»), e essa grafia aponta para uma só sigla;
+   em vez de «Freguesia de A e B»), e essa grafia aponta para uma só sigla.
+   Se apontar para mais de uma, ou para um nome pendente da lista (como
+   «Freguesia de Mosteiro»), fica `por_confirmar`;
 3. `literal`: a sigla está escrita no nome («SITESE - Sindicato...»);
 4. `regra`: entidade fora da lista, com um rótulo derivado do nome
    («Águas do Norte» dá `AguasNorte`). É aceite sem revisão, para ser estável;
@@ -251,7 +253,7 @@ Cada recolha escreve dois ficheiros ao lado do registo (`data/registo/`):
 1. `siglas_novas.csv`: entidades fora da lista que receberam sigla por regra
    (origens `literal` e `regra`), já com as colunas da lista global e os
    documentos onde aparecem. Não bloqueiam nada;
-2. `siglas_pendentes.csv` (`nome;sigla;decisao;documentos;atencao`): siglas
+2. `siglas_pendentes.csv` (`nome;sigla;decisao;id_entidade;documentos;atencao`): siglas
    que bloqueiam documentos, os mais frequentes primeiro. Estes documentos ficam
    `por_confirmar`: não são copiados para a árvore RNC e, por isso, não são
    convertidos para Markdown. A coluna `atencao` assinala a mesma sigla
@@ -265,7 +267,11 @@ python scripts/acrescentar_siglas.py --novas data/registo/siglas_novas.csv --dec
 ```
 
 O script acrescenta as entidades novas à lista (com `id_entidade` `NOM-NNNN`),
-aplica as decisões aprovadas e regera o `siglas.csv` indicado. Repetir a recolha
+aplica as decisões aprovadas e regera o `siglas.csv` indicado. Cada decisão
+aplica-se à entidade do `id_entidade` ou, sem ele, à do nome com a mesma grafia
+exata (Mosteiro e Mosteirô são entidades diferentes), ou à que tem esse nome
+como rótulo CRL. Um nome fora da lista cuja sigla aprovada já é de uma só
+entidade entra como rótulo dela. Repetir a recolha
 nomeia os documentos desbloqueados. Um nome já atribuído não muda.
 `--aceitar-heuristicas` nomeia também os documentos pendentes, depois de rever
 o resumo. `--nomes` muda a pasta de destino e `--sem-nomear` desliga este passo.

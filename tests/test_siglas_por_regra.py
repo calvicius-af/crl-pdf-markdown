@@ -45,8 +45,8 @@ def test_equivalencia_nao_escolhe_entre_duas_entidades(tmp_path):
     tabela = _tabela(tmp_path, (
         "Freguesia de Lousa;JF-LOUSA-BRAGANCA;;;documentada;lista_global;;;\n"
         "Freguesia de Lousã;JF-LOUSA-COIMBRA;;;documentada;lista_global;;;\n"))
-    # «da Lousa» não é nenhuma das duas grafias: fica com rótulo por regra.
-    assert nomeacao.origem_sigla("Freguesia da Lousa", tabela)[1] == "regra"
+    # «da Lousa» pode ser qualquer das duas: a regra não decide, pede confirmação.
+    assert nomeacao.origem_sigla("Freguesia da Lousa", tabela)[1] == "por_confirmar"
 
 
 def test_origens_da_sigla(tmp_path):
@@ -109,3 +109,61 @@ def test_entidades_novas_e_decisoes_entram_na_lista_e_no_siglas_csv(tmp_path):
     assert nomeacao.sigla("Refinaria Exemplar, SA", tabela) == ("RefinariaExemplar", None)
     assert nomeacao.sigla("Associação Pendente", tabela) == ("APNOVA", None)
     assert destino.with_name("siglas.manifest.json").exists()
+
+
+# Casos da revisão do PR #24, reproduzidos com a lista real.
+
+LISTA_REAL = RAIZ / "vocabularios/lista_siglas_global.csv"
+
+
+def _aplicar_na_lista_real(tmp_path, decisoes_texto):
+    lista = tmp_path / "lista.csv"
+    lista.write_bytes(LISTA_REAL.read_bytes())
+    decisoes = tmp_path / "siglas_pendentes.csv"
+    decisoes.write_text("nome;sigla;decisao;id_entidade;documentos;atencao\n" + decisoes_texto, encoding="utf-8-sig")
+    destino = tmp_path / "siglas.csv"
+    assert _script().main(["--lista", str(lista), "--decisoes", str(decisoes), "--siglas", str(destino)]) == 0
+    linhas = {linha["id_entidade"]: linha for linha in csv.DictReader(lista.open(encoding="utf-8"), delimiter=";")}
+    return linhas, nomeacao.carregar_siglas(destino)
+
+
+@pytest.mark.parametrize("id_entidade", ["", "INE-2131"])
+def test_aprovar_mosteiro_nao_desativa_mosteiro_com_acento(tmp_path, id_entidade):
+    linhas, tabela = _aplicar_na_lista_real(
+        tmp_path, f"Freguesia de Mosteiro;JF-MOSTEIRO;aprovar;{id_entidade};D1;\n")
+    assert (linhas["INE-2131"]["sigla"], linhas["INE-2131"]["revisao"]) == ("JF-MOSTEIRO", "")
+    assert linhas["INE-2134"]["estado"] != "Desativada"
+    assert nomeacao.sigla("Freguesia de Mosteirô", tabela) == ("JFMOSTEIROAVEIRO", None)
+    assert nomeacao.sigla("Freguesia de Mosteiro", tabela) == ("JFMOSTEIRO", None)
+
+
+def test_equivalencia_nao_contorna_um_nome_pendente_da_lista_real():
+    tabela = nomeacao.tabela_de_siglas(equipa=Path("nao-existe.csv"))
+    # «Freguesia de Mosteiro» está pendente (três freguesias na CAOP): «do
+    # Mosteiro» não pode cair na Mosteirô por equivalência.
+    valor, origem = nomeacao.origem_sigla("Freguesia do Mosteiro", tabela)
+    assert origem == "por_confirmar" and valor != "JFMOSTEIROAVEIRO"
+    assert nomeacao.sigla("Freguesia de Mosteirô", tabela) == ("JFMOSTEIROAVEIRO", None)
+
+
+def test_pendente_regista_o_id_da_entidade():
+    tabela = nomeacao.tabela_de_siglas(equipa=Path("nao-existe.csv"))
+    assert tabela.ids_por_grafia[nomeacao.chave_grafia("Freguesia de Mosteiro")] == {"INE-2131"}
+
+
+@pytest.mark.parametrize("id_entidade", ["", "DGERT-5.496"])
+def test_aprovar_um_rotulo_crl_desbloqueia_a_entidade_original(tmp_path, id_entidade):
+    antes = nomeacao.tabela_de_siglas(equipa=Path("nao-existe.csv"))
+    assert nomeacao.origem_sigla("ANO", antes)[1] == "por_confirmar"
+    linhas, tabela = _aplicar_na_lista_real(tmp_path, f"ANO;ANO-TERAP;aprovar;{id_entidade};D1;\n")
+    assert (linhas["DGERT-5.496"]["sigla"], linhas["DGERT-5.496"]["revisao"]) == ("ANO-TERAP", "")
+    assert not any(linha["id_entidade"].startswith("NOM-") for linha in linhas.values())
+    assert nomeacao.sigla("ANO", tabela) == ("ANOTERAP", None)
+
+
+def test_nome_alternativo_com_sigla_existente_entra_como_rotulo(tmp_path):
+    linhas, tabela = _aplicar_na_lista_real(
+        tmp_path, "Freguesia do Mosteiro (Oleiros);JF-MOSTEIRO-CASTELO-BRANCO;aprovar;;D1;\n")
+    assert "Freguesia do Mosteiro (Oleiros)" in linhas["CAOP-050607"]["rotulos_crl"]
+    assert not any(linha["id_entidade"].startswith("NOM-") for linha in linhas.values())
+    assert nomeacao.sigla("Freguesia do Mosteiro (Oleiros)", tabela) == ("JFMOSTEIROCASTELOBRANCO", None)
