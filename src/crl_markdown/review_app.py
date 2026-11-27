@@ -649,7 +649,7 @@ class ReviewWindow:
                 png = render_page(source, state['page'], state['width'], folder)
                 state['image'] = tk.PhotoImage(file=str(png))
             except Exception as error:
-                label.set(f'Página {state["page"]}: {error}')
+                label.set(f'Página {state["page"]} não desenhada ({type(error).__name__}): {error}')
                 return
             canvas.delete('all')
             canvas.create_image(0, 0, anchor='nw', image=state['image'])
