@@ -149,11 +149,13 @@ def test_second_reviewer_gets_new_draft_with_own_authorship(damaged_output):  # 
     root = tk.Tk()
     try:
         view = ReviewWindow(root, damaged_output)
-        assert view.revision == first
+        # A janela trabalha com o prefixo de caminho estendido no Windows.
+        from crl_markdown.caminhos import display
+        assert display(view.revision) == display(first)
         assert 'AMOUNTS' not in view.rule_values.values()
         view.reviewer.set('Pessoa B')
         view.edit_revision()
-        assert view.revision != first
+        assert display(view.revision) != display(first)
         assert json.loads((view.revision / 'revision.json').read_text(encoding='utf-8'))['reviewer'] == 'Pessoa B'
         assert path.read_bytes() == before
     finally:

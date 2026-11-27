@@ -4,15 +4,18 @@ import json
 import queue
 import threading
 import tkinter as tk
-import webbrowser
 from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
 
+from .caminhos import longpath, open_with_system
 from .models import _sha256
 from .pipeline import atomic_write
 from .report import STATUS
 from .ui_labels import FAMILIES, PROFILES, family, rule_label
 from .validation import _load, _verified, decide, review_head
+
+FALSE_ALARM = 'está correto (falso alarme)'
+FALSE_ALARM_NOTE = 'Conferido no PDF: o Markdown está correto; o alerta automático não corresponde a um erro.'
 
 
 def load_document(output, document):
@@ -46,7 +49,9 @@ def current_inventory(output):
 
 class ReviewWindow:
     def __init__(self, root, output):
-        self.output = Path(output)
+        # Prefixo de caminho estendido no Windows: as correções ficam em
+        # subpastas profundas que ultrapassam os 260 caracteres.
+        self.output = longpath(output)
         self.manifest = current_inventory(self.output)
         self.documents = self.manifest['documents']
         self.current = None
@@ -126,7 +131,7 @@ class ReviewWindow:
         resolution.pack(fill='x', pady=6)
         self.resolution_action = tk.StringVar(value='conferido')
         ttk.Combobox(resolution, textvariable=self.resolution_action,
-                     values=['conferido', 'corrigido', 'decorativo', 'transcrito'],
+                     values=['conferido', 'corrigido', 'decorativo', 'transcrito', FALSE_ALARM],
                      state='readonly', width=14).pack(side='left')
         ttk.Label(resolution, text='Página conferida').pack(side='left', padx=6)
         self.page = tk.StringVar()
@@ -283,17 +288,26 @@ class ReviewWindow:
             self.status.set(self.status.get() + f" · Notas de {draft['reviewer']} recuperadas (não é aprovação). "
                             'Indique quem está a rever.')
 
+    def open_file(self, path):
+        try:
+            open_with_system(path)
+        except (ValueError, OSError) as error:
+            messagebox.showerror('Não foi possível abrir o ficheiro', str(error), parent=self.window)
+
     def open_pdf(self):
         if self.current:
             from .review_sources import resolve_source
             document = next(d for d in self.documents if d['relative_source'] == self.selected.get())
-            page = self.page.get().strip()
-            suffix = '#page=' + page if page.isdigit() else ''
-            webbrowser.open(resolve_source(self.output, document).resolve().as_uri() + suffix)
+            try:
+                source = resolve_source(self.output, document)
+            except (ValueError, OSError) as error:
+                messagebox.showerror('PDF indisponível', str(error), parent=self.window)
+                return
+            self.open_file(source)
 
     def open_markdown(self):
         if self.current:
-            webbrowser.open(self.current[0].resolve().as_uri())
+            self.open_file(self.current[0])
 
     def open_evidence(self):
         if not self.current:
@@ -303,7 +317,7 @@ class ReviewWindow:
         manifest = {**self.manifest, 'documents': [{**self.current[2], 'relative_source': self.selected.get()}]}
         path = self.output / '_auditoria/consulta' / (_key(self.selected.get()) + '.md')
         atomic_write(path, diagnostic(manifest, path.parent))
-        webbrowser.open(path.resolve().as_uri())
+        self.open_file(path)
 
     def open_history(self):
         if not self.selected.get() or self.busy:
@@ -580,8 +594,15 @@ class ReviewWindow:
             self.check_revision_author()
             if not finding.get('id'):
                 raise ValueError('Esta auditoria é antiga. Use Reauditar lote antes de resolver ocorrências.')
-            page = int(self.page.get())
+            action = self.resolution_action.get()
+            false_alarm = action == FALSE_ALARM
+            page_text = self.page.get().strip() or (str(finding.get('page') or 1) if false_alarm else '')
+            if not page_text.isdigit():
+                raise ValueError('Indique o número da página do PDF onde conferiu a ocorrência.')
+            page = int(page_text)
             notes = self.notes.get('1.0', 'end').strip()
+            if false_alarm and not notes:
+                notes = FALSE_ALARM_NOTE
             if not notes:
                 raise ValueError('Descreva a evidência e a resolução desta ocorrência nas notas.')
             if self.revision is None:
@@ -590,7 +611,7 @@ class ReviewWindow:
             messagebox.showerror('Resolução', str(error), parent=self.window)
             return
         resolution = {'finding_id': finding['id'], 'page': page, 'notes': notes,
-                      'action': self.resolution_action.get()}
+                      'action': 'falso_alarme' if false_alarm else action}
         revision = self.revision
         self.task(lambda: audit_revision(revision, resolutions=[resolution]), lambda _result: self.refresh())
 
