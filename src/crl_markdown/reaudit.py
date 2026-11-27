@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from .cache import CachedConverter
+from .caminhos import display
 from .pipeline import Options, convert_pdf, run
 
 
@@ -55,7 +56,7 @@ def plan_reaudit(output, *, relative_source=None, families=(), rules=(), statuse
             raise ValueError('Caminho relativo inválido no manifesto.')
     provenance = {
         'operation': 'reaudit',
-        'manifest': str(manifest_path),
+        'manifest': display(manifest_path),
         'manifest_sha256': hashlib.sha256(content).hexdigest(),
         'run_id': manifest['run_id'],
         'filters': {'document': relative_source, 'families': families,
