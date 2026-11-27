@@ -2,10 +2,11 @@
 
 import hashlib
 import json
+import os
 import platform
 from pathlib import Path
 
-from .caminhos import display, longpath
+from .caminhos import display
 from .models import _sha256
 
 
@@ -33,7 +34,7 @@ def resolve_source(output, document):
             path = Path(candidate)
             # Um caminho relativo (por exemplo «..\\pdfs\\x.pdf») é resolvido sobre
             # a forma simples da pasta: o prefixo estendido do Windows não normaliza «..».
-            path = path if path.is_absolute() else longpath(Path(display(output)) / path)
+            path = path if path.is_absolute() else Path(os.path.normpath(Path(display(output)) / path))
             if path.is_file() and _sha256(path) == expected:
                 return path.resolve()
     raise ValueError('O PDF original não está disponível nesta máquina ou o conteúdo mudou. '

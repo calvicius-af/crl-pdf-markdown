@@ -48,6 +48,13 @@ def longpath(path) -> Path:
     return Path(extended(os.path.abspath(str(path))))
 
 
+def like(result, original) -> Path:
+    """Devolver no mesmo formato da entrada: só quem pediu o prefixo o recebe."""
+    if os.name == 'nt' and not str(original).startswith(PREFIX):
+        return Path(plain(str(result)))
+    return Path(result)
+
+
 def display(path) -> str:
     return plain(str(path)) if os.name == 'nt' else str(path)
 

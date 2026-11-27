@@ -9,7 +9,7 @@ from types import SimpleNamespace
 from uuid import uuid4
 
 from .cache import CachedConverter
-from .caminhos import display, longpath
+from .caminhos import display, like, longpath
 from .locking import exclusive
 from .models import _sha256
 from .pipeline import Options, atomic_write, make_converter, run
@@ -135,6 +135,7 @@ def reextract_pages(output, relative_source, reviewer, models, pages, *, progres
         raise ValueError('Indique números de página positivos.')
     check_ocr_models(models)
     revision = create_revision(output, relative_source, reviewer)
+    requested = output
     output = longpath(output).resolve()
     meta = json.loads((revision / 'revision.json').read_text(encoding='utf-8'))
     with exclusive(output / '_auditoria/.operacao.lock'):
@@ -180,4 +181,4 @@ def reextract_pages(output, relative_source, reviewer, models, pages, *, progres
         atomic_write(current_pointer(output, relative_source), json.dumps(pointer, ensure_ascii=False, indent=2) + '\n')
         from .occurrences import record_version
         record_version(output, relative_source, updated, origin='page_ocr')
-        return publication, updated
+        return like(publication, requested), updated

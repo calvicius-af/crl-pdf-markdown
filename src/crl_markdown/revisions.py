@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from uuid import uuid4
 
-from .caminhos import longpath
+from .caminhos import like, longpath
 from .locking import exclusive
 from .models import _sha256
 from .pipeline import Options, atomic_write, convert_pdf, previous_report
@@ -99,6 +99,7 @@ def active_version(output, document):
 def create_revision(output, relative_source, reviewer):
     from .validation import _key, _verified
 
+    requested = output
     output = longpath(output).resolve()
     if not reviewer.strip():
         raise ValueError('Indique o responsável pela correção.')
@@ -122,7 +123,7 @@ def create_revision(output, relative_source, reviewer):
                 'table_signature': table_signature(target.read_text(encoding='utf-8')),
                 'revision_id': revision.name}
         atomic_write(revision / 'revision.json', json.dumps(meta, ensure_ascii=False, indent=2) + '\n')
-        return revision
+        return like(revision, requested)
 
 
 def pending_revisions(output, relative_source, reviewer, identity):
@@ -179,6 +180,7 @@ def audit_revision(revision, *, resolutions=()):
     from .report import new_manifest, write_reports
     from .validation import _verified
 
+    requested = revision
     revision = longpath(revision).resolve()
     meta = json.loads((revision / 'revision.json').read_text(encoding='utf-8'))
     # A pasta completa pode ter sido transferida para outra máquina. A origem
@@ -244,4 +246,4 @@ def audit_revision(revision, *, resolutions=()):
         atomic_write(pointer, json.dumps(data, ensure_ascii=False, indent=2) + '\n')
         from .occurrences import record_version
         record_version(output, relative, updated, origin='human_revision')
-        return publication, updated
+        return like(publication, requested), updated
