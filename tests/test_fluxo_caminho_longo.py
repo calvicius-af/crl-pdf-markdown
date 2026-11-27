@@ -90,6 +90,8 @@ def test_end_to_end_check_drives_review_window(tmp_path, monkeypatch):
     from tkinter import messagebox
 
     from crl_markdown.ensaio_completo import check
+    from tests.conftest import tk_root
+    tk_root().destroy()  # Ignorar o ensaio se o Tk do runner não arrancar.
     for name in ('askyesno', 'askyesnocancel', 'showinfo', 'showerror'):
         monkeypatch.setattr(messagebox, name, getattr(messagebox, name))
     lines = ['Convenção de ensaio', 'Cláusula 1.ª', 'Retribuição',

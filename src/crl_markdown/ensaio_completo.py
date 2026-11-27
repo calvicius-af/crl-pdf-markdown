@@ -31,6 +31,17 @@ def _wait(root, view, seconds=900):
         raise RuntimeError('A janela de revisão não terminou a tarefa a tempo.')
 
 
+def _new_root(tk):
+    # O Tcl do Windows falha por vezes a ler o init.tcl à primeira tentativa.
+    for attempt in range(3):
+        try:
+            return tk.Tk()
+        except tk.TclError:
+            if attempt == 2:
+                raise
+            time.sleep(.5 * (attempt + 1))
+
+
 def _descendants(widget):
     for child in widget.winfo_children():
         yield child
@@ -99,7 +110,7 @@ def check(pdfs: Path, out: Path, *, models=None, steps=None, converter=None, ocr
     messagebox.showinfo = lambda *a, **k: None
     messagebox.showerror = lambda title, message, **k: errors.append(f'{title}: {message}')
     from .review_app import ReviewWindow
-    root = tk.Tk()
+    root = _new_root(tk)
     root.withdraw()
     try:
         view = ReviewWindow(root, output)
