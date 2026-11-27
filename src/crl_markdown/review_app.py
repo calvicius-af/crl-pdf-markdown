@@ -11,10 +11,11 @@ from .caminhos import longpath, open_with_system
 from .models import _sha256
 from .pipeline import atomic_write
 from .report import STATUS
-from .ui_labels import FAMILIES, PROFILES, family, rule_label
+from .ui_labels import CATEGORIES, FAMILIES, PROFILES, category, family, rule_label
 from .validation import _load, _verified, decide, review_head
 
 FALSE_ALARM = 'está correto (falso alarme)'
+APPROVAL_NOTE = 'Avisos conferidos no PDF; o Markdown está correto.'
 FALSE_ALARM_NOTE = 'Conferido no PDF: o Markdown está correto; o alerta automático não corresponde a um erro.'
 
 
@@ -63,9 +64,9 @@ class ReviewWindow:
         self.saved_notes = ''
         self.decision_head = None
         self.window = tk.Toplevel(root)
-        self.window.title('Conferir, corrigir e reauditar')
-        self.window.geometry('1100x800')
-        self.window.minsize(950, 700)
+        self.window.title('Rever documentos')
+        self.window.geometry('1150x780')
+        self.window.minsize(950, 640)
         self.window.transient(root)
         self.window.protocol('WM_DELETE_WINDOW', self.close)
         guards = getattr(root, 'review_close_guards', [])
@@ -73,81 +74,87 @@ class ReviewWindow:
         root.review_close_guards = guards
         frame = ttk.Frame(self.window, padding=12)
         frame.pack(fill='both', expand=True)
+        identity = ttk.Frame(frame)
+        identity.pack(fill='x', pady=(0, 6))
+        ttk.Label(identity, text='Quem está a rever').pack(side='left')
+        from . import settings
+        self.reviewer = tk.StringVar(value=settings.reviewer())
+        ttk.Entry(identity, textvariable=self.reviewer, width=36).pack(side='left', padx=8)
         filters = ttk.Frame(frame)
         filters.pack(fill='x')
         self.state = tk.StringVar(value='Todos')
         self.family = tk.StringVar(value='Todas')
         self.rule = tk.StringVar(value='Todas')
         families = sorted({family(d) for d in self.documents})
-        rules = sorted({f['rule'] for d in self.documents for f in d.get('findings', [])})
         self.family_values = {FAMILIES.get(code, code.replace('_', ' ').capitalize()): code for code in families}
-        self.rule_values = {rule_label(code): code for code in rules}
+        self.rule_values = {label: code for code, label in CATEGORIES.items()}
         self.filter_boxes = {}
         for label, variable, choices in [
             ('Estado', self.state, ['Todos', *(STATUS[k] for k in ('blocked', 'review', 'passed', 'falhou'))]),
             ('Família', self.family, ['Todas', *self.family_values]),
-            ('Regra', self.rule, ['Todas', *self.rule_values]),
+            ('Problema', self.rule, ['Todas', *self.rule_values]),
         ]:
             ttk.Label(filters, text=label).pack(side='left', padx=(0, 4))
-            box = ttk.Combobox(filters, textvariable=variable, values=choices, state='readonly', width=18)
+            box = ttk.Combobox(filters, textvariable=variable, values=choices, state='readonly', width=22)
             box.pack(side='left', padx=(0, 12))
             self.filter_boxes[label] = box
             box.bind('<<ComboboxSelected>>', self.filter_documents)
+        navigation = ttk.Frame(frame)
+        navigation.pack(fill='x', pady=8)
+        ttk.Button(navigation, text='Anterior', command=lambda: self.step(-1)).pack(side='left')
         self.selected = tk.StringVar()
-        self.choices = ttk.Combobox(frame, textvariable=self.selected, state='readonly')
-        self.choices.pack(fill='x', pady=8)
+        self.choices = ttk.Combobox(navigation, textvariable=self.selected, state='readonly')
+        self.choices.pack(side='left', fill='x', expand=True, padx=6)
         self.choices.bind('<<ComboboxSelected>>', self.refresh)
+        ttk.Button(navigation, text='Seguinte', command=lambda: self.step(1)).pack(side='left')
+        self.position = tk.StringVar()
+        ttk.Label(navigation, textvariable=self.position, width=12, anchor='e').pack(side='left')
         self.status = tk.StringVar()
-        ttk.Label(frame, textvariable=self.status, wraplength=1020).pack(anchor='w')
-        actions = ttk.Frame(frame)
-        actions.pack(fill='x', pady=6)
-        for label, action in [('Abrir PDF', self.open_pdf), ('Abrir Markdown', self.open_markdown),
-                              ('Relatório deste documento', self.open_evidence),
-                              ('Reler páginas com OCR', self.ocr_pages),
-                              ('Criar / editar correção', self.edit_revision)]:
-            ttk.Button(actions, text=label, command=action).pack(side='left', padx=(0, 6))
+        ttk.Label(frame, textvariable=self.status, wraplength=1080).pack(anchor='w')
         self.findings = ttk.Treeview(frame, columns=('severity', 'rule', 'page', 'message'),
-                                     show='headings', height=9, selectmode='browse')
-        for key, label, width in [('severity', 'Estado', 85), ('rule', 'Regra', 155),
-                                  ('page', 'Página', 55), ('message', 'Ocorrência / ação', 680)]:
+                                     show='headings', height=10, selectmode='browse')
+        for key, label, width in [('severity', 'Gravidade', 85), ('rule', 'Problema', 190),
+                                  ('page', 'Página', 55), ('message', 'O que foi detetado', 700)]:
             self.findings.heading(key, text=label)
             self.findings.column(key, width=width, stretch=key == 'message')
-        self.findings.pack(fill='both', expand=True)
+        self.findings.pack(fill='both', expand=True, pady=(6, 0))
         self.findings.bind('<<TreeviewSelect>>', self.show_finding)
-        self.evidence = tk.Text(frame, height=6, wrap='word', state='disabled')
+        self.findings.bind('<Double-1>', lambda _event: self.edit_revision())
+        self.evidence = tk.Text(frame, height=5, wrap='word', state='disabled')
         self.evidence.pack(fill='x', pady=6)
-        identity = ttk.Frame(frame)
-        identity.pack(fill='x')
-        ttk.Label(identity, text='Responsável pela conferência/correção').pack(side='left')
-        self.reviewer = tk.StringVar()
-        ttk.Entry(identity, textvariable=self.reviewer).pack(side='left', fill='x', expand=True, padx=8)
-        self.integral = tk.BooleanVar()
-        ttk.Checkbutton(frame, variable=self.integral,
-                        text='Conferi integralmente esta versão, incluindo tabelas e anexos').pack(anchor='w', pady=4)
-        ttk.Label(frame, text='Notas da conferência / evidência da ocorrência selecionada').pack(anchor='w')
-        self.notes = tk.Text(frame, height=4, wrap='word')
+        ttk.Label(frame, text='Nota (opcional)').pack(anchor='w')
+        self.notes = tk.Text(frame, height=2, wrap='word')
         self.notes.pack(fill='x')
-        resolution = ttk.Frame(frame)
-        resolution.pack(fill='x', pady=6)
-        self.resolution_action = tk.StringVar(value='conferido')
-        ttk.Combobox(resolution, textvariable=self.resolution_action,
-                     values=['conferido', 'corrigido', 'decorativo', 'transcrito', FALSE_ALARM],
-                     state='readonly', width=14).pack(side='left')
-        ttk.Label(resolution, text='Página conferida').pack(side='left', padx=6)
+        # Campos internos conservados para o OCR e para decisões antigas; não
+        # aparecem na janela principal.
+        self.integral = tk.BooleanVar()
         self.page = tk.StringVar()
-        ttk.Entry(resolution, textvariable=self.page, width=6).pack(side='left')
-        ttk.Button(resolution, text='Resolver ocorrência e reauditar', command=self.resolve).pack(side='left', padx=8)
-        decisions = ttk.Frame(frame)
-        decisions.pack(fill='x', pady=6)
-        self.approve = ttk.Button(decisions, text='Registar aprovação', command=lambda: self.record('aprovado'))
-        self.approve.pack(side='left')
-        ttk.Button(decisions, text='Registar rejeição', command=lambda: self.record('rejeitado')).pack(side='left', padx=6)
-        ttk.Button(decisions, text='Histórico de ocorrências…', command=self.open_history).pack(side='left', padx=6)
-        exchange = ttk.Frame(frame)
-        exchange.pack(fill='x', pady=4)
-        ttk.Button(exchange, text='Preparar cópia para outra pessoa…', command=self.export_copy).pack(side='left')
-        ttk.Button(exchange, text='Importar revisão recebida…', command=self.import_copy).pack(side='left', padx=8)
-        ttk.Button(exchange, text='Reconciliar decisões…', command=self.reconcile).pack(side='left')
+        self.resolution_action = tk.StringVar(value=FALSE_ALARM)
+        actions = ttk.Frame(frame)
+        actions.pack(fill='x', pady=(8, 0))
+        ttk.Button(actions, text='Corrigir (PDF e Markdown lado a lado)',
+                   command=self.edit_revision).pack(side='left')
+        ttk.Button(actions, text='Está correto (falso alarme)', command=self.resolve).pack(side='left', padx=6)
+        self.approve = ttk.Button(actions, text='Aprovar', command=lambda: self.record('aprovado'))
+        self.approve.pack(side='left', padx=(18, 6))
+        ttk.Button(actions, text='Rejeitar', command=lambda: self.record('rejeitado')).pack(side='left')
+        more = ttk.Menubutton(actions, text='Mais opções')
+        menu = tk.Menu(more, tearoff=False)
+        for label, action in [('Abrir PDF no leitor do sistema', self.open_pdf),
+                              ('Abrir Markdown no editor do sistema', self.open_markdown),
+                              ('Relatório deste documento', self.open_evidence),
+                              ('Reler páginas com OCR…', self.ocr_pages),
+                              ('Histórico de ocorrências…', self.open_history),
+                              (None, None),
+                              ('Preparar cópia para outra pessoa…', self.export_copy),
+                              ('Importar revisão recebida…', self.import_copy),
+                              ('Reconciliar decisões…', self.reconcile)]:
+            if label is None:
+                menu.add_separator()
+            else:
+                menu.add_command(label=label, command=action)
+        more['menu'] = menu
+        more.pack(side='right')
         self.filter_documents()
         self.window.after(100, self.poll)
 
@@ -209,10 +216,8 @@ class ReviewWindow:
         self.documents = self.manifest['documents']
         self.family_values = {FAMILIES.get(code, code.replace('_', ' ').capitalize()): code
                               for code in sorted({family(d) for d in self.documents})}
-        self.rule_values = {rule_label(code): code for code in sorted({f['rule'] for d in self.documents
-                                                                      for f in d.get('findings', [])})}
         for label, variable, values in [('Família', self.family, self.family_values),
-                                         ('Regra', self.rule, self.rule_values)]:
+                                         ('Problema', self.rule, self.rule_values)]:
             self.filter_boxes[label]['values'] = ['Todas', *values]
             if variable.get() != 'Todas' and variable.get() not in values:
                 variable.set('Todas')
@@ -223,14 +228,25 @@ class ReviewWindow:
             if (self.state.get() != 'Todos'
                     and STATUS.get(d.get('quality_status', d.get('state', 'review'))) != self.state.get()):
                 continue
-            if (self.rule.get() != 'Todas' and not any(f['rule'] == self.rule_values.get(self.rule.get())
-                                                      for f in d.get('findings', []))):
+            if (self.rule.get() != 'Todas' and not any(
+                    category(f['rule']) == self.rule_values.get(self.rule.get()) and f.get('severity') != 'info'
+                    for f in d.get('findings', []))):
                 continue
             choices.append(d['relative_source'])
         self.choices['values'] = choices
         self.selected.set(self.selected.get() if self.selected.get() in choices else choices[0] if choices else '')
         self.saved_notes = self.notes.get('1.0', 'end-1c')
         self.refresh()
+
+    def step(self, delta):
+        values = list(self.choices['values'])
+        if self.busy or not values:
+            return
+        index = values.index(self.selected.get()) if self.selected.get() in values else -1
+        index = min(max(index + delta, 0), len(values) - 1)
+        if values[index] != self.selected.get():
+            self.selected.set(values[index])
+            self.refresh()
 
     def refresh(self, _event=None):
         if self.busy:
@@ -245,6 +261,9 @@ class ReviewWindow:
         self.notes.delete('1.0', 'end')
         self.saved_notes = ''
         self.shown_document = self.selected.get()
+        values = list(self.choices['values'])
+        self.position.set(f'{values.index(self.selected.get()) + 1} de {len(values)}'
+                          if self.selected.get() in values else '')
         self.findings.delete(*self.findings.get_children())
         self.approve.configure(state='disabled')
         if not self.selected.get():
@@ -263,15 +282,17 @@ class ReviewWindow:
             self.revision = target.parents[len(Path(document['relative_source']).parts) - 1].parent.parent
         state = report['quality_status']
         profile = PROFILES.get(report.get('document_profile'), 'Não identificado')
-        self.status.set(f'{STATUS.get(state, state)} · Perfil: {profile} · '
-                        + ('Resolva as ocorrências de erro antes de aprovar.' if state == 'blocked'
-                           else 'Confira esta versão e registe a decisão.'))
+        self.status.set(f'{STATUS.get(state, state)} · {profile} · '
+                        + ('Corrija o Markdown ou marque os alertas como falso alarme antes de aprovar.'
+                           if state == 'blocked' else 'Confira e aprove ou rejeite.'))
         if document.get('latest_attempt'):
             self.status.set(self.status.get() + ' · A última tentativa não terminou; '
                             'está a conferir a versão anterior verificada.')
         self.approve.configure(state='disabled' if state == 'blocked' else 'normal')
         for i, finding in enumerate(report.get('findings', [])):
-            severity = {'error': 'Erro', 'warning': 'Aviso', 'info': 'Informação'}
+            if finding['severity'] == 'info':
+                continue  # Informação e alertas já resolvidos não pedem ação.
+            severity = {'error': 'Erro', 'warning': 'Aviso'}
             self.findings.insert('', 'end', iid=str(i), values=(severity.get(finding['severity'], finding['severity']), rule_label(finding['rule']),
                                  finding.get('page', '—'), finding.get('message', '')))
         from .validation import _key
@@ -537,20 +558,36 @@ class ReviewWindow:
         from .drafts import DraftSession, confirm_discard_or_save
         session = DraftSession(revision / 'correcao.md')
         editor = tk.Toplevel(self.window)
-        editor.title('Correção separada do original — guardar e reauditar')
-        editor.geometry('1000x720')
-        edit_body = ttk.Frame(editor)
-        edit_body.pack(fill='both', expand=True)
-        edit_body.rowconfigure(0, weight=1)
+        editor.title('Corrigir: ' + self.selected.get())
+        editor.geometry('1400x860')
+        panes = ttk.PanedWindow(editor, orient='horizontal')
+        panes.pack(fill='both', expand=True)
+        pdf_side = ttk.Frame(panes)
+        edit_body = ttk.Frame(panes)
+        panes.add(pdf_side, weight=1)
+        panes.add(edit_body, weight=1)
+        finding = None
+        if self.findings.selection():
+            finding = self.current[2]['findings'][int(self.findings.selection()[0])]
+        self.pdf_panel(pdf_side, int((finding or {}).get('page') or 1))
+        ttk.Label(edit_body, text='Markdown (cópia de trabalho; o original é conservado)').grid(
+            row=0, column=0, sticky='w', padx=4, pady=4)
+        edit_body.rowconfigure(1, weight=1)
         edit_body.columnconfigure(0, weight=1)
         text = tk.Text(edit_body, wrap='none', undo=True)
-        text.grid(row=0, column=0, sticky='nsew')
+        text.grid(row=1, column=0, sticky='nsew')
         vertical = ttk.Scrollbar(edit_body, orient='vertical', command=text.yview)
         horizontal = ttk.Scrollbar(edit_body, orient='horizontal', command=text.xview)
-        vertical.grid(row=0, column=1, sticky='ns')
-        horizontal.grid(row=1, column=0, sticky='ew')
+        vertical.grid(row=1, column=1, sticky='ns')
+        horizontal.grid(row=2, column=0, sticky='ew')
         text.configure(yscrollcommand=vertical.set, xscrollcommand=horizontal.set)
         text.insert('1.0', session.text)
+        line = int((finding or {}).get('line') or 0)
+        if line:
+            text.tag_configure('ocorrencia', background='#fff2a8')
+            text.tag_add('ocorrencia', f'{line}.0', f'{line}.end')
+            text.see(f'{line}.0')
+            text.mark_set('insert', f'{line}.0')
         def save():
             try:
                 session.save(text.get('1.0', 'end-1c'))
@@ -568,17 +605,78 @@ class ReviewWindow:
         editor.protocol('WM_DELETE_WINDOW', close)
         def audit():
             if not self.busy and save():
-                self.task(lambda: audit_revision(revision), lambda _result: self.refresh())
-        controls = ttk.Frame(editor)
-        controls.pack(fill='x', pady=8)
-        ttk.Button(controls, text='Guardar rascunho', command=save).pack(side='left', padx=8)
-        ttk.Button(controls, text='Reauditar correção guardada', command=audit).pack(side='left')
-        ttk.Label(controls, text='Uma correção auditada precisa de nova conferência e decisão.').pack(side='left', padx=8)
+                def done(_result):
+                    if editor.winfo_exists():
+                        editor.destroy()
+                    self.refresh()
+                self.task(lambda: audit_revision(revision), done)
+        controls = ttk.Frame(edit_body)
+        controls.grid(row=3, column=0, columnspan=2, sticky='ew', pady=8)
+        ttk.Button(controls, text='Guardar e verificar', command=audit).pack(side='left', padx=4)
+        ttk.Button(controls, text='Guardar sem verificar', command=save).pack(side='left', padx=4)
+        ttk.Label(controls, text='Depois de verificar, aprove ou rejeite na janela principal.').pack(
+            side='left', padx=8)
+
+    def pdf_panel(self, parent, first_page):
+        """Página do PDF desenhada na própria janela, para comparar sem trocar de aplicação."""
+        from .review_sources import resolve_source
+        document = next(d for d in self.documents if d['relative_source'] == self.selected.get())
+        state = {'page': max(1, first_page), 'width': 760, 'image': None, 'total': None}
+        bar = ttk.Frame(parent)
+        bar.pack(fill='x', padx=4, pady=4)
+        label = tk.StringVar()
+        canvas = tk.Canvas(parent, background='#808080', highlightthickness=0)
+        vertical = ttk.Scrollbar(parent, orient='vertical', command=canvas.yview)
+        canvas.configure(yscrollcommand=vertical.set)
+        vertical.pack(side='right', fill='y')
+        canvas.pack(fill='both', expand=True)
+        try:
+            from .pdf_view import page_count
+            source = resolve_source(self.output, document)
+            state['total'] = page_count(source)
+        except Exception as error:  # Sem PDF ou sem PDFium: a correção continua possível.
+            ttk.Label(parent, text=f'Não foi possível mostrar o PDF: {error}', wraplength=600).pack()
+            return
+        import tempfile
+        folder = Path(tempfile.mkdtemp(prefix='crl-paginas-'))
+
+        def show():
+            from .pdf_view import render_page
+            state['page'] = min(max(state['page'], 1), state['total'])
+            try:
+                png = render_page(source, state['page'], state['width'], folder)
+                state['image'] = tk.PhotoImage(file=str(png))
+            except Exception as error:
+                label.set(f'Página {state["page"]}: {error}')
+                return
+            canvas.delete('all')
+            canvas.create_image(0, 0, anchor='nw', image=state['image'])
+            canvas.configure(scrollregion=(0, 0, state['image'].width(), state['image'].height()))
+            canvas.yview_moveto(0)
+            label.set(f'Página {state["page"]} de {state["total"]}')
+
+        def move(delta):
+            state['page'] += delta
+            show()
+
+        def zoom(factor):
+            state['width'] = int(min(max(state['width'] * factor, 400), 2000))
+            show()
+
+        ttk.Button(bar, text='Página anterior', command=lambda: move(-1)).pack(side='left')
+        ttk.Label(bar, textvariable=label, width=18, anchor='center').pack(side='left', padx=6)
+        ttk.Button(bar, text='Página seguinte', command=lambda: move(1)).pack(side='left')
+        ttk.Button(bar, text='Ampliar', command=lambda: zoom(1.25)).pack(side='left', padx=(12, 0))
+        ttk.Button(bar, text='Reduzir', command=lambda: zoom(.8)).pack(side='left', padx=4)
+        canvas.bind('<MouseWheel>', lambda e: canvas.yview_scroll(-1 if e.delta > 0 else 1, 'units'))
+        show()
 
     def check_revision_author(self):
         reviewer = self.reviewer.get().strip()
         if not reviewer:
-            raise ValueError('Indique quem está a conferir ou corrigir este documento.')
+            raise ValueError('Indique quem está a rever, no campo do topo da janela.')
+        from . import settings
+        settings.remember_reviewer(reviewer)
         if self.revision is not None:
             meta = json.loads((self.revision / 'revision.json').read_text(encoding='utf-8'))
             if meta.get('reviewer') != reviewer:
@@ -586,34 +684,36 @@ class ReviewWindow:
                 self.revision = None
 
     def resolve(self):
-        if not self.current or self.busy or not self.findings.selection():
+        """Marcar como falso alarme a ocorrência selecionada ou, sem seleção, todas as pendentes."""
+        if not self.current or self.busy:
             return
         from .revisions import audit_revision, create_revision
-        finding = self.current[2]['findings'][int(self.findings.selection()[0])]
+        findings = self.current[2]['findings']
+        if self.findings.selection():
+            chosen = [findings[int(self.findings.selection()[0])]]
+        else:
+            chosen = [f for f in findings if f.get('severity') != 'info']
+            if not chosen:
+                return
+            if not messagebox.askyesno('Está correto',
+                                       f'Confirma que conferiu no PDF os {len(chosen)} alertas deste documento '
+                                       'e que o Markdown está correto?', parent=self.window):
+                return
         try:
             self.check_revision_author()
-            if not finding.get('id'):
+            if not all(f.get('id') for f in chosen):
                 raise ValueError('Esta auditoria é antiga. Use Reauditar lote antes de resolver ocorrências.')
-            action = self.resolution_action.get()
-            false_alarm = action == FALSE_ALARM
-            page_text = self.page.get().strip() or (str(finding.get('page') or 1) if false_alarm else '')
-            if not page_text.isdigit():
-                raise ValueError('Indique o número da página do PDF onde conferiu a ocorrência.')
-            page = int(page_text)
-            notes = self.notes.get('1.0', 'end').strip()
-            if false_alarm and not notes:
-                notes = FALSE_ALARM_NOTE
-            if not notes:
-                raise ValueError('Descreva a evidência e a resolução desta ocorrência nas notas.')
+            notes = self.notes.get('1.0', 'end').strip() or FALSE_ALARM_NOTE
+            pages = self.current[2].get('pages') or 1
             if self.revision is None:
                 self.revision = create_revision(self.output, self.selected.get(), self.reviewer.get())
         except (ValueError, OSError) as error:
-            messagebox.showerror('Resolução', str(error), parent=self.window)
+            messagebox.showerror('Está correto', str(error), parent=self.window)
             return
-        resolution = {'finding_id': finding['id'], 'page': page, 'notes': notes,
-                      'action': 'falso_alarme' if false_alarm else action}
+        resolutions = [{'finding_id': f['id'], 'page': min(max(int(f.get('page') or 1), 1), pages),
+                        'notes': notes, 'action': 'falso_alarme'} for f in chosen]
         revision = self.revision
-        self.task(lambda: audit_revision(revision, resolutions=[resolution]), lambda _result: self.refresh())
+        self.task(lambda: audit_revision(revision, resolutions=resolutions), lambda _result: self.refresh())
 
     def ocr_pages(self):
         if not self.current or self.busy:
@@ -658,13 +758,27 @@ class ReviewWindow:
     def record(self, decision):
         if not self.current or self.busy:
             return
+        notes = self.notes.get('1.0', 'end').strip()
+        if decision == 'aprovado' and not notes and self.current[2].get('quality_status') == 'review':
+            notes = APPROVAL_NOTE
         try:
-            path = decide(self.output, self.selected.get(), reviewer=self.reviewer.get(), decision=decision,
-                          scope='integral' if self.integral.get() else 'amostra',
-                          notes=self.notes.get('1.0', 'end').strip(), expected=self.current[3],
-                          expected_decision=self.decision_head)
+            self.check_revision_author()
+            # Aprovar declara a conferência do documento; é a decisão que a entrega aceita.
+            scope = 'integral' if decision == 'aprovado' or self.integral.get() else 'amostra'
+            decide(self.output, self.selected.get(), reviewer=self.reviewer.get(), decision=decision,
+                   scope=scope, notes=notes, expected=self.current[3],
+                   expected_decision=self.decision_head)
             self.decision_head = review_head(self.output, self.selected.get())
             self.saved_notes = self.notes.get('1.0', 'end-1c')
-            messagebox.showinfo('Conferência registada', f'Decisão guardada: {path}', parent=self.window)
         except (ValueError, OSError) as error:
-            messagebox.showerror('Conferência', str(error), parent=self.window)
+            messagebox.showerror('Decisão não registada', str(error), parent=self.window)
+            return
+        label = 'Aprovado' if decision == 'aprovado' else 'Rejeitado'
+        self.notes.delete('1.0', 'end')
+        self.saved_notes = ''
+        before = self.selected.get()
+        self.step(1)
+        if self.selected.get() == before:
+            self.status.set(f'{label}: {before}. Era o último documento desta lista.')
+        else:
+            self.status.set(f'{label}: {before}. ' + self.status.get())

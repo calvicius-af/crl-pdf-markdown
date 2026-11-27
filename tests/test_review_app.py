@@ -160,3 +160,58 @@ def test_second_reviewer_gets_new_draft_with_own_authorship(damaged_output):  # 
         assert path.read_bytes() == before
     finally:
         root.destroy()
+
+
+@pytest.mark.skipif(os.environ.get('CRL_TEST_TK') != '1', reason='Ensaio Tk explícito numa sessão gráfica')
+def test_editor_shows_pdf_page_beside_markdown(damaged_output):  # noqa: F811
+    root = tk.Tk()
+    try:
+        view = ReviewWindow(root, damaged_output)
+        view.reviewer.set('Pessoa de ensaio')
+        view.edit_revision()
+        root.update()
+        editor, _guard = view.editors[view.revision]
+
+        def descendants(widget):
+            for child in widget.winfo_children():
+                yield child
+                yield from descendants(child)
+
+        canvases = [w for w in descendants(editor) if isinstance(w, tk.Canvas)]
+        assert canvases and canvases[0].find_all()  # Página desenhada na janela.
+        assert any(isinstance(w, tk.Text) for w in descendants(editor))
+        from crl_markdown import settings
+        assert settings.reviewer() == 'Pessoa de ensaio'
+    finally:
+        root.destroy()
+
+
+@pytest.mark.skipif(os.environ.get('CRL_TEST_TK') != '1', reason='Ensaio Tk explícito numa sessão gráfica')
+def test_false_alarm_for_all_alerts_unblocks_and_approval_moves_on(damaged_output, monkeypatch):  # noqa: F811
+    root = tk.Tk()
+    monkeypatch.setattr('tkinter.messagebox.askyesno', lambda *a, **k: True)
+    errors = []
+    monkeypatch.setattr('tkinter.messagebox.showerror', lambda title, message, **k: errors.append(message))
+    try:
+        view = ReviewWindow(root, damaged_output)
+        assert 'Bloqueado' in view.status.get()
+        assert set(view.rule_values) == {'Texto', 'Números e sinais', 'Tabelas', 'Imagens'}
+        assert all('(' not in view.findings.item(i)['values'][1] for i in view.findings.get_children())
+        view.reviewer.set('Pessoa de ensaio')
+        view.resolve()
+        deadline = time.monotonic() + 10
+        while view.busy and time.monotonic() < deadline:
+            root.update()
+            time.sleep(.01)
+        root.update()
+        assert not errors
+        assert view.current[2]['quality_status'] == 'passed'
+        assert not view.findings.get_children()
+        view.record('aprovado')
+        assert not errors
+        assert 'Aprovado' in view.status.get()
+        decisions = list((damaged_output / '_auditoria/revisoes').rglob('*.json'))
+        import json
+        assert json.loads(decisions[0].read_text(encoding='utf-8'))['scope'] == 'integral'
+    finally:
+        root.destroy()

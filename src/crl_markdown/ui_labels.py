@@ -31,8 +31,25 @@ FAMILIES = {'convencoes': 'Convenções', 'portarias_extensao': 'Portarias de ex
             'cessacoes_vigencia': 'Cessações de vigência', 'avisos': 'Avisos', '.': 'Documentos na raiz'}
 
 
+# Quatro categorias para a pessoa que revê; os códigos ficam nos relatórios.
+CATEGORIES = {'texto': 'Texto', 'numeros': 'Números e sinais', 'tabelas': 'Tabelas', 'imagens': 'Imagens'}
+_NUMBERS = {'AMOUNTS', 'CRITICAL_SYMBOLS', 'SIGNED_VALUES_UNAVAILABLE'}
+_IMAGES = {'IMAGE'}
+
+
+def category(code):
+    if code in _NUMBERS:
+        return 'numeros'
+    if code in _IMAGES:
+        return 'imagens'
+    if code.startswith('TABLE') or code in {'MD056'}:
+        return 'tabelas'
+    return 'texto'
+
+
 def rule_label(code):
-    return f'{RULES.get(code, code.replace("_", " ").capitalize())} ({code})'
+    """Nome em português, sem o código interno."""
+    return RULES.get(code, code.replace("_", " ").capitalize())
 
 
 def family(document):

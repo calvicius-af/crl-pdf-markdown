@@ -165,3 +165,26 @@ def dialog(parent, initial=None):
     ttk.Button(frame, text="Cancelar", command=window.destroy).pack(side="right", padx=8, pady=16)
     parent.wait_window(window)
     return result
+
+
+def reviewer(path=None):
+    """Nome de quem revê neste perfil do Windows; preenchido por omissão, sempre editável."""
+    path = path or user_folder() / 'responsavel.json'
+    try:
+        data = json.loads(path.read_text(encoding='utf-8'))
+    except (OSError, ValueError):
+        return ''
+    name = data.get('reviewer') if isinstance(data, dict) else None
+    return name.strip() if isinstance(name, str) else ''
+
+
+def remember_reviewer(name, path=None):
+    from .diagnostics import atomic_write
+    name = (name or '').strip()
+    if not name:
+        return
+    path = path or user_folder() / 'responsavel.json'
+    try:
+        atomic_write(path, json.dumps({'schema': 1, 'reviewer': name}, ensure_ascii=False) + '\n')
+    except OSError:
+        pass  # Uma preferência local nunca impede a conferência.
