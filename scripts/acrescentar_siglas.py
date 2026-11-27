@@ -10,7 +10,9 @@ Entradas (as duas escritas pela recolha, ao lado do registo):
    `id_entidade` da linha ou, sem ele, a de nome com a mesma grafia exata
    (Mosteiro e Mosteirô são diferentes), ou a que tem esse nome como rótulo
    CRL. A sigla aprovada passa a ser a dela, sem pendentes em `revisao`; outras
-   entidades com a mesma grafia e outra sigla ficam `Desativada`. Um nome fora
+   entidades com a mesma grafia e outra sigla ficam `Desativada`. Se a sigla
+   aprovada já pertence a outra entidade, o nome entra como rótulo dela e o
+   registo genérico fica `Desativada` (a sigla nunca se duplica). Um nome fora
    da lista cuja sigla já pertence a uma só entidade entra como rótulo dela;
    senão, entra como entidade nova.
 
@@ -90,7 +92,7 @@ def aplicar(lista: list[dict], novas: list[dict], decisoes: list[dict], hoje: st
     Mosteiro e Mosteirô são entidades diferentes. Um nome que é rótulo CRL de
     uma entidade (`rotulos_crl`) aplica a decisão a essa entidade."""
     rel = {"acrescentadas": [], "ja_na_lista": [], "aprovadas": [], "desativadas": [],
-           "rotulos": [], "ignoradas": 0}
+           "rotulos": [], "conflitos": [], "ignoradas": 0}
     por_id = {linha.get("id_entidade", ""): linha for linha in lista if linha.get("id_entidade")}
     por_grafia: dict[str, list[dict]] = {}
     por_rotulo: dict[str, list[dict]] = {}
@@ -153,6 +155,42 @@ def aplicar(lista: list[dict], novas: list[dict], decisoes: list[dict], hoje: st
                 linha = acrescentar(nome, sigla, "Entidade nova (aprovada pela equipa)")
                 rel["aprovadas"].append((linha["id_entidade"], sigla, nome))
             continue
+        # A sigla aprovada já é de outra entidade (por exemplo «Freguesia de
+        # Mosteiro» aprovada como JF-MOSTEIRO-BRAGA): o nome passa a rótulo
+        # dessa entidade e o registo genérico sai, em vez de duplicar a sigla.
+        ids_candidatos = {id(linha) for linha in candidatos}
+        donos = {linha.get("id_entidade") or id(linha): linha for linha in lista
+                 if _ativa(linha) and id(linha) not in ids_candidatos and _sigla(linha["sigla"]) == _sigla(sigla)}
+        if len(donos) > 1:
+            rel["conflitos"].append((sigla, nome, sorted(str(i) for i in donos)))
+            continue
+        if donos and not pelo_rotulo:
+            dono = next(iter(donos.values()))
+            if grafia not in {nomeacao.chave_grafia(r) for r in _rotulos(dono)}:
+                dono["rotulos_crl"] = " | ".join([*_rotulos(dono), nome])
+            dono["data_atualizacao"] = hoje
+            por_rotulo.setdefault(grafia, []).append(dono)
+            rel["rotulos"].append((dono["id_entidade"], sigla, nome))
+            for generica in candidatos:
+                generica["estado"] = "Desativada"
+                generica["revisao"] = (f"nome associado a {dono['id_entidade']} ({sigla}) "
+                                       f"por decisão da equipa de {hoje}")
+                generica["data_atualizacao"] = hoje
+                rel["desativadas"].append((generica["id_entidade"], generica["sigla"], generica["nome"]))
+            continue
+        if donos:
+            # Um rótulo partilhado aprovado com a sigla de outra entidade: o
+            # rótulo passa para essa entidade e sai das outras.
+            dono = next(iter(donos.values()))
+            for outra in candidatos:
+                outra["rotulos_crl"] = " | ".join(
+                    r for r in _rotulos(outra) if nomeacao.chave_grafia(r) != grafia)
+                outra["data_atualizacao"] = hoje
+            if grafia not in {nomeacao.chave_grafia(r) for r in _rotulos(dono)}:
+                dono["rotulos_crl"] = " | ".join([*_rotulos(dono), nome])
+            dono["data_atualizacao"] = hoje
+            rel["rotulos"].append((dono["id_entidade"], sigla, nome))
+            continue
         escolhida = next((linha for linha in candidatos if _sigla(linha["sigla"]) == _sigla(sigla)), candidatos[0])
         escolhida["sigla"], escolhida["revisao"], escolhida["data_atualizacao"] = sigla, "", hoje
         rel["aprovadas"].append((escolhida["id_entidade"], sigla, nome))
@@ -204,6 +242,8 @@ def main(argv=None) -> int:
     print(f"Decisões aprovadas: {len(rel['aprovadas'])}; nomes acrescentados como rótulo: {len(rel['rotulos'])}; "
           f"linhas desativadas: {len(rel['desativadas'])}; "
           f"linhas ignoradas (sem aprovar ou incompletas): {rel['ignoradas']}.")
+    for sigla, nome, ids in rel["conflitos"]:
+        print(f"  NÃO APLICADA: {sigla} para «{nome}» pertence a várias entidades ({', '.join(ids)})")
     for ident, sigla, nome in rel["acrescentadas"] + rel["aprovadas"] + rel["rotulos"]:
         print(f"  {ident}: {sigla} = {nome}")
     if args.siglas:

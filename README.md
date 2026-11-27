@@ -270,8 +270,10 @@ O script acrescenta as entidades novas à lista (com `id_entidade` `NOM-NNNN`),
 aplica as decisões aprovadas e regera o `siglas.csv` indicado. Cada decisão
 aplica-se à entidade do `id_entidade` ou, sem ele, à do nome com a mesma grafia
 exata (Mosteiro e Mosteirô são entidades diferentes), ou à que tem esse nome
-como rótulo CRL. Um nome fora da lista cuja sigla aprovada já é de uma só
-entidade entra como rótulo dela. Repetir a recolha
+como rótulo CRL. Se a sigla aprovada já é de outra entidade, o nome entra como
+rótulo dessa entidade e o registo genérico fica desativado, para a sigla nunca
+ficar em duas entidades. Um nome fora da lista cuja sigla aprovada já é de uma
+só entidade entra também como rótulo dela. Repetir a recolha
 nomeia os documentos desbloqueados. Um nome já atribuído não muda.
 `--aceitar-heuristicas` nomeia também os documentos pendentes, depois de rever
 o resumo. `--nomes` muda a pasta de destino e `--sem-nomear` desliga este passo.

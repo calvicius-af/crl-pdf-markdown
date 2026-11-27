@@ -167,3 +167,19 @@ def test_nome_alternativo_com_sigla_existente_entra_como_rotulo(tmp_path):
     assert "Freguesia do Mosteiro (Oleiros)" in linhas["CAOP-050607"]["rotulos_crl"]
     assert not any(linha["id_entidade"].startswith("NOM-") for linha in linhas.values())
     assert nomeacao.sigla("Freguesia do Mosteiro (Oleiros)", tabela) == ("JFMOSTEIROCASTELOBRANCO", None)
+
+
+def test_aprovar_um_nome_generico_com_a_sigla_de_outra_entidade_nao_cria_bloqueios(tmp_path):
+    linhas, tabela = _aplicar_na_lista_real(
+        tmp_path, "Freguesia de Mosteiro;JF-MOSTEIRO-BRAGA;aprovar;INE-2131;D1;\n")
+    # O nome genérico passa a rótulo da freguesia de Vieira do Minho, e o
+    # registo genérico do INE sai; a sigla não fica em duas entidades.
+    assert "Freguesia de Mosteiro" in linhas["CAOP-031110"]["rotulos_crl"]
+    assert linhas["INE-2131"]["estado"] == "Desativada"
+    assert linhas["INE-2131"]["sigla"] == "JF-MOSTEIRO"
+    for nome, esperada in (("Freguesia de Mosteiro", "JFMOSTEIROBRAGA"),
+                           ("Freguesia de Mosteiro - Vieira do Minho", "JFMOSTEIROBRAGA"),
+                           ("Freguesia de Mosteiro - Oleiros", "JFMOSTEIROCASTELOBRANCO"),
+                           ("Freguesia de Mosteirô", "JFMOSTEIROAVEIRO")):
+        assert nomeacao.sigla(nome, tabela) == (esperada, None), nome
+    assert not tabela.siglas_pendentes & {"jfmosteirobraga", "jfmosteiroaveiro"}
