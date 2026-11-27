@@ -103,7 +103,7 @@ def check(pdfs: Path, out: Path, *, models=None, steps=None, converter=None, ocr
         step('ocr_dirigido', documento=relatives[0], publicacao=len(str(publication)))
 
     import tkinter as tk
-    from tkinter import messagebox
+    from tkinter import messagebox, ttk
     errors = []
     messagebox.askyesno = lambda *a, **k: True
     messagebox.askyesnocancel = lambda *a, **k: False
@@ -122,7 +122,9 @@ def check(pdfs: Path, out: Path, *, models=None, steps=None, converter=None, ocr
         root.update()
         editor, _guard = view.editors[view.revision]
         if not any(isinstance(w, tk.Canvas) and w.find_all() for w in _descendants(editor)):
-            raise RuntimeError('A janela de correção não mostrou a página do PDF.')
+            texts = [str(w.cget('text')) or (editor.getvar(str(w.cget('textvariable'))) if str(w.cget('textvariable')) else '')
+                     for w in _descendants(editor) if isinstance(w, ttk.Label)]
+            raise RuntimeError('A janela de correção não mostrou a página do PDF: ' + ' | '.join(map(str, texts)))
         step('correcao_lado_a_lado', documento=relatives[-1])
         editor.destroy()
         view.editors.clear()
