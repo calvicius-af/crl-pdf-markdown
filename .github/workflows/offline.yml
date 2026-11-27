@@ -19,8 +19,8 @@ jobs:
       PYTHONUTF8: '1'
       PIP_CONSTRAINT: ${{ github.workspace }}/requirements/offline-windows-py313.txt
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.13'
           cache: pip
@@ -102,14 +102,14 @@ jobs:
           }
       - name: Guardar evidência pequena do ensaio
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: evidencia-offline-windows-py313
           if-no-files-found: warn
           path: ${{ runner.temp }}/Evidencia CRL/
       - name: Disponibilizar pacote completo para teste
         if: success()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: CRL-offline-tecnico-windows-x64-py313
           path: ${{ runner.temp }}/Pacote CRL com espaços/
