@@ -35,3 +35,8 @@ pypdfium2==5.14.0
 
 # Docling 2.134 usa o registo PP_OCRV6_LANGS, removido no RapidOCR 3.10.
 rapidocr==3.9.1
+
+# O lxml 6.2.0 saiu só em código-fonte, sem pacotes binários: o pip tentava
+# compilá-lo e falhava sem libxml2-dev (CI de 27/11/2026). Mesma versão do
+# pacote offline para Windows.
+lxml==6.1.3
