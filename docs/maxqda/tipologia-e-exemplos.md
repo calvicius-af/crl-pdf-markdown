@@ -283,7 +283,7 @@ A lista tem `ambito_subsetor` com `SEE` (106), `SEL` (103) e `SER` (23). Proponh
 
 ## 9. Resumo das perguntas
 
-1. Significado de `ACC` (hipótese na secção 10.4).
+1. ~~Significado de `ACC`.~~ Respondida a 2026-11-27 (secção 10.4).
 2. Variáveis de conteúdo fora dos ficheiros gerados.
 3. Singular `outra` agregado a `outras`.
 4. `SubTipo_conv_Reg` de retificações e deliberações.
@@ -368,7 +368,10 @@ com `Central`, `Local` ou `Regional` para as entidades `SPE`. O quarto campo do 
 `SEL` → `Local` e `SER` → `Regional` é compatível com os valores de 2025. `Regional`
 continua a ser um valor novo por confirmar.
 
-### 10.4 Significado de `ACC` (hipótese de trabalho)
+### 10.4 Significado de `ACC`
+
+**Confirmado pela equipa a 2026-11-27.** `ACC` é o acordo coletivo de carreira, da
+administração pública, e tem as mesmas variáveis das outras convenções coletivas.
 
 O código em `main` já trata o `ACCE` como acordo de carreira especial, família
 `convencao`, âmbito `APU`. Na Lei Geral do Trabalho em Funções Públicas (Lei n.º 35/2014),
@@ -376,9 +379,8 @@ os acordos coletivos de trabalho dividem-se em acordos coletivos de carreira e a
 coletivos de empregador público. Por isso `ACC` em `Listas` deve corresponder ao acordo
 coletivo de carreira, o mesmo universo que o `ACCE`.
 
-Esta leitura não está verificada: confirmar no artigo 13.º da LTFP. Se se confirmar,
-proponho que `Tipo_conv` use um só valor para os dois códigos, `ACC` ou `ACCE`, à escolha
-da equipa.
+Fica por decidir se `Tipo_conv` usa um só valor para os dois códigos, `ACC` ou `ACCE`,
+à escolha da equipa.
 
 ### 10.5 Listas de siglas em uso: risco a decidir
 

@@ -225,21 +225,50 @@ Um nome atribuído não muda. Por isso, um documento com dados incertos fica
 `por_confirmar` e não é copiado: siglas adivinhadas, âmbito proposto por regra
 ou pela lista do INE, outorgantes lidos do título, ou o código da convenção de
 base lido da cadeia de alterações do índice. Sem código de base, ou sem número e
-ano da portaria, nunca há nome. As siglas vêm do registo de organizações da
-DGERT (`vocabularios/siglas_organizacoes.csv`) e do `siglas.csv` da equipa, na
-pasta de trabalho (`nome;sigla`, com ou sem cabeçalho), que tem prioridade.
+ano da portaria, nunca há nome. Um `siglas.csv` na pasta de trabalho
+(`nome;sigla`, com ou sem cabeçalho) tem prioridade sobre o do pacote.
 
-O registo da DGERT só tem associações e sindicatos: as siglas de empresas
-(acordos de empresa) são adivinhadas e ficam por confirmar. Cada recolha
-escreve-as em `data/registo/siglas_pendentes.csv`
-(`nome;sigla;documentos;atencao`), com os documentos que cada uma bloqueia, os
-mais frequentes primeiro; a coluna `atencao` assinala a mesma sigla sugerida
-para entidades diferentes. Abrir no
-Excel, corrigir a coluna `sigla`, apagar as linhas que não estiverem certas e
-copiar as restantes para o `siglas.csv` (guardado como CSV separado por ponto e
-vírgula, em UTF-8 ou no formato do Excel); repetir a recolha nomeia os
-documentos desbloqueados. Depois de rever o resumo, `--aceitar-heuristicas`
-nomeia também os restantes. `--nomes` muda a pasta de destino e `--sem-nomear` desliga este passo.
+As siglas vêm da `vocabularios/lista_siglas_global.csv`, a fonte única, através
+do `siglas.csv` gerado a partir dela. Cada entidade que entra num nome tem uma de
+seis origens (decisão de 2026-11-27):
+
+1. `lista`: o nome está na lista;
+2. `equivalencia`: o nome está na lista com outra grafia (forma jurídica no fim,
+   texto entre parênteses, palavras de ligação, «União das freguesias de A e B»
+   em vez de «Freguesia de A e B»), e essa grafia aponta para uma só sigla;
+3. `literal`: a sigla está escrita no nome («SITESE - Sindicato...»);
+4. `regra`: entidade fora da lista, com um rótulo derivado do nome
+   («Águas do Norte» dá `AguasNorte`). É aceite sem revisão, para ser estável;
+5. `por_confirmar`: a entidade está na lista com pendentes ou é ambígua;
+6. `derivada`: sigla adivinhada sem regra aceite (só com um `siglas.csv` antigo).
+
+As quatro primeiras não pedem intervenção. O resumo de cada recolha mostra a
+percentagem de entidades resolvidas assim; um teste garante pelo menos 90% no
+índice de 2026 do repositório.
+
+Cada recolha escreve dois ficheiros ao lado do registo (`data/registo/`):
+
+1. `siglas_novas.csv`: entidades fora da lista que receberam sigla por regra
+   (origens `literal` e `regra`), já com as colunas da lista global e os
+   documentos onde aparecem. Não bloqueiam nada;
+2. `siglas_pendentes.csv` (`nome;sigla;decisao;documentos;atencao`): siglas
+   que bloqueiam documentos, os mais frequentes primeiro. Estes documentos ficam
+   `por_confirmar`: não são copiados para a árvore RNC e, por isso, não são
+   convertidos para Markdown. A coluna `atencao` assinala a mesma sigla
+   sugerida para entidades diferentes.
+
+Para aprovar, corrigir a `sigla` se for preciso e escrever `aprovar` em
+`decisao`. Depois:
+
+```text
+python scripts/acrescentar_siglas.py --novas data/registo/siglas_novas.csv --decisoes data/registo/siglas_pendentes.csv --siglas 0_gestao/vocabularios/siglas.csv
+```
+
+O script acrescenta as entidades novas à lista (com `id_entidade` `NOM-NNNN`),
+aplica as decisões aprovadas e regera o `siglas.csv` indicado. Repetir a recolha
+nomeia os documentos desbloqueados. Um nome já atribuído não muda.
+`--aceitar-heuristicas` nomeia também os documentos pendentes, depois de rever
+o resumo. `--nomes` muda a pasta de destino e `--sem-nomear` desliga este passo.
 
 ## Utilização com Microsoft Copilot
 
