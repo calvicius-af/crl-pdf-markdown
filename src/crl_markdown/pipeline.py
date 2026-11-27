@@ -119,6 +119,12 @@ def make_converter(options: Options):
     )
 
 
+def _options_record(options) -> dict:
+    """Opções para os relatórios, com os caminhos sempre na forma simples."""
+    record = {**asdict(options), "models": str(options.models) if options.models else None}
+    return {k: display(v) if isinstance(v, str) else v for k, v in record.items()}
+
+
 def discover(source: Path) -> list[tuple[Path, Path]]:
     if source.is_file() and source.suffix.lower() == ".pdf":
         return [(source, Path(source.stem + ".md"))]
@@ -310,7 +316,7 @@ def convert_pdf(
         "docling_document_sha256": hashlib.sha256(document_json.encode("utf-8")).hexdigest(),
         "cached_extraction": hasattr(converter, "extraction_options"),
         "options": getattr(converter, "extraction_options", None)
-        or {**asdict(options), "models": str(options.models) if options.models else None},
+        or _options_record(options),
         "state": state,
         "quality_status": "blocked"
         if any(f.severity == "error" for f in findings)
@@ -398,11 +404,7 @@ def _run(
         source,
         output,
         entries,
-        {
-            **asdict(options),
-            "models": str(options.models) if options.models else None,
-            "overwrite": overwrite,
-        },
+        {**_options_record(options), "overwrite": overwrite},
         relative_sources=relative_sources,
     )
     if provenance is not None:
