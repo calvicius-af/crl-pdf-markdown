@@ -15,6 +15,7 @@ from pathlib import Path
 
 from . import models
 from .audit import audit_pdf
+from .caminhos import display, longpath
 from .document import plain_markdown, prepare
 from .isolamento import ConversorIsolado, FalhaArranque
 from .legacy import completude
@@ -295,13 +296,13 @@ def convert_pdf(
     state = "rever" if any(f.severity != "info" for f in findings) else "sem_alertas_automaticos"
     document_json = json.dumps(result.document.export_to_dict(), ensure_ascii=False) + "\n"
     report = {
-        "source": str(pdf.resolve()),
+        "source": display(pdf.resolve()),
         "document_profile": subtype,
         "profile_origin": profile_origin,
         "audit_policy_version": policy()['versao'],
         "pipeline_fingerprint": fingerprint(),
         "model_manifest_sha256": model_fingerprint(options.models),
-        "output": str(target.resolve()),
+        "output": display(target.resolve()),
         "source_sha256": source_digest,
         "markdown_sha256": hashlib.sha256(markdown.encode("utf-8")).hexdigest(),
         "raw_markdown_sha256": hashlib.sha256(raw.encode("utf-8")).hexdigest(),
@@ -475,7 +476,7 @@ def _run(
                     raise
                 from .diagnostics import explain
                 report = {
-                    "source": str(pdf.resolve()),
+                    "source": display(pdf.resolve()),
                     "state": "falhou",
                     "error": str(exc),
                     "error_type": getattr(exc, "error_type", type(exc).__name__),
@@ -484,7 +485,13 @@ def _run(
                 }
             report = {**manifest["documents"][index - 1], **report}
             from .occurrences import record_version
-            record_version(output, report['relative_source'], report)
+            try:
+                record_version(output, report['relative_source'], report)
+            except OSError as exc:
+                # O histórico de ocorrências é complementar: uma falha aqui fica
+                # registada neste documento e não interrompe os restantes.
+                report["occurrence_record_error"] = f"{type(exc).__name__}: {exc}"
+                progress(f"  Aviso: histórico de ocorrências não gravado ({exc})")
             manifest["documents"][index - 1] = report
             reports.append(report)
             progress(
@@ -505,7 +512,7 @@ def _run(
         if isolated is not None:
             isolated.fechar()
         report_path = write_reports(manifest, output, atomic_write)
-        progress(f"Relatório consolidado: {report_path.resolve()}")
+        progress(f"Relatório consolidado: {display(report_path.resolve())}")
         log.close()
         if native is not None:
             faulthandler.disable()
@@ -518,6 +525,9 @@ def _run(
 def run(source: Path, output: Path, options: Options, **kwargs) -> list[dict]:
     from .locking import exclusive
 
+    # Raiz com prefixo estendido no Windows: todos os caminhos derivados
+    # (ocorrências, correções, documentos) ficam livres do limite de 260.
+    output = longpath(output)
     with exclusive(output / "_auditoria" / ".operacao.lock"):
         from .review_exchange import ensure_complete_imports
         ensure_complete_imports(output)

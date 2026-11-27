@@ -39,9 +39,12 @@ def block(value):
 
 
 def link(path, parent, label):
-    target = Path(path).resolve()
+    from .caminhos import display
+    # Formas simples dos dois lados: um caminho com prefixo estendido do
+    # Windows e outro sem ele nunca têm caminho relativo entre si.
+    target = Path(display(Path(path).resolve()))
     try:
-        relative = os.path.relpath(target, parent.resolve()).replace(os.sep, "/")
+        relative = os.path.relpath(target, display(Path(parent).resolve())).replace(os.sep, "/")
     except ValueError:
         # Windows não tem caminhos relativos entre C:, L: ou partilhas UNC.
         # A ligação absoluta conserva o acesso à origem sem interromper o lote.
@@ -364,22 +367,23 @@ def diagnostic(manifest, parent, *, detailed=True):
 
 
 def new_manifest(source: Path, output: Path, entries, options, *, relative_sources=None):
+    from .caminhos import display
     started = datetime.now(timezone.utc)
     return {
         "schema_version": 1,
         "run_id": started.strftime("%Y%m%dT%H%M%S%fZ") + "-" + uuid4().hex[:8],
         "started_at_utc": started.isoformat(),
-        "source": str(source.resolve()),
-        "output": str(output.resolve()),
+        "source": display(source.resolve()),
+        "output": display(output.resolve()),
         "options": options,
         "documents": [
             {
-                "source": str(pdf.resolve()),
+                "source": display(pdf.resolve()),
                 "relative_source": (
                     Path(relative_sources[index]) if relative_sources is not None else
                     pdf.relative_to(source) if source.is_dir() else Path(pdf.name)
                 ).as_posix(),
-                "output": str((output / relative).resolve()),
+                "output": display((output / relative).resolve()),
                 "state": "nao_processado",
             }
             for index, (pdf, relative) in enumerate(entries)

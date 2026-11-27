@@ -103,6 +103,27 @@ def main(argv=None):
         def use_sample():
             source.set(str(args.models.parent / "smoke.pdf"))
         ttk.Button(toolbar, text="Usar PDF de teste incluído", command=use_sample).pack(side="left")
+
+        def apply_update():
+            if running.is_set():
+                messagebox.showinfo("Atualização", "Espere que a operação em curso termine.")
+                return
+            package = filedialog.askopenfilename(
+                title="Pacote de atualização CRL", filetypes=[("Pacote CRL", "CRL-atualizacao-*.zip")])
+            if not package:
+                return
+            from .atualizacao import apply
+            try:
+                record = apply(Path(package))
+            except ValueError as error:
+                messagebox.showerror("Atualização não aplicada", str(error))
+                return
+            # O código novo só deve correr num processo novo: fechar já.
+            messagebox.showinfo("Atualização aplicada",
+                                f"Versão {record['version']} instalada. A aplicação vai fechar; "
+                                "abra-a de novo pelo atalho Abrir CRL.")
+            root.destroy()
+        ttk.Button(toolbar, text="Aplicar atualização…", command=apply_update).pack(side="left", padx=(8, 0))
     if not args.installed:
         ttk.Button(toolbar, text="Criar / usar pasta RNC…", command=use_workspace).pack(side="left")
     ttk.Label(conversion_panel, text="Documentos a converter na pasta RNC").pack(anchor="w")

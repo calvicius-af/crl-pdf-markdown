@@ -15,7 +15,7 @@ permissions:
 jobs:
   build:
     runs-on: windows-latest
-    timeout-minutes: 90
+    timeout-minutes: 120
     env:
       PYTHONUTF8: '1'
       PIP_CONSTRAINT: ${{ github.workspace }}/requirements/offline-windows-py313.txt
@@ -89,6 +89,47 @@ jobs:
           # O atalho usa pythonw: testar também sem stdout/stderr de consola.
           $check = Start-Process "$destination\python\pythonw.exe" -ArgumentList '-I', '-X', 'utf8', '-B', '-m', 'crl_markdown.release_check', '--out', "`"$env:RUNNER_TEMP\evidencia-instalacao`"" -Wait -PassThru
           if ($check.ExitCode -ne 0) { throw 'Falhou a conversão sem consola após instalar o EXE' }
+          "CRL_DESTINO=$destination" >> $env:GITHUB_ENV
+      - name: Ensaio de ponta a ponta numa pasta como a da estação CRL
+        shell: pwsh
+        run: |
+          # Converter, reauditar, OCR numa página, falso alarme e aprovação na
+          # janela de revisão, correção com o PDF ao lado, aprovação em lote,
+          # entrega e cópia de revisão. A pasta de saída tem o nome longo,
+          # acentuado e com espaços da pasta sincronizada da estação.
+          python scripts/amostra_ensaio.py --saida "$env:RUNNER_TEMP\amostra" --smoke "$env:CRL_DESTINO\recursos\smoke.pdf"
+          if ($LASTEXITCODE -ne 0) { throw 'Falhou a preparação da amostra' }
+          $run = Start-Process "$env:CRL_DESTINO\python\pythonw.exe" -ArgumentList '-I', '-X', 'utf8', '-B', '-m', 'crl_markdown.ensaio_completo', '--pdfs', "`"$env:RUNNER_TEMP\amostra`"", '--out', "`"$env:RUNNER_TEMP\ensaio`"" -Wait -PassThru
+          Get-Content "$env:RUNNER_TEMP\ensaio\ensaio_completo.json" -ErrorAction SilentlyContinue
+          if ($run.ExitCode -ne 0) { throw 'Falhou o ensaio de ponta a ponta' }
+      - name: Pacote de atualização aplicado pelo ficheiro Atualizar CRL.cmd
+        shell: pwsh
+        run: |
+          & "$env:CRL_DESTINO\python\python.exe" -I -X utf8 -B -m crl_markdown.atualizacao --criar "$env:RUNNER_TEMP\atualizacao"
+          if ($LASTEXITCODE -ne 0) { throw 'Falhou a criação do pacote de atualização' }
+          Copy-Item 'packaging/windows/Atualizar CRL.cmd' "$env:RUNNER_TEMP\atualizacao\"
+          # O .cmd procura a instalação em LOCALAPPDATA\Programs\CRL-PDF-Markdown,
+          # como na estação: uma junção aponta para a instalação do ensaio.
+          $fake = "$env:RUNNER_TEMP\localappdata"
+          New-Item -ItemType Directory "$fake\Programs\CRL-PDF-Markdown" | Out-Null
+          New-Item -ItemType Junction -Path "$fake\Programs\CRL-PDF-Markdown\0.4.0rc3" -Target $env:CRL_DESTINO | Out-Null
+          $env:LOCALAPPDATA = $fake
+          cmd /c "echo.| `"$env:RUNNER_TEMP\atualizacao\Atualizar CRL.cmd`""
+          if ($LASTEXITCODE -ne 0) { throw 'Falhou a aplicação do pacote de atualização' }
+          $distribution = Get-Content "$env:CRL_DESTINO\distribuicao.json" -Raw | ConvertFrom-Json
+          if (-not $distribution.atualizacoes) { throw 'A atualização não ficou registada' }
+          $check = Start-Process "$env:CRL_DESTINO\python\pythonw.exe" -ArgumentList '-I', '-X', 'utf8', '-B', '-m', 'crl_markdown.release_check', '--out', "`"$env:RUNNER_TEMP\evidencia-atualizacao`"" -Wait -PassThru
+          if ($check.ExitCode -ne 0) { throw 'Falhou o ensaio da instalação depois da atualização' }
+          Get-ChildItem "$env:RUNNER_TEMP\atualizacao\*.zip" | ForEach-Object {
+            "$((Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower())  $($_.Name)" | Set-Content "$env:RUNNER_TEMP\atualizacao\SHA256SUMS.txt" -Encoding utf8
+          }
+      - name: Guardar pacote de atualização
+        uses: actions/upload-artifact@v4
+        with:
+          name: pacote-atualizacao
+          path: ${{ runner.temp }}/atualizacao/
+          if-no-files-found: error
+          retention-days: 30
       - name: Guardar instalador candidato
         uses: actions/upload-artifact@v4
         with:
@@ -105,6 +146,10 @@ jobs:
           path: |
             ${{ runner.temp }}/evidencia-runtime/
             ${{ runner.temp }}/evidencia-instalacao/
+            ${{ runner.temp }}/evidencia-atualizacao/
+            ${{ runner.temp }}/ensaio/ensaio_completo.json
+            ${{ runner.temp }}/ensaio/**/_auditoria/*.md
+            ${{ runner.temp }}/ensaio/**/_auditoria/relatorio.txt
             ${{ runner.temp }}/instalacao.log
             ${{ runner.temp }}/pacote/falha.txt
           if-no-files-found: warn

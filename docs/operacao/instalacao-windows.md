@@ -44,6 +44,36 @@ dos PDFs, o OCR e os controlos de qualidade. Num único PDF, a estimativa pode
 permanecer «a calcular» até terminar. As operações sem contagem disponível mantêm
 o indicador de atividade e o tempo decorrido.
 
+## Atualizar sem reinstalar
+
+Quando a correção muda só o código da aplicação, recebe dois ficheiros
+pequenos em vez do instalador: `CRL-atualizacao-<versão>.zip` e
+`Atualizar CRL.cmd`.
+
+1. Feche a aplicação CRL.
+2. Guarde os dois ficheiros na mesma pasta (por exemplo, Transferências).
+3. Faça duplo clique em `Atualizar CRL.cmd`. A janela indica a instalação
+   encontrada e termina com «Atualização aplicada». Não precisa de
+   administrador: só muda a pasta da aplicação no seu perfil.
+4. Abra a aplicação pelo atalho Abrir CRL. O título mostra a versão nova.
+
+Depois da primeira atualização, as seguintes também podem ser aplicadas na
+janela principal, em **Aplicar atualização…**.
+
+A atualização confirma os hashes de todos os ficheiros e recusa-se a avançar se
+as bibliotecas instaladas não forem as do ensaio; nesse caso é preciso o
+instalador completo. A versão anterior fica guardada ao lado e pode ser reposta
+pelo apoio com `python\python.exe -I -m crl_markdown.atualizacao --reverter`,
+na pasta da aplicação.
+
+## Pastas de saída com nome longo
+
+As pastas sincronizadas do SharePoint têm nomes longos e as subpastas de
+auditoria ultrapassam os 260 caracteres que o Windows aceita por omissão. A
+partir da 0.4.0rc4 a aplicação usa caminhos estendidos em todas as operações.
+Se aparecer o código `CRL-CAMINHO-LONGO`, escolha uma pasta de saída mais
+curta (por exemplo `C:\CRL\texto`) e entregue o relatório ao apoio.
+
 ## Se alguma coisa falhar
 
 A mensagem explica o próximo passo. Prima **Guardar relatório para o apoio**,
