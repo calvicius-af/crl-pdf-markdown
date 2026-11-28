@@ -647,7 +647,10 @@ class ReviewWindow:
             state['page'] = min(max(state['page'], 1), state['total'])
             try:
                 png = render_page(source, state['page'], state['width'], folder)
-                state['image'] = tk.PhotoImage(file=str(png))
+                # Os bytes vão diretamente para o Tk: o Tcl do Windows falha por vezes
+                # a abrir ficheiros (TclError sem mensagem) e não lê caminhos estendidos.
+                import base64
+                state['image'] = tk.PhotoImage(data=base64.b64encode(png.read_bytes()))
             except Exception as error:
                 label.set(f'Página {state["page"]} não desenhada ({type(error).__name__}): {error}')
                 return
