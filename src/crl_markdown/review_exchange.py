@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from uuid import uuid4
 
+from .caminhos import display, like, longpath
 from .locking import exclusive
 from .models import _sha256
 from .pipeline import atomic_write
@@ -63,7 +64,8 @@ def export_review(output, destination, *, reviewer):
     from .review_sources import resolve_source
     from .validation import _load, _verified
 
-    output, destination = Path(output).resolve(), Path(destination).resolve()
+    requested = destination
+    output, destination = longpath(output).resolve(), longpath(destination).resolve()
     if not reviewer.strip():
         raise ValueError('Indique quem recebe a cópia de revisão.')
     if destination.exists() or destination.is_relative_to(output) or output.is_relative_to(destination):
@@ -119,7 +121,7 @@ def export_review(output, destination, *, reviewer):
         finally:
             if staging.exists():
                 shutil.rmtree(staging)
-        return destination
+        return like(destination, requested)
 
 
 def _document_for_file(name):
@@ -212,7 +214,7 @@ def merge_review(output, branch, *, reviewer):
     """Aplica um plano validado; um journal conserva a evidência para recuperação."""
     if not reviewer.strip():
         raise ValueError('Indique o responsável pela importação.')
-    output, branch = Path(output).resolve(), Path(branch).resolve()
+    output, branch = longpath(output).resolve(), longpath(branch).resolve()
     if output == branch or branch.is_relative_to(output) or output.is_relative_to(branch):
         raise ValueError('Escolha uma cópia de revisão separada da pasta principal.')
     with exclusive(output / '_auditoria/.operacao.lock'):
@@ -274,7 +276,7 @@ def merge_review(output, branch, *, reviewer):
             record['status'] = 'rolled_back'
             atomic_write(receipt, json.dumps(record, ensure_ascii=False, indent=2) + '\n')
             raise
-        return {'imported': len(applied), 'receipt': str(receipt)}
+        return {'imported': len(applied), 'receipt': display(receipt)}
 
 
 def recover_imports(output):

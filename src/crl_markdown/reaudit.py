@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from .cache import CachedConverter
+from .caminhos import display
 from .pipeline import Options, convert_pdf, run
 
 
@@ -55,7 +56,7 @@ def plan_reaudit(output, *, relative_source=None, families=(), rules=(), statuse
             raise ValueError('Caminho relativo inválido no manifesto.')
     provenance = {
         'operation': 'reaudit',
-        'manifest': str(manifest_path),
+        'manifest': display(manifest_path),
         'manifest_sha256': hashlib.sha256(content).hexdigest(),
         'run_id': manifest['run_id'],
         'filters': {'document': relative_source, 'families': families,
@@ -122,14 +123,15 @@ def reaudit(output, destination=None, *, relative_source=None, families=(), rule
             progress=print, jobs=2, cancel_event=None, include_history=False):
     if jobs not in {1, 2}:
         raise ValueError('A reauditoria suporta 1 ou 2 processos locais.')
-    output = Path(output).resolve()
+    from .caminhos import longpath
+    output = longpath(output).resolve()
     manifest, selected, provenance = plan_reaudit(
         output, relative_source=relative_source, families=families, rules=rules, statuses=statuses,
         include_history=include_history)
     if destination is None:
         stamp = datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S%fZ')
         destination = output.with_name(output.name + '_reauditoria_' + stamp)
-    destination = Path(destination).resolve()
+    destination = longpath(destination).resolve()
     if destination.exists():
         raise FileExistsError('A reauditoria exige uma pasta nova; a corrida original é conservada.')
     options = manifest.get('options', {})

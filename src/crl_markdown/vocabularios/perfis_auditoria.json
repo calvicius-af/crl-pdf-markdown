@@ -1,5 +1,9 @@
 {
-  "versao": "2026-10-16.2",
+  "versao": "2026-11-27.1",
+  "avisos_informativos": {
+    "nota": "Avisos que descrevem a forma da saída e não pedem ação humana; ficam registados como informação.",
+    "regras": ["TABLE_SPAN", "TABLE_WIDE", "LIST_MARKER"]
+  },
   "perfis": {
     "desconhecido": {"deposito": true, "articulado": true},
     "convencao_privada": {"deposito": true, "articulado": true},

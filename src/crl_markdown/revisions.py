@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from uuid import uuid4
 
-from .caminhos import like, longpath
+from .caminhos import display, like, longpath
 from .locking import exclusive
 from .models import _sha256
 from .pipeline import Options, atomic_write, convert_pdf, previous_report
@@ -115,7 +115,7 @@ def create_revision(output, relative_source, reviewer):
                          cache / (Path(relative_source).stem + suffix))
         shutil.copy2(report_path, cache / report_path.name)
         shutil.copy2(target, revision / 'correcao.md')
-        meta = {'schema_version': 1, 'origin_output': str(output),
+        meta = {'schema_version': 1, 'origin_output': display(output),
                 'relative_source': relative_source, 'reviewer': reviewer.strip(),
                 'created_at_utc': datetime.now(timezone.utc).isoformat(),
                 'parent': _identity(target, report_path, report),

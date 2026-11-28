@@ -97,7 +97,8 @@ class PageOCRConverter:
             return records
         if untouched(original) != untouched(combined):
             raise ValueError('As páginas não selecionadas mudaram durante a composição do OCR.')
-        self.extraction_options = {**asdict(self.options), 'models': str(self.options.models),
+        self.extraction_options = {**asdict(self.options), 'models': display(self.options.models),
+            'cache_directory': display(self.options.cache_directory),
             'operation': 'ocr_paginas', 'selected_pages': sorted(selected),
             'force_full_page_ocr': True,
             'reused_pages': sorted(set(pages) - selected), 'parent_options': base.extraction_options}
@@ -137,6 +138,8 @@ def reextract_pages(output, relative_source, reviewer, models, pages, *, progres
     revision = create_revision(output, relative_source, reviewer)
     requested = output
     output = longpath(output).resolve()
+    # A correção volta na forma de quem chamou; aqui tudo usa a forma estendida.
+    revision = longpath(revision).resolve()
     meta = json.loads((revision / 'revision.json').read_text(encoding='utf-8'))
     with exclusive(output / '_auditoria/.operacao.lock'):
         document = _record(output, relative_source)

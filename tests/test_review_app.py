@@ -6,6 +6,7 @@ import pytest
 
 from crl_markdown.review_app import ReviewWindow, load_document
 from crl_markdown.validation import _load
+from tests.conftest import tk_root
 from tests.test_desktop_distribution import (
     collect_destroyed_tk_windows_on_main_thread,  # noqa: F401
 )
@@ -23,7 +24,7 @@ def test_review_view_verifies_current_content_and_finding_ids(damaged_output):  
 
 @pytest.mark.skipif(os.environ.get('CRL_TEST_TK') != '1', reason='Ensaio Tk explícito numa sessão gráfica')
 def test_native_review_window_opens_editor_and_blocks_unresolved_errors(damaged_output):  # noqa: F811
-    root = tk.Tk()
+    root = tk_root()
     root.title('CRL — ensaio temporário')
     try:
         view = ReviewWindow(root, damaged_output)
@@ -54,7 +55,7 @@ def test_native_review_window_opens_editor_and_blocks_unresolved_errors(damaged_
 
 @pytest.mark.skipif(os.environ.get('CRL_TEST_TK') != '1', reason='Ensaio Tk explícito numa sessão gráfica')
 def test_editor_and_parent_close_preserve_unsaved_edits(damaged_output, monkeypatch):  # noqa: F811
-    root = tk.Tk()
+    root = tk_root()
     try:
         view = ReviewWindow(root, damaged_output)
         view.reviewer.set('Pessoa de ensaio')
@@ -82,7 +83,7 @@ def test_editor_and_parent_close_preserve_unsaved_edits(damaged_output, monkeypa
 
 @pytest.mark.skipif(os.environ.get('CRL_TEST_TK') != '1', reason='Ensaio Tk explícito numa sessão gráfica')
 def test_review_notes_can_be_saved_and_reopened_without_approval(damaged_output, monkeypatch):  # noqa: F811
-    root = tk.Tk()
+    root = tk_root()
     try:
         view = ReviewWindow(root, damaged_output)
         view.reviewer.set('Pessoa A')
@@ -104,7 +105,7 @@ def test_review_notes_can_be_saved_and_reopened_without_approval(damaged_output,
 def test_switch_document_can_cancel_or_save_notes_and_stale_decision_is_refused(reviewed_output, monkeypatch):  # noqa: F811
     from tests.test_review_exchange import add_second
     add_second(reviewed_output)
-    root = tk.Tk()
+    root = tk_root()
     messages = []
     monkeypatch.setattr('tkinter.messagebox.showinfo', lambda *a, **k: None)
     monkeypatch.setattr('tkinter.messagebox.showerror', lambda title, message, **k: messages.append(message))
@@ -146,7 +147,7 @@ def test_second_reviewer_gets_new_draft_with_own_authorship(damaged_output):  # 
     path.write_text(path.read_text(encoding='utf-8').replace('125,00', '-125,00'), encoding='utf-8')
     audit_revision(first)
     before = path.read_bytes()
-    root = tk.Tk()
+    root = tk_root()
     try:
         view = ReviewWindow(root, damaged_output)
         # A janela trabalha com o prefixo de caminho estendido no Windows.
@@ -160,3 +161,99 @@ def test_second_reviewer_gets_new_draft_with_own_authorship(damaged_output):  # 
         assert path.read_bytes() == before
     finally:
         root.destroy()
+
+
+@pytest.mark.skipif(os.environ.get('CRL_TEST_TK') != '1', reason='Ensaio Tk explícito numa sessão gráfica')
+def test_editor_shows_pdf_page_beside_markdown(damaged_output):  # noqa: F811
+    root = tk_root()
+    try:
+        view = ReviewWindow(root, damaged_output)
+        view.reviewer.set('Pessoa de ensaio')
+        view.edit_revision()
+        root.update()
+        editor, _guard = view.editors[view.revision]
+
+        def descendants(widget):
+            for child in widget.winfo_children():
+                yield child
+                yield from descendants(child)
+
+        canvases = [w for w in descendants(editor) if isinstance(w, tk.Canvas)]
+        assert canvases and canvases[0].find_all()  # Página desenhada na janela.
+        assert any(isinstance(w, tk.Text) for w in descendants(editor))
+        from crl_markdown import settings
+        assert settings.reviewer() == 'Pessoa de ensaio'
+    finally:
+        root.destroy()
+
+
+@pytest.mark.skipif(os.environ.get('CRL_TEST_TK') != '1', reason='Ensaio Tk explícito numa sessão gráfica')
+def test_false_alarm_for_all_alerts_unblocks_and_approval_moves_on(damaged_output, monkeypatch):  # noqa: F811
+    root = tk_root()
+    monkeypatch.setattr('tkinter.messagebox.askyesno', lambda *a, **k: True)
+    errors = []
+    monkeypatch.setattr('tkinter.messagebox.showerror', lambda title, message, **k: errors.append(message))
+    try:
+        view = ReviewWindow(root, damaged_output)
+        assert 'Bloqueado' in view.status.get()
+        assert set(view.rule_values) == {'Texto', 'Números e sinais', 'Tabelas', 'Imagens'}
+        assert all('(' not in view.findings.item(i)['values'][1] for i in view.findings.get_children())
+        view.reviewer.set('Pessoa de ensaio')
+        view.resolve()
+        deadline = time.monotonic() + 10
+        while view.busy and time.monotonic() < deadline:
+            root.update()
+            time.sleep(.01)
+        root.update()
+        assert not errors
+        assert view.current[2]['quality_status'] == 'passed'
+        assert not view.findings.get_children()
+        view.record('aprovado')
+        assert not errors
+        assert 'Aprovado' in view.status.get()
+        decisions = list((damaged_output / '_auditoria/revisoes').rglob('*.json'))
+        import json
+        assert json.loads(decisions[0].read_text(encoding='utf-8'))['scope'] == 'integral'
+    finally:
+        root.destroy()
+
+
+@pytest.mark.skipif(os.environ.get('CRL_TEST_TK') != '1', reason='Ensaio Tk explícito numa sessão gráfica')
+def test_batch_approval_covers_only_clean_documents_and_allows_delivery(reviewed_output, tmp_path, monkeypatch):  # noqa: F811
+    import json
+
+    from crl_markdown.validation import deliver
+    from tests.test_review_exchange import add_second
+    audit = reviewed_output / '_auditoria/documentos'
+    report = json.loads((audit / 'a.qualidade.json').read_text(encoding='utf-8'))
+    report.update(quality_status='passed', findings=[])
+    (audit / 'a.qualidade.json').write_text(json.dumps(report), encoding='utf-8')
+    manifest = reviewed_output / '_auditoria/manifest.json'
+    manifest.write_text(json.dumps({'run_id': 'test', 'documents': [{**report, 'relative_source': 'a.pdf'}]}),
+                        encoding='utf-8')
+    add_second(reviewed_output)
+    data = json.loads(manifest.read_text(encoding='utf-8'))
+    data['documents'][1].update(quality_status='review', findings=[{'severity': 'warning', 'rule': 'STRUCTURE'}])
+    manifest.write_text(json.dumps(data), encoding='utf-8')
+    second = json.loads((audit / 'b.qualidade.json').read_text(encoding='utf-8'))
+    second.update(quality_status='review', findings=[{'severity': 'warning', 'rule': 'STRUCTURE'}])
+    (audit / 'b.qualidade.json').write_text(json.dumps(second), encoding='utf-8')
+    monkeypatch.setattr('tkinter.messagebox.askyesno', lambda *a, **k: True)
+    shown = []
+    monkeypatch.setattr('tkinter.messagebox.showinfo', lambda title, message, **k: shown.append(message))
+    root = tk_root()
+    try:
+        view = ReviewWindow(root, reviewed_output)
+        view.reviewer.set('Pessoa de ensaio')
+        view.approve_clean()
+        deadline = time.monotonic() + 10
+        while view.busy and time.monotonic() < deadline:
+            root.update()
+            time.sleep(.01)
+        root.update()
+        assert shown == ['Documentos aprovados: 1.']
+    finally:
+        root.destroy()
+    conformity = deliver(reviewed_output, tmp_path / 'entrega')
+    delivered = json.loads((conformity.parent / 'conformidade.json').read_text(encoding='utf-8'))
+    assert [d['document'] for d in delivered['documents']] == ['a.md']

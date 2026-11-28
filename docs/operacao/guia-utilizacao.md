@@ -41,33 +41,35 @@ de correções, que conserva o original e cria uma publicação auditada separad
    **Pasta de saída** e clique em **Reauditar lote (sem nova extração)**.
    A operação verifica a cache e cria uma pasta nova. O campo de saída passa a
    apontar para essa nova corrida quando termina; a anterior fica conservada.
-2. Abra **Conferir / aprovar…**. Filtre por estado, família ou regra e selecione
-   o documento. A lista mostra as ocorrências, IDs e páginas disponíveis.
-   **Relatório deste documento** abre as evidências da versão selecionada.
-   **Abrir PDF** e **Abrir Markdown** usam a aplicação predefinida do sistema
-   (leitor de PDF e editor de texto), o que permite colocá-los lado a lado.
-3. Preencha o responsável. Se há erro real, escolha **Criar / editar correção**.
-   Edite no rascunho separado, guarde e clique em **Reauditar correção guardada**.
-   O editor tem deslocação horizontal para tabelas largas.
-4. Depois da auditoria, confira o resultado com o PDF. A caixa de conferência
-   integral é reposta; uma correção não concede aprovação automaticamente.
-5. Para registar uma resolução, selecione a ocorrência, indique a página e as
-   evidências nas notas e use a ação adequada: **conferido** para avisos,
-   **corrigido** para uma grelha efetivamente alterada, **decorativo** para uma
-   figura sem conteúdo a transcrever ou **transcrito** quando a transcrição foi
-   incorporada e conferida. Clique em **Resolver ocorrência e reauditar**.
-   Se conferiu no PDF que o Markdown está certo e o alerta é falso, escolha
-   **está correto (falso alarme)**: a página da ocorrência e uma nota padrão são
-   usadas quando não indicar outras. A ocorrência fica no histórico com o
-   responsável e a severidade original.
-6. Se faltar reconhecimento de conteúdo numa imagem, use **Reler páginas com
-   OCR** e indique as páginas e a pasta de modelos locais. Só essas páginas são
-   reextraídas; as restantes são verificadas e reutilizadas. Se um elemento
-   atravessar a seleção, inclua todas as suas páginas. Uma edição humana ativa
-   exige reconciliação e não é substituída automaticamente pelo OCR.
-7. Registe a decisão sobre a versão atual. A aprovação fica desativada enquanto
-   houver erros por resolver. A rejeição continua disponível. **Entregar aprovados**
-   utiliza a revisão ativa aprovada, preservando o nome relativo do documento.
+2. Abra **Conferir / aprovar…**. O nome de quem revê fica guardado neste
+   computador e aparece no topo da janela; altere-o se outra pessoa rever.
+   Filtre por estado, família ou tipo de problema (**Texto**, **Números e
+   sinais**, **Tabelas** ou **Imagens**) e use **Anterior** e **Seguinte** para
+   percorrer os documentos. A lista mostra só os alertas que pedem ação.
+3. Se o Markdown tem um erro, clique em **Corrigir (PDF e Markdown lado a lado)**
+   ou faça duplo clique no alerta. Abre uma janela com a página do PDF à
+   esquerda e uma cópia de trabalho do Markdown à direita, posicionada na linha
+   do alerta quando ela é conhecida. Corrija e clique em **Guardar e verificar**:
+   a aplicação reaudita a cópia e o original é conservado.
+4. Se conferiu no PDF que o Markdown está certo, clique em **Está correto
+   (falso alarme)**. Com um alerta selecionado, só esse é marcado; sem seleção,
+   a aplicação pede confirmação e marca todos os alertas do documento. A nota
+   é opcional; sem nota fica registado um texto padrão. Cada alerta fica no
+   histórico com o responsável, a página e a gravidade original.
+5. Clique em **Aprovar** ou **Rejeitar**. Aprovar declara que conferiu o
+   documento e é a decisão que **Entregar aprovados** aceita. A aprovação é
+   recusada enquanto houver erros por resolver. Depois de registar, a janela
+   passa ao documento seguinte.
+6. Em **Mais opções** ficam as ações menos frequentes: abrir o PDF ou o
+   Markdown na aplicação predefinida do sistema, o relatório do documento,
+   **Aprovar todos os documentos sem alertas desta lista** (aprovação em lote,
+   em nome de quem revê, que não altera decisões já registadas),
+   **Reler páginas com OCR**, o histórico de ocorrências e a troca de cópias
+   de revisão com outra pessoa. O OCR relê só as páginas indicadas e confirma
+   antes a pasta de modelos.
+7. Os avisos que descrevem só a forma da saída (células unidas, tabelas com
+   mais de oito colunas e itens de lista sem marcador) ficam registados como
+   informação e não pedem revisão.
 
 As correções ficam em `_auditoria/correcoes`, com publicações imutáveis e
 referência para a versão ativa em `_auditoria/versoes`. O relatório do lote é o

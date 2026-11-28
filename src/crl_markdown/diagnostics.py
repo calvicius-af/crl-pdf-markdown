@@ -31,6 +31,14 @@ def safe_detail(text: str) -> str:
                   r"\1\2[omitido]", text)
 
 
+
+def _long_path(error):
+    """Um WinError 3/206 com um caminho acima de 259 caracteres é o limite do Windows."""
+    if getattr(error, 'winerror', None) not in {3, 206}:
+        return False
+    names = (getattr(error, 'filename', None), getattr(error, 'filename2', None))
+    return any(name and not str(name).startswith('\\\\?\\') and len(str(name)) >= 260 for name in names)
+
 def explain(error: BaseException) -> dict:
     detail = safe_detail(str(error))
     lowered = detail.lower()
@@ -83,6 +91,12 @@ def explain(error: BaseException) -> dict:
         code, action = "CRL-TEMPO", (
             "Experimente converter apenas o PDF indicado. Feche programas pesados. "
             "O apoio informático pode aumentar o tempo máximo sem mudar de extrator."
+        )
+    elif isinstance(error, OSError) and _long_path(error):
+        code, action = "CRL-CAMINHO-LONGO", (
+            "O caminho ultrapassa o limite de 260 caracteres do Windows. "
+            "Escolha uma pasta de saída com nome mais curto (por exemplo C:\\CRL\\texto) "
+            "e entregue este relatório ao apoio da aplicação."
         )
     elif isinstance(error, FileNotFoundError):
         code, action = "CRL-FICHEIRO", (

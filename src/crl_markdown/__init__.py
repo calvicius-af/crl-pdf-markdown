@@ -1,6 +1,6 @@
 """Preparação de documentos Markdown para análise qualitativa."""
 
-__version__ = "0.4.0rc3"
+__version__ = "0.4.0rc4"
 
 
 def utf8_output():

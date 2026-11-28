@@ -170,6 +170,9 @@ def _decision(output: Path, document: dict, report_path: Path):
 
 def deliver(output: Path, destination: Path) -> Path:
     """Cria entrega nova, completa e imutável; só documentos com revisão integral."""
+    from .caminhos import like, longpath
+    requested = destination
+    output, destination = longpath(output), longpath(destination)
     with exclusive(output / '_auditoria/.operacao.lock'):
         if destination.exists():
             raise FileExistsError('A pasta de entrega já existe. Escolha um nome novo para conservar a anterior.')
@@ -231,4 +234,4 @@ def deliver(output: Path, destination: Path) -> Path:
         finally:
             if staging.exists():
                 shutil.rmtree(staging)
-        return destination / 'conformidade.md'
+        return like(destination / 'conformidade.md', requested)
